@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
@@ -15,6 +14,32 @@ class UserSeeder extends Seeder
     {
 
         $users = [
+            [
+                "email" => "string@gmail.com",
+                "first_name" => "User",
+                "last_name" => "User",
+                "phone_number" => "string",
+                "gender" => "Male",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "No",
+                "unit" => "",
+                "status" => ""
+            ],
+            [
+                "email" => "string2@gmail.com",
+                "first_name" => "User 2",
+                "last_name" => "User 2",
+                "phone_number" => "string2",
+                "gender" => "Male",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "No",
+                "unit" => "",
+                "status" => ""
+            ],
             [
                 "first_name" => "Oluwatobi",
                 "last_name" => "Abiona",
@@ -994,7 +1019,7 @@ class UserSeeder extends Seeder
                 "first_name" => "Bukola",
                 "last_name" => "Olanase",
                 "phone_number" => 7087033539,
-                "email" => "Bukolaolanase1000@gmail.com",
+                "email" => "oluwabukolaolanase@gmail.com",
                 "gender" => "Male",
                 "address" => "",
                 "date_of_birth" => "",
@@ -1446,7 +1471,128 @@ class UserSeeder extends Seeder
                 "status" => ""
             ],
         ];
-        foreach ($users as $userData) {
+
+        $usersOriginal = [
+            [
+                "first_name" => "Admin",
+                "last_name" => "admin",
+                "phone_number" => 1503,
+                "email" => "admin@gmail.com",
+                "gender" => "Male",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "Yes",
+                "unit" => "",
+                "status" => ""
+            ],
+            [
+                "first_name" => "Abiodun",
+                "last_name" => "Samuel Oluyemi",
+                "phone_number" => 8164650987,
+                "email" => "abiodunsamyemi@gmail.com",
+                "gender" => "Male",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "Yes",
+                "unit" => "",
+                "status" => ""
+            ],
+            [
+                "first_name" => "Olasunkanmi",
+                "last_name" => "Gbadegesin",
+                "phone_number" => 9063474054,
+                "email" => "olasunkanmi.gbadegesin@gmail.com",
+                "gender" => "Male",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "Yes",
+                "unit" => "",
+                "status" => ""
+            ],
+            [
+                "first_name" => "Adeyemi",
+                "last_name" => "Agoro",
+                "phone_number" => 8148989175,
+                "email" => "agoroadeyemi65@gmail.com",
+                "gender" => "Male",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "Yes",
+                "unit" => "",
+                "status" => ""
+            ],
+            [
+                "first_name" => "Toluwalashe",
+                "last_name" => "Akinola",
+                "phone_number" => 8102810733,
+                "email" => "akinolatoluwalashe48@gmail.com",
+                "gender" => "Female",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "Yes",
+                "unit" => "",
+                "status" => ""
+            ],
+            [
+                "first_name" => "Amudipe",
+                "last_name" => "Esther",
+                "phone_number" => 8147192513,
+                "email" => "Xtarife3@gmail.com",
+                "gender" => "Female",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "Yes",
+                "unit" => "",
+                "status" => ""
+            ],
+            [
+                "first_name" => "Bukola",
+                "last_name" => "Olanase",
+                "phone_number" => 7087033539,
+                "email" => "oluwabukolaolanase@gmail.com",
+                "gender" => "Male",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "Yes",
+                "unit" => "",
+                "status" => ""
+            ],
+            [
+                "first_name" => "Oyindamola",
+                "last_name" => "Ishola",
+                "phone_number" => 7069293698,
+                "email" => "isholaoyindamola93@gmail.com",
+                "gender" => "Female",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "Yes",
+                "unit" => "",
+                "status" => ""
+            ],
+            [
+                "first_name" => "Inioluwa",
+                "last_name" => "Olatunji",
+                "phone_number" => 8037316709,
+                "email" => "olatunjiinioluwa2308@gamil.com",
+                "gender" => "Female",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "Yes",
+                "unit" => "",
+                "status" => ""
+            ],
+        ];
+
+        foreach ($usersOriginal as $userData) {
             $user = \App\Models\User::create([
                 'first_name' => $userData['first_name'],
                 'last_name' => $userData['last_name'],
@@ -1457,15 +1603,14 @@ class UserSeeder extends Seeder
                 'date_of_birth' => $userData['date_of_birth'],
                 'community' => $userData['community'],
                 'worker' => $userData['worker'],
-                'unit' => $userData['unit'],
                 'status' => $userData['status'],
-                'password' => bcrypt($userData['phone_number']), // default password
+                'password' => bcrypt($userData['phone_number']),
             ]);
             // Assign roles
-            if ($user->email === 'abiodunsamyemi@gmail.com') {
+            if ($user->email === 'admin@gmail.com') {
                 $user->assignRole(UserRole::ADMIN->value);
-            } elseif ($user->email === 'a@gmail.com') {
-                $user->assignRole(UserRole::SUPER_ADMIN->value);
+            } elseif ($user->email === 'abiodunsamyemi@gmail.com') {
+                $user->assignRole(UserRole::LEADER->value);
             } else {
                 $user->assignRole(UserRole::MEMBER->value);
             }

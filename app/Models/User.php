@@ -28,11 +28,17 @@ class User extends Authenticatable
         'gender',
         'address',
         'date_of_birth',
-        'date_of_visit',
         'community',
         'worker',
-        'unit',
+        'avatar',
         'status',
+        'country',
+        'city_or_state',
+        'facebook',
+        'instagram',
+        'linkedin',
+        'twitter',
+        'email_verified_at'
     ];
 
     /**
@@ -56,5 +62,28 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+    public function getFullNameAttribute()
+    {
+        return trim("{$this->first_name} {$this->last_name}");
+    }
+    public function units()
+    {
+        return $this->belongsToMany(Unit::class)
+            ->withPivot(['is_leader', 'is_asst_leader'])
+            ->withTimestamps();
+    }
+    // public function leadingUnits()
+    // {
+    //     return $this->units()->wherePivot('is_leader', true);
+    // }
+    public function assignedFirstTimers()
+    {
+        // where status is active
+        return $this->hasMany(FirstTimer::class, 'assigned_to_member_id');
     }
 }
