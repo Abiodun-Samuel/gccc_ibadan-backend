@@ -2,20 +2,17 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class FirstTimer extends Model
 {
     protected $hidden = ['pivot'];
-    public function getRouteKeyName(): string
-    {
-        return 'slug';
-    }
     protected $fillable = [
         'name',
         'phone_number',
         'email',
-        'slug',
         'status',
         'located_in_ibadan',
         'interest',
@@ -59,5 +56,9 @@ class FirstTimer extends Model
     public function followupNotes()
     {
         return $this->hasMany(FirstTimerFollowUp::class);
+    }
+    public function scopeInPeriod(Builder $query, Carbon $startDate, Carbon $endDate): Builder
+    {
+        return $query->whereBetween('date_of_visit', [$startDate->startOfDay(), $endDate->endOfDay()]);
     }
 }

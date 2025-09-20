@@ -17,7 +17,6 @@ class FirstTimerResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'slug' => $this->slug,
             'phone_number' => $this->phone_number,
             'email' => $this->email,
             'gender' => $this->gender,
@@ -45,7 +44,6 @@ class FirstTimerResource extends JsonResource
             'follow_up_status' => $this->whenLoaded('followUpStatus', fn() => [
                 'id' => $this->followUpStatus->id,
                 'title' => $this->followUpStatus->title,
-                'slug' => $this->followUpStatus->slug,
                 'color' => $this->followUpStatus->color,
             ]),
 

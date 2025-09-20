@@ -14,7 +14,6 @@ return new class extends Migration {
         Schema::create('first_timers', function (Blueprint $table) {
             $table->id();
             $table->string('name')->index();
-            $table->string('slug')->unique();
             $table->string('phone_number')->nullable();
             $table->string('email')->nullable()->index();
             $table->enum('gender', ['Male', 'Female', 'Other'])->nullable();

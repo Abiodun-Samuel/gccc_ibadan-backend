@@ -11,7 +11,6 @@ use App\Models\FirstTimerFollowUp;
 use App\Models\FollowUpStatus;
 use App\Services\FirstTimerFollowupService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class FirstTimerController extends Controller
@@ -21,11 +20,11 @@ class FirstTimerController extends Controller
     {
         $this->followupService = $followupService;
     }
+
     public function index(Request $request)
     {
-        $firstTimers = FirstTimer::with(['followUpStatus', 'assignedTo'])->orderBy('date_of_visit', 'desc')->paginate(20);
-
-        return $this->paginatedResponse(
+        $firstTimers = FirstTimer::with(['followUpStatus', 'assignedTo'])->orderBy('date_of_visit', 'desc')->get();
+        return $this->successResponse(
             FirstTimerResource::collection($firstTimers),
             'First timers retrieved successfully',
             Response::HTTP_OK
@@ -71,53 +70,9 @@ class FirstTimerController extends Controller
             'First timer deleted successfully'
         );
     }
-    public function analytics(Request $request)
-    {
-        $year = $request->query('year', now()->year);
-
-        // Handle string date formats: 20-Apr-2025 OR 8/31/2025
-        $dateExpression = "
-        COALESCE(
-            STR_TO_DATE(date_of_visit, '%d-%b-%Y'),
-            STR_TO_DATE(date_of_visit, '%m/%d/%Y')
-        )
-    ";
-
-        // 1. Total first timers per month
-        $firstTimersPerMonth = FirstTimer::query()
-            ->selectRaw("MONTH($dateExpression) as month, COUNT(*) as total")
-            ->whereRaw("YEAR($dateExpression) = ?", [$year])
-            ->groupByRaw("MONTH($dateExpression)")
-            ->orderByRaw("MONTH($dateExpression)")
-            ->pluck('total', 'month'); // key = month, value = count
-
-        // 2. Integrated first timers (follow_up_status = Completed)
-        $integratedPerMonth = FirstTimer::query()
-            ->selectRaw("MONTH($dateExpression) as month, COUNT(*) as total")
-            ->where('follow_up_status', 'Integrated')
-            ->whereRaw("YEAR($dateExpression) = ?", [$year])
-            ->groupByRaw("MONTH($dateExpression)")
-            ->orderByRaw("MONTH($dateExpression)")
-            ->pluck('total', 'month');
-
-        // Build final arrays (index-based, always 12 months)
-        $totalFirstTimers = [];
-        $integratedFirstTimers = [];
-
-        foreach (range(1, 12) as $month) {
-            $totalFirstTimers[] = (int) ($firstTimersPerMonth[$month] ?? 0);
-            $integratedFirstTimers[] = (int) ($integratedPerMonth[$month] ?? 0);
-        }
-
-        return $this->successResponse([
-            'year' => (int) $year,
-            'total_first_timers' => $totalFirstTimers,
-            'integrated_first_timers' => $integratedFirstTimers,
-        ], 'First timers analytics retrieved successfully');
-    }
     public function assignFollowup(FirstTimer $firstTimer)
     {
-        $candidate = $this->followupService->assignMemberToFirstTimer($firstTimer);
+        $candidate = $this->followupService->findLeastLoadedFollowupMember($firstTimer);
 
         if (!$candidate) {
             return $this->errorResponse(null, 'No eligible follow-up member found or Follow-up unit missing', 422);
@@ -141,7 +96,7 @@ class FirstTimerController extends Controller
         ]);
 
         if (!empty($payload['status'])) {
-            $status = FollowUpStatus::where('slug', $payload['status'])->first();
+            $status = FollowUpStatus::where('title', $payload['status'])->first();
             if (!$status) {
                 return $this->errorResponse(null, 'Status not found', 404);
             }
@@ -151,11 +106,6 @@ class FirstTimerController extends Controller
 
         $firstTimer->follow_up_status_id = $status->id;
         $firstTimer->save();
-
-        // Optionally: if the status is integrated or opt-out, unassign the member
-        if (in_array($status->slug, ['integrated', 'opt-out'])) {
-            $this->followupService->unassign($firstTimer);
-        }
 
         return $this->successResponse(new FirstTimerResource($firstTimer->fresh()->load('followUpStatus', 'assignedTo')), 'Status updated');
     }

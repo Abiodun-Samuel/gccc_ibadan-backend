@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\FirstTimerController;
 use App\Http\Controllers\MemberController;
@@ -32,10 +33,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('first-timers/{first_timer}/unassign', [FirstTimerController::class, 'unassignFollowup']);
     Route::post('first-timers/{first_timer}/status', [FirstTimerController::class, 'setFollowupStatus']);
     Route::apiResource('first-timers', FirstTimerController::class)->except(['store']);
+
     // admins only
     Route::middleware(['role:' . UserRole::ADMIN->value . '|' . UserRole::SUPER_ADMIN->value])->group(function () {
         // first timer
-        Route::get('first-timers/analytics', [FirstTimerController::class, 'analytics']);
+        Route::get('admin/first-timers/analytics', [AdminController::class, 'getFirstTimersAnalytics']);
+        Route::get('admin/analytics', [AdminController::class, 'getAdminAnalytics']);
+
         // members
         Route::apiResource('members', MemberController::class);
         // Route::post('/members/bulk-upsert', [MemberController::class, 'bulkUpsert']);

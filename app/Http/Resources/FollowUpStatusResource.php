@@ -17,7 +17,6 @@ class FollowUpStatusResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
-            'slug' => $this->slug,
             'color' => $this->color,
             'description' => $this->description,
         ];

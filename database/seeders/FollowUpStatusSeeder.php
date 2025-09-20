@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\FollowUpStatusEnum;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -17,56 +18,47 @@ class FollowUpStatusSeeder extends Seeder
         $statuses = [
 
             [
-                'title' => 'Invited Again',
-                'slug' => 'invited-again',
+                'title' => FollowUpStatusEnum::INVITED_AGAIN->value,
                 'color' => 'warning',
                 'description' => 'Visitor has been invited to another event/service.',
             ],
             [
-                'title' => 'Second Timer',
-                'slug' => 'second-timer',
+                'title' => FollowUpStatusEnum::SECOND_TIMER->value,
                 'color' => 'dark',
                 'description' => 'Visitor has attended for the second time.',
             ],
             [
-                'title' => 'Third Timer',
-                'slug' => 'third-timer',
+                'title' => FollowUpStatusEnum::THIRD_TIMER->value,
                 'color' => 'dark',
                 'description' => 'Visitor has attended for the third time.',
             ],
             [
-                'title' => 'Fourth Timer',
-                'slug' => 'fourth-timer',
+                'title' => FollowUpStatusEnum::FOURTH_TIMER->value,
                 'color' => 'dark',
                 'description' => 'Visitor has attended for the fourth time or more.',
             ],
             [
-                'title' => 'Contacted',
-                'slug' => 'contacted',
+                'title' => FollowUpStatusEnum::CONTACTED->value,
                 'color' => 'info',
                 'description' => 'Visitor has been contacted at least once.',
             ],
             [
-                'title' => 'Not Contacted',
-                'slug' => 'not-contacted',
+                'title' => FollowUpStatusEnum::NOT_CONTACTED->value,
                 'color' => 'light',
                 'description' => 'Visitor not yet contacted for follow-up.',
             ],
             [
-                'title' => 'Integrated',
-                'slug' => 'integrated',
+                'title' => FollowUpStatusEnum::INTEGRATED->value,
                 'color' => 'success',
                 'description' => 'Visitor is now integrated into the church/community.',
             ],
             [
-                'title' => 'Visiting',
-                'slug' => 'visiting',
+                'title' => FollowUpStatusEnum::VISITING->value,
                 'color' => 'primary',
                 'description' => 'Visitor is presently visiting (short-term).',
             ],
             [
-                'title' => 'Opt-out',
-                'slug' => 'opt-out',
+                'title' => FollowUpStatusEnum::OPT_OUT->value,
                 'color' => 'error',
                 'description' => 'Visitor has opted out of follow-ups.',
             ],
@@ -76,7 +68,7 @@ class FollowUpStatusSeeder extends Seeder
 
         foreach ($statuses as $s) {
             DB::table('follow_up_statuses')->updateOrInsert(
-                ['slug' => $s['slug']],
+                ['title' => $s['title']],
                 array_merge($s, ['created_at' => $now, 'updated_at' => $now])
             );
         }

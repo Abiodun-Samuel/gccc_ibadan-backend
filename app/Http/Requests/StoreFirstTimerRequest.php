@@ -25,7 +25,6 @@ class StoreFirstTimerRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'slug' => 'required|string',
             'phone_number' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255|unique:first_timers,email',
             'gender' => 'nullable|in:Male,Female,Other',

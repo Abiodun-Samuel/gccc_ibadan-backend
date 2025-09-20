@@ -30,7 +30,7 @@ class UserResource extends JsonResource
             'city_or_state' => $this->city_or_state,
             'units' => UnitResource::collection($this->whenLoaded('units')),
             'assignedFirstTimers' => $this->assignedFirstTimers,
-            'role' => $this->roles->pluck('name')->first(),
+            'role' => $this->roles->pluck('name'),
             'facebook' => $this->facebook,
             'instagram' => $this->instagram,
             'linkedin' => $this->linkedin,

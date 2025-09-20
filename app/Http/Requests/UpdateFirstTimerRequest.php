@@ -24,7 +24,6 @@ class UpdateFirstTimerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'slug' => 'required|string',
             'name' => 'sometimes|required|string|max:255',
             'phone_number' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255|unique:first_timers,email,' . $this->route('first_timer'),

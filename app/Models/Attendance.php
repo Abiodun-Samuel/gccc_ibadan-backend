@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class Attendance extends Model
 {
@@ -27,5 +29,10 @@ class Attendance extends Model
     public function service()
     {
         return $this->belongsTo(Service::class);
+    }
+    // Query scopes
+    public function scopeInPeriod(Builder $query, Carbon $startDate, Carbon $endDate): Builder
+    {
+        return $query->whereBetween('attendance_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
     }
 }

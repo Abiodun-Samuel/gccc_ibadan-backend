@@ -12,8 +12,7 @@ return new class extends Migration {
     {
         Schema::create('follow_up_statuses', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
-            $table->string('slug')->unique();
+            $table->string('title')->unique();
             $table->string('color');
             $table->text('description')->nullable();
             $table->timestamps();

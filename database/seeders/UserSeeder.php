@@ -1476,6 +1476,19 @@ class UserSeeder extends Seeder
             [
                 "first_name" => "Admin",
                 "last_name" => "admin",
+                "phone_number" => "string",
+                "email" => "string",
+                "gender" => "Male",
+                "address" => "",
+                "date_of_birth" => "",
+                "community" => "",
+                "worker" => "Yes",
+                "unit" => "",
+                "status" => ""
+            ],
+            [
+                "first_name" => "Admin",
+                "last_name" => "admin",
                 "phone_number" => 1503,
                 "email" => "admin@gmail.com",
                 "gender" => "Male",
@@ -1608,9 +1621,11 @@ class UserSeeder extends Seeder
             ]);
             // Assign roles
             if ($user->email === 'admin@gmail.com') {
-                $user->assignRole(UserRole::ADMIN->value);
+                $user->assignRole([UserRole::ADMIN->value, UserRole::MEMBER->value]);
             } elseif ($user->email === 'abiodunsamyemi@gmail.com') {
-                $user->assignRole(UserRole::LEADER->value);
+                $user->assignRole([UserRole::LEADER->value, UserRole::MEMBER->value]);
+            } elseif ($user->email === 'string') {
+                $user->assignRole([UserRole::ADMIN->value, UserRole::MEMBER->value]);
             } else {
                 $user->assignRole(UserRole::MEMBER->value);
             }

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UnitEnum;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -14,8 +15,16 @@ class FollowUpUnitSeeder extends Seeder
      */
     public function run(): void
     {
-        $unit = Unit::firstOrCreate(['name' => 'Follow-up'], ['description' => 'Members assigned to follow up visitors', 'slug' => 'follow-up']);
-        $media = Unit::firstOrCreate(['name' => 'Media'], ['description' => 'Media team', 'slug' => 'media']);
+        $unit = Unit::firstOrCreate(['name' => UnitEnum::FOLLOW_UP->value], ['description' => 'Members assigned to follow up visitors']);
+        Unit::Create(['name' => UnitEnum::MEDIA->value, 'description' => 'Media team']);
+        Unit::Create(['name' => UnitEnum::PRAYER->value, 'description' => '']);
+        Unit::Create(['name' => UnitEnum::WORSHIP->value, 'description' => '']);
+        Unit::Create(['name' => UnitEnum::WELFARE->value, 'description' => '']);
+        Unit::Create(['name' => UnitEnum::CHILDREN->value, 'description' => '']);
+        Unit::Create(['name' => UnitEnum::SOUND->value, 'description' => '']);
+        Unit::Create(['name' => UnitEnum::SANITATION->value, 'description' => '']);
+        Unit::Create(['name' => UnitEnum::USHERING->value, 'description' => '']);
+        Unit::Create(['name' => UnitEnum::FSP->value, 'description' => '']);
 
         $members = User::whereIn('email', [
             "olasunkanmi.gbadegesin@gmail.com",

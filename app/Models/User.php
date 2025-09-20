@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -77,13 +79,13 @@ class User extends Authenticatable
             ->withPivot(['is_leader', 'is_asst_leader'])
             ->withTimestamps();
     }
-    // public function leadingUnits()
-    // {
-    //     return $this->units()->wherePivot('is_leader', true);
-    // }
     public function assignedFirstTimers()
     {
         // where status is active
         return $this->hasMany(FirstTimer::class, 'assigned_to_member_id');
+    }
+    public function scopeInPeriod(Builder $query, Carbon $startDate, Carbon $endDate): Builder
+    {
+        return $query->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()]);
     }
 }

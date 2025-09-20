@@ -9,7 +9,7 @@ class FollowUpStatus extends Model
 {
     use HasFactory;
     public const DEFAULT_STATUS_ID = 6;
-    protected $fillable = ['title', 'slug', 'color', 'description'];
+    protected $fillable = ['title', 'color', 'description'];
 
     public function firstTimers()
     {
