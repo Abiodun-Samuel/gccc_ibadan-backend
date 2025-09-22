@@ -16,12 +16,12 @@ class AttendanceResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user_id' => $this->user->id,
-            'first_name' => $this->user->first_name,
-            'last_name' => $this->user->last_name,
-            'email' => $this->user->email,
-            'role' => $this->user->roles->pluck('name')->first(),
-            'phone_number' => $this->user->phone_number,
+            'user_id' => $this?->user?->id,
+            'first_name' => $this?->user?->first_name,
+            'last_name' => $this?->user?->last_name,
+            'email' => $this?->user?->email,
+            'role' => $this?->user?->roles->pluck('name')->first(),
+            'phone_number' => $this?->user?->phone_number,
             'service_name' => $this->service?->name,
             'attendance_date' => $this->attendance_date,
             'service_day_of_week' => $this->service?->day_of_week,

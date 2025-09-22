@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\FirstTimerController;
+use App\Http\Controllers\FormController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\TestController;
@@ -19,6 +20,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/admin/users/bulk-register', [AuthController::class, 'bulkRegister']);
 Route::get('/services', [ServiceController::class, 'index']);
 Route::post('/first-timers', [FirstTimerController::class, 'store']);
+Route::post('/forms', [FormController::class, 'store']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -36,6 +38,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // admins only
     Route::middleware(['role:' . UserRole::ADMIN->value . '|' . UserRole::SUPER_ADMIN->value])->group(function () {
+        // forms
+        Route::apiResource('forms', FormController::class)->except('store');
         // first timer
         Route::get('admin/first-timers/analytics', [AdminController::class, 'getFirstTimersAnalytics']);
         Route::get('admin/analytics', [AdminController::class, 'getAdminAnalytics']);

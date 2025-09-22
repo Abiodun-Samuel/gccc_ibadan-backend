@@ -17,7 +17,7 @@ class AttendanceController extends Controller
      */
     public function index()
     {
-        $attendance = Attendance::get();
+        $attendance = Attendance::with(['user', 'service'])->get();
         return $this->successResponse(AttendanceResource::collection($attendance), '', 200);
     }
 
