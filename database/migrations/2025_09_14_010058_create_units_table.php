@@ -13,7 +13,17 @@ return new class extends Migration {
         Schema::create('units', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->text('description')->nullable();
+
+            $table->foreignId('leader_id')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            $table->foreignId('assistant_leader_id')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
             $table->timestamps();
         });
     }

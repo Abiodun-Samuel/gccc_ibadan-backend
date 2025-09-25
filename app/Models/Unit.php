@@ -6,24 +6,43 @@ use Illuminate\Database\Eloquent\Model;
 
 class Unit extends Model
 {
-    protected $fillable = [
-        'name',
-        'description',
-    ];
+    protected $fillable = ['name', 'leader_id', 'assistant_leader_id'];
+    public function leader()
+    {
+        return $this->belongsTo(User::class, 'leader_id');
+    }
+
+    public function assistantLeader()
+    {
+        return $this->belongsTo(User::class, 'assistant_leader_id');
+    }
 
     public function members()
     {
-        return $this->belongsToMany(User::class)
-            ->withPivot('is_leader')
+        return $this->belongsToMany(User::class, 'unit_user')
             ->withTimestamps();
     }
 
-    public function leaders()
+    // Boot hooks to ensure consistency
+    protected static function booted(): void
     {
-        return $this->members()->wherePivot('is_leader', true);
+        static::saved(function (Unit $unit) {
+            $unit->syncLeaderAsMember();
+            $unit->syncAssistantLeaderAsMember();
+        });
     }
-    public function assistantLeaders()
+
+    protected function syncLeaderAsMember(): void
     {
-        return $this->members()->wherePivot('is_asst_leader', true);
+        if ($this->leader_id && !$this->members()->where('user_id', $this->leader_id)->exists()) {
+            $this->members()->attach($this->leader_id);
+        }
+    }
+
+    protected function syncAssistantLeaderAsMember(): void
+    {
+        if ($this->assistant_leader_id && !$this->members()->where('user_id', $this->assistant_leader_id)->exists()) {
+            $this->members()->attach($this->assistant_leader_id);
+        }
     }
 }

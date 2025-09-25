@@ -45,18 +45,12 @@ class StoreFirstTimerRequest extends FormRequest
             'pastorate_call' => 'nullable|string',
             'friend_family' => 'nullable|string',
             'how_did_you_learn' => 'nullable|string',
-            // 'week_ending' => 'nullable|date',
-            // 'follow_up_status_id' => 'nullable|exists:follow_up_statuses,id',
-            // 'assigned_to_member_id' => 'nullable|exists:users,id',
-            // 'assigned_at' => 'nullable|date',
         ];
     }
     public function messages(): array
     {
         return [
             'email.unique' => 'This email has already been registered as a first timer.',
-            // 'follow_up_status_id.exists' => 'Invalid follow-up status selected.',
-            // 'assigned_to_member_id.exists' => 'Invalid member assigned.',
         ];
     }
 }

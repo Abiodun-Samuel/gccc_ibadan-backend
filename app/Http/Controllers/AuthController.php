@@ -1,7 +1,9 @@
 <?php
 namespace App\Http\Controllers;
+use App\Enums\RoleEnum;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\UserRolePermissionService;
 use DB;
 use Illuminate\Http\Request;
 use Hash;
@@ -9,9 +11,12 @@ use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly UserRolePermissionService $service
+    ) {
+    }
     public function login(Request $request)
     {
-
         $credentials = $request->validate([
             'username' => 'required|string',  // phone or email
             'password' => 'required|string',
@@ -20,7 +25,7 @@ class AuthController extends Controller
         $loginField = filter_var($credentials['username'], FILTER_VALIDATE_EMAIL) ? 'email' : 'phone_number';
         $user = User::where($loginField, $credentials['username'])->first();
         if (!$user || !\Hash::check($credentials['password'], $user->password)) {
-            return $this->errorResponse(null, 'Invalid credentials', 401);
+            return $this->errorResponse(null, 'Invalid credentials', 422);
         }
         $user->load('units');
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -38,7 +43,7 @@ class AuthController extends Controller
             'address' => 'nullable|string',
             'date_of_birth' => 'nullable|date',
             'community' => 'nullable|string',
-            'worker' => 'nullable|in:Yes,No',
+            'worker' => 'nullable|string',
             'unit' => 'nullable|string',
             'status' => 'nullable|string',
         ]);
@@ -46,8 +51,7 @@ class AuthController extends Controller
         $validated['password'] = Hash::make($validated['phone_number']);
 
         $user = User::create($validated);
-        // Assign default role
-        $user->assignRole('member');
+        $this->service->assignRoleAndSyncPermissions($user, [RoleEnum::MEMBER->value]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
         $data = ['token' => $token, 'user' => new UserResource($user)];
@@ -75,7 +79,7 @@ class AuthController extends Controller
                     'password' => bcrypt($userData['phone_number']),
                 ]);
 
-                $user->assignRole('member');
+                $this->service->assignRoleAndSyncPermissions($user, [RoleEnum::MEMBER->value]);
 
                 $results[] = [
                     'id' => $user->id,
@@ -101,7 +105,7 @@ class AuthController extends Controller
     }
     public function me(Request $request)
     {
-        $user = $request->user();
+        $user = $request->user()->load('units');
         $data = new UserResource($user);
         return $this->successResponse(['user' => $data], 'user details', 200);
     }

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use Symfony\Component\HttpFoundation\Response;
+
 abstract class Controller
 {
-    protected function paginatedResponse($data, $message = null, $code = 200)
+    protected function paginatedResponse($data, $message = null, $code = Response::HTTP_OK)
     {
         $currentPage = $data->currentPage();
         $lastPage = $data->lastPage();
@@ -48,7 +50,7 @@ abstract class Controller
             $code
         );
     }
-    protected function successResponse($data, $message = null, $code = 200)
+    protected function successResponse($data, $message = null, $code = Response::HTTP_OK)
     {
         return response()->json([
             'status' => true,

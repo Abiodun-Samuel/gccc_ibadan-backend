@@ -2,151 +2,135 @@
 
 namespace App\Http\Controllers;
 
-use App\DTOs\MemberData;
 use App\Http\Requests\StoreMemberRequest;
 use App\Http\Requests\UpdateMemberRequest;
+use App\Http\Requests\BulkCreateMembersRequest;
+use App\Http\Requests\BulkUpdateMembersRequest;
 use App\Http\Resources\UserResource;
-use App\Models\User;
 use App\Services\MemberService;
-use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class MemberController extends Controller
 {
-    public function __construct(private MemberService $memberService)
-    {
-    }
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(Request $request)
-    {
-        $members = $this->memberService->listMembers(
-            perPage: $request->get('per_page', 15),
-            search: $request->get('search'),
-            sortBy: $request->get('sort_by', 'created_at'),
-            sortDir: $request->get('sort_dir', 'desc')
-        );
-
-        return $this->paginatedResponse(
-            UserResource::collection($members),
-            'Members fetched successfully'
-        );
+    public function __construct(
+        private readonly MemberService $memberService
+    ) {
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Display a listing of members
      */
-    public function store(StoreMemberRequest $request)
+    public function index(): JsonResponse
     {
-        $dto = MemberData::fromArray($request->validated());
-        $member = $this->memberService->createMember($dto)->load('units');
+        try {
+            $members = $this->memberService->getAllMembers();
 
-        return $this->successResponse(
-            new UserResource($member),
-            'Member created successfully',
-            201
-        );
+            return $this->successResponse(UserResource::collection($members), 'Members retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse(null, $e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
-     * Display the specified resource.
+     * Store a newly created member
      */
-    public function show(User $member)
+    public function store(StoreMemberRequest $request): JsonResponse
     {
-        $member->load('units');
-        return $this->successResponse(
-            new UserResource($member),
-            'Member details retrieved successfully'
-        );
+        try {
+            $member = $this->memberService->createMember($request->validated());
+            return $this->successResponse(new UserResource($member), 'Member created successfully', Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            return $this->errorResponse(null, 'Failed to create member', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
-     * Update the specified resource in storage.
+     * Display the specified member
      */
-    public function update(UpdateMemberRequest $request, User $member)
+    public function show(int $id): JsonResponse
     {
-        $dto = MemberData::fromArray($request->validated());
-        $updatedMember = $this->memberService->updateMember($member, $dto)->load('units');
-
-        return $this->successResponse(
-            new UserResource($updatedMember),
-            'Member updated successfully'
-        );
+        try {
+            $member = $this->memberService->findMember($id);
+            return $this->successResponse(new UserResource($member), 'Member retrieved successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->errorResponse(null, 'Member not found', Response::HTTP_NOT_FOUND);
+        } catch (\Exception $e) {
+            return $this->errorResponse(null, 'Member not found', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
-     * Bulk create or update members by email.
-     * Each record must contain an email.
+     * Update the specified member
      */
-    public function bulkUpsert(Request $request)
+    public function update(UpdateMemberRequest $request, int $id): JsonResponse
     {
-        $validated = $request->validate([
-            'members' => 'required|array|min:1',
-            'members.*.email' => 'required|email',
-            'members.*.first_name' => 'required|string|max:255',
-            'members.*.last_name' => 'required|string|max:255',
-            'members.*.phone_number' => 'nullable',
-            'members.*.gender' => 'nullable|string',
-            'members.*.address' => 'nullable|string|max:500',
-            'members.*.community' => 'nullable|string|max:255',
-            'members.*.worker' => 'nullable|string',
-            'members.*.status' => 'nullable|string',
-            'members.*.date_of_birth' => 'nullable|string',
-            'members.*.date_of_visit' => 'nullable|string',
-            'members.*.country' => 'nullable|string|max:255',
-            'members.*.city_or_state' => 'nullable|string|max:255',
-            'members.*.facebook' => 'nullable|url',
-            'members.*.instagram' => 'nullable|url',
-            'members.*.linkedin' => 'nullable|url',
-            'members.*.twitter' => 'nullable|url',
-            'members.*.password' => 'nullable|string|min:8',
-            // 'members.*.units' => 'nullable|array',
-            // 'members.*.units.*.id' => 'required_with:members.*.units|exists:units,id',
-            // 'members.*.units.*.is_leader' => 'boolean'
-        ]);
+        try {
+            $member = $this->memberService->findMember($id);
+            $updatedMember = $this->memberService->updateMember($member, $request->validated());
 
-        $result = $this->memberService->bulkUpsertMembers($validated['members']);
-
-        return $this->successResponse($result, 'Bulk member operation completed successfully');
-        //         {
-//   "members": [
-//     {
-//       "first_name": "John",
-//       "last_name": "Doe",
-//       "email": "john@example.com",
-//       "phone_number": "+2348000000001",
-//       "gender": "male",
-//       "community": "Downtown Parish",
-//       "status": "active",
-//       "units": [
-//         { "id": 1, "is_leader": false },
-//         { "id": 2, "is_leader": true }
-//       ]
-//     },
-//     {
-//       "first_name": "Jane",
-//       "last_name": "Smith",
-//       "email": "jane@example.com",
-//       "phone_number": "+2348000000002",
-//       "gender": "female",
-//       "community": "Central Parish",
-//       "status": "active",
-//       "units": [
-//         { "id": 3, "is_leader": false }
-//       ]
-//     }
-//   ]
-// }
+            return $this->successResponse(new UserResource($updatedMember), 'Member updated successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->errorResponse(null, 'Member not found', Response::HTTP_NOT_FOUND);
+        } catch (\Exception $e) {
+            return $this->errorResponse(null, 'Failed to update member', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
+    /**
+     * Remove the specified member
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        try {
+            $member = $this->memberService->findMember($id);
+            $this->memberService->deleteMember($member);
+
+            return $this->successResponse(null, 'Member deleted successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->errorResponse(null, 'Member not found', Response::HTTP_NOT_FOUND);
+        } catch (\Exception $e) {
+            return $this->errorResponse(null, 'Failed to delete member', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 
     /**
-     * Remove the specified resource from storage.
+     * Bulk create members
      */
-    public function destroy(User $member)
+    public function bulkCreate(BulkCreateMembersRequest $request): JsonResponse
     {
-        $this->memberService->deleteMember($member);
-        return $this->successResponse(null, 'Member deleted successfully');
+        try {
+            $results = $this->memberService->bulkCreateMembers($request->validated('members'));
+
+            $createdCount = count($results['created']);
+            $failedCount = count($results['failed']);
+            $totalProcessed = $results['total_processed'];
+
+            $message = "Bulk create completed. Created: {$createdCount}, Failed: {$failedCount}, Total processed: {$totalProcessed}";
+
+            return $this->successResponse($results, $message);
+        } catch (\Exception $e) {
+            return $this->errorResponse(null, 'Failed to bulk create members', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function bulkUpdate(BulkUpdateMembersRequest $request): JsonResponse
+    {
+        try {
+            $results = $this->memberService->bulkUpdateMembersByEmail($request->validated('members'));
+
+            $updatedCount = count($results['updated']);
+            $notFoundCount = count($results['not_found']);
+            $failedCount = count($results['failed']);
+            $totalProcessed = $results['total_processed'];
+
+            $message = "Bulk update completed. Updated: {$updatedCount}, Not found: {$notFoundCount}, Failed: {$failedCount}, Total processed: {$totalProcessed}";
+
+            return $this->successResponse($results, $message);
+        } catch (\Exception $e) {
+            return $this->errorResponse(null, 'Failed to bulk update members', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
 }

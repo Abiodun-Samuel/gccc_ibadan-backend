@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -13,9 +14,6 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles, HasApiTokens;
-    protected $guard_name = 'api';
-
-
     /**
      * The attributes that are mass assignable.
      *
@@ -63,20 +61,44 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'date_of_birth' => 'date',
         ];
     }
-    public function attendances()
+    public function getRolePermissions()
     {
-        return $this->hasMany(Attendance::class);
+        return $this->roles->flatMap(fn($role) => $role->permissions)->unique('id');
+    }
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class)->latest('attendance_date');
+    }
+    public function recentAttendances(int $days = 30): HasMany
+    {
+        return $this->attendances()
+            ->where('attendance_date', '>=', now()->subDays($days));
     }
     public function getFullNameAttribute()
     {
         return trim("{$this->first_name} {$this->last_name}");
     }
+
     public function units()
     {
-        return $this->belongsToMany(Unit::class)
-            ->withPivot(['is_leader', 'is_asst_leader'])
+        return $this->belongsToMany(Unit::class);
+    }
+    public function ledUnits()
+    {
+        return $this->hasMany(Unit::class, 'leader_id');
+    }
+
+    public function assistedUnits()
+    {
+        return $this->hasMany(Unit::class, 'assistant_leader_id');
+    }
+
+    public function memberUnits()
+    {
+        return $this->belongsToMany(Unit::class, 'unit_user')
             ->withTimestamps();
     }
     public function assignedFirstTimers()

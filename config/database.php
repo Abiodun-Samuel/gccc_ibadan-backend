@@ -59,7 +59,15 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                // just added
+                PDO::MYSQL_ATTR_INIT_COMMAND => 'SET sql_mode="STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"',
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_STRINGIFY_FETCHES => false,
             ]) : [],
+            // just added
+            'dump' => [
+                'dump_binary_path' => env('DB_DUMP_BINARY_PATH', 'mysqldump'),
+            ],
         ],
 
         'mariadb' => [
@@ -147,7 +155,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-database-'),
+            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')) . '-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
 

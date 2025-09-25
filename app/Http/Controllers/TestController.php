@@ -2,50 +2,52 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Http;
-use Illuminate\Http\Request;
+use App\Services\MailService;
 
 class TestController extends Controller
 {
+    protected MailService $mailService;
+
+    public function __construct(MailService $mailService)
+    {
+        $this->mailService = $mailService;
+    }
 
     public function index()
     {
-        $url = "https://api.zeptomail.com/v1.1/email";
-
-        $payload = [
+        $data = [
+            "mail_template_key" => "2d6f.63afa6f2690c5939.k1.78191f80-9993-11f0-98ed-525400d4bb1c.1997dc86978",
             "from" => [
-                "address" => "samyemidele@gmail.com", // Replace with a valid sender email
+                "address" => "admin@gcccibadan.org",
+                "name" => "Daphne from GCCC IBADAN"
             ],
             "to" => [
                 [
                     "email_address" => [
                         "address" => "abiodunsamyemi@gmail.com",
-                        "name" => "abiodun"
+                        "name" => "Daphne"
                     ]
                 ]
             ],
-            "subject" => "Test Email",
-            "htmlbody" => "<div><b> Test email sent successfully. </b></div>",
+            "merge_info" => [
+                "name" => "Daphne",
+            ]
         ];
 
-        $response = Http::withHeaders([
-            "accept" => "application/json",
-            "authorization" => "Zoho-enczapikey wSsVR60g8hf0W6wrzjWlIbw6zVhVUlL1F0su0VDw6HP0GPqUoMcywRDJAgKuFKQXFzZhETsSpLx6zh8JgToKiI5/y1gIDCiF9mqRe1U4J3x17qnvhDzDV2xakBWBJIkIxgtjnGNhEslu",
-            "cache-control" => "no-cache",
-            "content-type" => "application/json",
-        ])->post($url, $payload);
+        try {
+            $result = $this->mailService->sendEmail($data);
 
-        if ($response->failed()) {
             return response()->json([
-                'error' => 'Failed to send email',
-                'details' => $response->body()
+                'success' => true,
+                'message' => 'Email sent successfully',
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send email',
+                'error' => $e->getMessage()
             ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'data' => $response->json()
-        ]);
     }
-
 }

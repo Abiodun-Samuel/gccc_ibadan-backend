@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Status;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,18 +15,23 @@ return new class extends Migration {
             $table->id();
             $table->string('first_name');
             $table->string('last_name');
-            $table->string('email')->nullable();
+            $table->string('email')->unique();
             $table->string('phone_number')->nullable();
-            $table->string('gender')->nullable();
+            $table->enum('gender', ['Male', 'Female', 'Other'])->nullable();
+            $table->enum('worker', ['Yes', 'No',])->nullable();
+            $table->string('avatar')->nullable();
+            $table->enum('status', Status::values())->nullable()->index()->default(Status::ACTIVE->value);
             $table->string('address')->nullable();
-            $table->string('community')->nullable();
-            $table->enum('worker', ['Yes', 'No'])->default('No');
-            $table->string('unit')->nullable();
-            $table->string('status')->nullable();
+            $table->string('community')->nullable()->index();
+            $table->string('country')->nullable();
+            $table->string('city_or_state')->nullable();
+            $table->string('facebook')->nullable();
+            $table->string('instagram')->nullable();
+            $table->string('linkedin')->nullable();
+            $table->string('twitter')->nullable();
             $table->timestamp('email_verified_at')->nullable();
+            $table->date('date_of_birth')->nullable();
             $table->string('password');
-            $table->string('date_of_birth')->nullable();
-            $table->date('date_of_visit')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

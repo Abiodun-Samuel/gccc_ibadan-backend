@@ -14,10 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('unit_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->boolean('is_leader')->default(false);
-            $table->boolean('is_asst_leader')->default(false);
             $table->timestamps();
-
             $table->unique(['unit_id', 'user_id']);
         });
     }

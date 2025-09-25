@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Service extends Model
 {
@@ -20,8 +21,12 @@ class Service extends Model
             'service_date' => 'date',
         ];
     }
-    public function attendances()
+    public function attendances(): HasMany
     {
-        return $this->hasMany(Attendance::class);
+        return $this->hasMany(Attendance::class)->latest('attendance_date');
+    }
+    public function attendancesForDate(string $date): HasMany
+    {
+        return $this->attendances()->whereDate('attendance_date', $date);
     }
 }

@@ -14,9 +14,9 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('service_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->date('attendance_date')->nullable()->index(); // actual service day
+            $table->date('attendance_date')->nullable()->index();
             $table->enum('status', ['present', 'absent'])->default('absent')->index();
-            $table->enum('mode', ['onsite', 'online'])->nullable();
+            $table->enum('mode', ['onsite', 'online'])->nullable()->index();
             $table->unique(['user_id', 'service_id', 'attendance_date'], 'attendance_unique');
             $table->timestamps();
         });

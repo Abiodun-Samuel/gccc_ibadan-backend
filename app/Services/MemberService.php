@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\DTOs\MemberData;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -11,244 +11,230 @@ use Illuminate\Support\Facades\Hash;
 class MemberService
 {
     private const CACHE_KEY = 'members_list';
+    private const CACHE_TTL = 3600;
 
-    public function listMembers(
-        int $perPage = 15,
-        ?string $search = null,
-        string $sortBy = 'created_at',
-        string $sortDir = 'desc'
-    ) {
-        $query = User::with('units')
-            ->select([
-                'id',
-                'first_name',
-                'last_name',
-                'email',
-                'phone_number',
-                'gender',
-                'community',
-                'status',
-                'avatar',
-                'worker',
-                'created_at'
-            ]);
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone_number', 'like', "%{$search}%");
-            });
-        }
-
-        return $query->orderBy($sortBy, $sortDir)->paginate($perPage);
+    public function getAllMembers(): Collection
+    {
+        return User::with(['units', 'assignedFirstTimers', 'permissions'])->get();
         // return Cache::remember(
-        //     self::CACHE_KEY . ":{$perPage}:{$search}:{$sortBy}:{$sortDir}",
-        //     60,
-        //     function () use ($perPage, $search, $sortBy, $sortDir) {
-        //         $query = User::with('units')
-        //             ->select([
-        //                 'id',
-        //                 'first_name',
-        //                 'last_name',
-        //                 'email',
-        //                 'phone_number',
-        //                 'gender',
-        //                 'community',
-        //                 'status',
-        //                 'avatar',
-        //                 'worker',
-        //                 'created_at'
-        //             ]);
-
-        //         if ($search) {
-        //             $query->where(function ($q) use ($search) {
-        //                 $q->where('first_name', 'like', "%{$search}%")
-        //                     ->orWhere('last_name', 'like', "%{$search}%")
-        //                     ->orWhere('email', 'like', "%{$search}%")
-        //                     ->orWhere('phone_number', 'like', "%{$search}%");
-        //             });
-        //         }
-
-        //         return $query->orderBy($sortBy, $sortDir)->paginate($perPage);
-        //     }
+        //     self::CACHE_KEY,
+        //     self::CACHE_TTL,
+        //     fn() =>
         // );
     }
 
-    public function createMember(MemberData $data): User
+    public function findMember(int $id): User
+    {
+        return User::with(['units', 'assignedFirstTimers'])->findOrFail($id);
+    }
+
+    public function createMember(array $data): User
     {
         return DB::transaction(function () use ($data) {
             $member = User::create([
-                'first_name' => $data->first_name,
-                'last_name' => $data->last_name,
-                'email' => $data->email,
-                'phone_number' => $data->phone_number,
-                'gender' => $data->gender,
-                'avatar' => $data->avatar,
-                'address' => $data->address,
-                'community' => $data->community,
-                'worker' => $data->worker,
-                'status' => $data->status,
-                'date_of_birth' => $data->date_of_birth,
-                'date_of_visit' => $data->date_of_visit,
-                'country' => $data->country,
-                'city_or_state' => $data->city_or_state,
-                'facebook' => $data->facebook,
-                'instagram' => $data->instagram,
-                'linkedin' => $data->linkedin,
-                'twitter' => $data->twitter,
-                'password' => Hash::make($data->password),
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'email' => $data['email'],
+                'phone_number' => $data['phone_number'] ?? null,
+                'gender' => $data['gender'] ?? null,
+                'avatar' => $data['avatar'] ?? null,
+                'address' => $data['address'] ?? null,
+                'community' => $data['community'] ?? null,
+                'worker' => $data['worker'] ?? null,
+                'status' => $data['status'] ?? 'active',
+                'date_of_birth' => $data['date_of_birth'] ?? null,
+                'country' => $data['country'] ?? null,
+                'city_or_state' => $data['city_or_state'] ?? null,
+                'facebook' => $data['facebook'] ?? null,
+                'instagram' => $data['instagram'] ?? null,
+                'linkedin' => $data['linkedin'] ?? null,
+                'twitter' => $data['twitter'] ?? null,
+                'password' => Hash::make($data['password']),
             ]);
 
-            // Sync units
-            $unitData = array_fill_keys($data->unit_ids, ['is_leader' => false]);
-            foreach ($data->leader_unit_ids as $leaderUnitId) {
-                $unitData[$leaderUnitId] = ['is_leader' => true];
-            }
-            $member->units()->sync($unitData);
-
-            Cache::forget(self::CACHE_KEY);
-
-            return $member;
+            $this->clearCache();
+            return $member->load('units');
         });
     }
 
-    public function updateMember(User $member, MemberData $data): User
+    public function updateMember(User $member, array $data): User
     {
         return DB::transaction(function () use ($member, $data) {
-            $updateData = [
-                'first_name' => $data->first_name,
-                'last_name' => $data->last_name,
-                'email' => $data->email,
-                'phone_number' => $data->phone_number,
-                'avatar' => $data->avatar,
-                'gender' => $data->gender,
-                'address' => $data->address,
-                'community' => $data->community,
-                'worker' => $data->worker,
-                'status' => $data->status,
-                'date_of_birth' => $data->date_of_birth,
-                'date_of_visit' => $data->date_of_visit,
-                'country' => $data->country,
-                'city_or_state' => $data->city_or_state,
-                'facebook' => $data->facebook,
-                'instagram' => $data->instagram,
-                'linkedin' => $data->linkedin,
-                'twitter' => $data->twitter,
-            ];
+            $updateData = array_filter([
+                'first_name' => $data['first_name'] ?? null,
+                'last_name' => $data['last_name'] ?? null,
+                'email' => $data['email'] ?? null,
+                'phone_number' => $data['phone_number'] ?? null,
+                'gender' => $data['gender'] ?? null,
+                'avatar' => $data['avatar'] ?? null,
+                'address' => $data['address'] ?? null,
+                'community' => $data['community'] ?? null,
+                'worker' => $data['worker'] ?? null,
+                'status' => $data['status'] ?? null,
+                'date_of_birth' => $data['date_of_birth'] ?? null,
+                'country' => $data['country'] ?? null,
+                'city_or_state' => $data['city_or_state'] ?? null,
+                'facebook' => $data['facebook'] ?? null,
+                'instagram' => $data['instagram'] ?? null,
+                'linkedin' => $data['linkedin'] ?? null,
+                'twitter' => $data['twitter'] ?? null,
+            ], fn($value) => $value !== null);
 
-            if ($data->password) {
-                $updateData['password'] = Hash::make($data->password);
+            if (!empty($data['phone_number'])) {
+                $updateData['password'] = Hash::make($data['phone_number']);
             }
 
             $member->update($updateData);
 
-            // Sync units
-            $unitData = array_fill_keys($data->unit_ids, ['is_leader' => false]);
-            foreach ($data->leader_unit_ids as $leaderUnitId) {
-                $unitData[$leaderUnitId] = ['is_leader' => true];
-            }
-            $member->units()->sync($unitData);
-
-            Cache::forget(self::CACHE_KEY);
-
-            return $member->fresh();
+            $this->clearCache();
+            return $member->fresh('units');
         });
     }
 
-    public function bulkUpsertMembers(array $membersData): array
+    public function deleteMember(User $member): bool
     {
-        $created = 0;
-        $updated = 0;
-
-        DB::transaction(function () use ($membersData, &$created, &$updated) {
-            collect($membersData)->chunk(50)->each(function ($chunk) use (&$created, &$updated) {
-                foreach ($chunk as $data) {
-                    // Ensure each record has email
-                    if (empty($data['email'])) {
-                        continue; // skip invalid record
-                    }
-                    // Try to find existing member by email
-                    $member = User::where('email', $data['email'])->first();
-
-                    $dto = MemberData::fromArray($data);
-
-                    if ($member) {
-                        // Update existing member
-                        $this->upsertMember($dto, $member);
-                        $updated++;
-                    } else {
-                        // Create new member
-                        $this->upsertMember($dto);
-                        $created++;
-                    }
-                }
-            });
+        return DB::transaction(function () use ($member) {
+            $member->units()->detach();
+            $deleted = $member->delete();
+            $this->clearCache();
+            return $deleted;
         });
+    }
 
-        // Clear cached members listing
-        Cache::forget(self::CACHE_KEY);
-
-        return [
-            'created' => $created,
-            'updated' => $updated,
-            'total_processed' => $created + $updated,
+    public function bulkCreateMembers(array $membersData): array
+    {
+        $results = [
+            'created' => [],
+            'failed' => [],
+            'total_processed' => count($membersData),
         ];
-    }
 
-    public function upsertMember(MemberData $dto, ?User $existingMember = null): User
-    {
-        return DB::transaction(function () use ($dto, $existingMember) {
-            $member = $existingMember ?? new User();
+        DB::transaction(function () use ($membersData, &$results) {
+            foreach ($membersData as $index => $memberData) {
+                try {
+                    // Check for duplicate email
+                    if (User::where('email', $memberData['email'])->exists()) {
+                        $results['failed'][] = [
+                            'index' => $index,
+                            'email' => $memberData['email'],
+                            'error' => 'Email already exists'
+                        ];
+                        continue;
+                    }
 
-            $member->fill([
-                'first_name' => $dto->first_name,
-                'last_name' => $dto->last_name,
-                'email' => $dto->email,
-                'phone_number' => $dto->phone_number,
-                'gender' => $dto->gender,
-                'address' => $dto->address,
-                'community' => $dto->community,
-                'worker' => $dto->worker,
-                'status' => $dto->status,
-                'date_of_birth' => $dto->date_of_birth,
-                'date_of_visit' => $dto->date_of_visit,
-                'country' => $dto->country,
-                'city_or_state' => $dto->city_or_state,
-                'facebook' => $dto->facebook,
-                'instagram' => $dto->instagram,
-                'linkedin' => $dto->linkedin,
-                'twitter' => $dto->twitter,
-            ]);
+                    $member = User::create([
+                        'first_name' => $memberData['first_name'],
+                        'last_name' => $memberData['last_name'],
+                        'email' => $memberData['email'],
+                        'phone_number' => $memberData['phone_number'] ?? null,
+                        'gender' => $memberData['gender'] ?? null,
+                        'avatar' => $memberData['avatar'] ?? null,
+                        'address' => $memberData['address'] ?? null,
+                        'community' => $memberData['community'] ?? null,
+                        'worker' => $memberData['worker'] ?? false,
+                        'status' => $memberData['status'] ?? 'active',
+                        'date_of_birth' => $memberData['date_of_birth'] ?? null,
+                        'country' => $memberData['country'] ?? null,
+                        'city_or_state' => $memberData['city_or_state'] ?? null,
+                        'facebook' => $memberData['facebook'] ?? null,
+                        'instagram' => $memberData['instagram'] ?? null,
+                        'linkedin' => $memberData['linkedin'] ?? null,
+                        'twitter' => $memberData['twitter'] ?? null,
+                        'password' => Hash::make($memberData['phone_number']),
+                    ]);
 
-            // Set password only on create or when explicitly given
-            if (!empty($dto->phone_number)) {
-                $member->password = bcrypt($dto->phone_number);
+                    $results['created'][] = [
+                        'index' => $index,
+                        'id' => $member->id,
+                        'email' => $member->email
+                    ];
+
+                } catch (\Exception $e) {
+                    $results['failed'][] = [
+                        'index' => $index,
+                        'email' => $memberData['email'] ?? 'unknown',
+                        'error' => $e->getMessage()
+                    ];
+                }
             }
-
-            $member->save();
-
-            // Sync units if provided
-            // if (!empty($dto->units)) {
-            //     $syncData = collect($dto->units)->mapWithKeys(function ($unit) {
-            //         return [
-            //             $unit['id'] => ['is_leader' => $unit['is_leader'] ?? false],
-            //         ];
-            //     });
-            //     $member->units()->sync($syncData);
-            // }
-
-            // return $member->load('units');
         });
+
+        $this->clearCache();
+        return $results;
     }
 
-
-
-    public function deleteMember(User $member): void
+    public function bulkUpdateMembersByEmail(array $membersData): array
     {
-        $member->units()->detach();
-        $member->delete();
+        $results = [
+            'updated' => [],
+            'not_found' => [],
+            'failed' => [],
+            'total_processed' => count($membersData),
+        ];
+
+        DB::transaction(function () use ($membersData, &$results) {
+            foreach ($membersData as $index => $memberData) {
+                try {
+                    $member = User::where('id', $memberData['id'])->first();
+
+                    if (!$member) {
+                        $results['not_found'][] = [
+                            'index' => $index,
+                            'id' => $memberData['id'],
+                        ];
+                        continue;
+                    }
+
+                    $updateData = array_filter([
+                        'first_name' => $memberData['first_name'] ?? null,
+                        'email' => $memberData['email'],
+                        'last_name' => $memberData['last_name'] ?? null,
+                        'phone_number' => $memberData['phone_number'] ?? null,
+                        'gender' => $memberData['gender'] ?? null,
+                        'avatar' => $memberData['avatar'] ?? null,
+                        'address' => $memberData['address'] ?? null,
+                        'community' => $memberData['community'] ?? null,
+                        'worker' => $memberData['worker'],
+                        'status' => $memberData['status'] ?? null,
+                        'date_of_birth' => $memberData['date_of_birth'] ?? null,
+                        'country' => $memberData['country'],
+                        'city_or_state' => $memberData['city_or_state'] ?? null,
+                        'facebook' => $memberData['facebook'] ?? null,
+                        'instagram' => $memberData['instagram'] ?? null,
+                        'linkedin' => $memberData['linkedin'] ?? null,
+                        'twitter' => $memberData['twitter'] ?? null,
+                    ], fn($value) => $value !== null);
+
+                    if (!empty($memberData['phone_number'])) {
+                        $updateData['password'] = Hash::make($memberData['phone_number']);
+                    }
+
+                    if (!empty($updateData)) {
+                        $member->update($updateData);
+                    }
+
+                    $results['updated'][] = [
+                        'index' => $index,
+                        'id' => $member->id,
+                        'email' => $member->email
+                    ];
+
+                } catch (\Exception $e) {
+                    $results['failed'][] = [
+                        'index' => $index,
+                        'email' => $memberData['email'] ?? 'unknown',
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+        });
+
+        $this->clearCache();
+        return $results;
+    }
+
+    private function clearCache(): void
+    {
         Cache::forget(self::CACHE_KEY);
     }
 }

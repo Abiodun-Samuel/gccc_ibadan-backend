@@ -14,12 +14,24 @@ class UnitResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $user = $request->user();
+        $isLeader = $this->leader_id === $user?->id;
+        $isAssistantLeader = $this->assistant_leader_id === $user?->id;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'description' => $this->description,
-            'is_leader' => (bool) $this->pivot?->is_leader,
-            'is_asst_leader' => (bool) $this->pivot?->is_asst_leader,
+
+            'leader_id' => $this->leader_id,
+            'assistant_leader_id' => $this->assistant_leader_id,
+
+            'isLeader' => $isLeader,
+            'isAssistantLeader' => $isAssistantLeader,
+            'isMember' =>
+                $isLeader ||
+                $isAssistantLeader ||
+                $this->members->contains($user?->id),
+
             'created_at' => $this->created_at?->toDateTimeString(),
             'updated_at' => $this->updated_at?->toDateTimeString(),
         ];

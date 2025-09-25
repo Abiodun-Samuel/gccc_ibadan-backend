@@ -12,12 +12,12 @@ return new class extends Migration {
     {
         Schema::create('services', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // e.g. Sunday Service
-            $table->longText('description')->nullable(); // e.g. Sunday Service
-            $table->string('day_of_week')->nullable(); // e.g. sunday, tuesday, friday
-            $table->time('start_time');
+            $table->string('name')->index();
+            $table->longText('description')->nullable();
+            $table->string('day_of_week')->index()->nullable();
+            $table->time('start_time')->index()->nullable();
             $table->boolean('is_recurring')->default(true);
-            $table->date('service_date')->nullable(); // for custom services
+            $table->date('service_date')->index()->nullable();
             $table->timestamps();
         });
     }
