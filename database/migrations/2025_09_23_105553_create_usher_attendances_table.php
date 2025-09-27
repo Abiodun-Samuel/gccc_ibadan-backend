@@ -12,10 +12,10 @@ return new class extends Migration {
     {
         Schema::create('usher_attendances', function (Blueprint $table) {
             $table->id();
-            $table->unsignedInteger('male');
-            $table->unsignedInteger('female');
-            $table->unsignedInteger('children');
-            $table->unsignedInteger('total_attendance');
+            $table->unsignedInteger('male')->index();
+            $table->unsignedInteger('female')->index();
+            $table->unsignedInteger('children')->index();
+            $table->unsignedInteger('total_attendance')->index();
             $table->date('service_date')->index();
             $table->string('service_day')->index();
             $table->string('service_day_desc')->nullable();

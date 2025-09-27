@@ -26,7 +26,7 @@ class UpdateFirstTimerRequest extends FormRequest
         return [
             'name' => 'sometimes|required|string|max:255',
             'phone_number' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255|unique:first_timers,email,' . $this->route('first_timer'),
+            'email' => 'nullable|email|max:255',
             'gender' => 'nullable|in:Male,Female,Other',
             'located_in_ibadan' => 'nullable|boolean',
             'interest' => 'nullable|in:Yes,No,Maybe',

@@ -2,38 +2,36 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\FollowUpStatusEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreFirstTimerRequest;
-use App\Http\Requests\UpdateFirstTimerRequest;
 use App\Http\Resources\FirstTimerResource;
 use App\Models\FirstTimer;
-use App\Models\FirstTimerFollowUp;
 use App\Models\FollowUpStatus;
-use App\Services\FirstTimerFollowupService;
+use App\Services\FirstTimerService;
+use Cache;
+use DB;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class FirstTimerController extends Controller
 {
-    public $followupService;
-    public function __construct(FirstTimerFollowupService $followupService)
+    public $firstTimerService;
+    public function __construct(FirstTimerService $firstTimerService)
     {
-        $this->followupService = $followupService;
+        $this->firstTimerService = $firstTimerService;
     }
 
-    public function index(Request $request)
+    public function index()
     {
         $firstTimers = FirstTimer::with(['followUpStatus', 'assignedTo'])->orderBy('date_of_visit', 'desc')->get();
-        return $this->successResponse(
-            FirstTimerResource::collection($firstTimers),
-            'First timers retrieved successfully',
-            Response::HTTP_OK
-        );
+        return $this->successResponse(FirstTimerResource::collection($firstTimers), 'First timers retrieved successfully', Response::HTTP_OK);
     }
+
     public function store(StoreFirstTimerRequest $request)
     {
         $data = $request->validated();
-        $followupMember = $this->followupService->findLeastLoadedFollowupMember($data['gender']);
+        $followupMember = $this->firstTimerService->findLeastLoadedFollowupMember($data['gender']);
 
         $firstTimer = FirstTimer::create(array_merge($data, [
             'assigned_to_member_id' => optional($followupMember)->id,
@@ -45,98 +43,127 @@ class FirstTimerController extends Controller
         return $this->successResponse($firstTimer, 'First timer created successfully', Response::HTTP_CREATED);
     }
 
-    public function show(FirstTimer $firstTimer)
-    {
-        return $this->successResponse(
-            new FirstTimerResource($firstTimer),
-            'First timer retrieved successfully'
-        );
-    }
-    public function update(UpdateFirstTimerRequest $request, FirstTimer $firstTimer)
-    {
-        $firstTimer->update($request->validated());
-        return $this->successResponse(
-            new FirstTimerResource($firstTimer->load(['followUpStatus', 'assignedTo', 'followupNotes'])),
-            'First timer updated successfully',
-            201
-        );
-    }
-    public function destroy(FirstTimer $firstTimer)
-    {
-        $firstTimer->delete();
-
-        return $this->successResponse(
-            null,
-            'First timer deleted successfully'
-        );
-    }
-    public function assignFollowup(FirstTimer $firstTimer)
-    {
-        $candidate = $this->followupService->findLeastLoadedFollowupMember($firstTimer);
-
-        if (!$candidate) {
-            return $this->errorResponse(null, 'No eligible follow-up member found or Follow-up unit missing', 422);
-        }
-
-        $firstTimer->assigned_to_member_id = $candidate->id;
-        $firstTimer->save();
-
-        return $this->successResponse(new FirstTimerResource($firstTimer->load('followUpStatus', 'assignedTo')), 'Assigned follow-up member successfully');
-    }
-    public function unassignFollowup(FirstTimer $firstTimer)
-    {
-        $this->followupService->unassign($firstTimer);
-        return $this->successResponse(new FirstTimerResource($firstTimer->fresh()->load('followUpStatus', 'assignedTo')), 'Unassigned follow-up member');
-    }
-    public function setFollowupStatus(Request $request, FirstTimer $firstTimer)
+    public function setFollowupStatus(Request $request)
     {
         $payload = $request->validate([
-            'status' => ['nullable', 'string'],
-            'status_id' => ['nullable', 'integer', 'exists:follow_up_statuses,id'],
+            'first_timer_ids' => ['required', 'array'],
+            'first_timer_ids.*' => ['integer', 'exists:first_timers,id'],
+            'status_id' => ['required', 'integer', 'exists:follow_up_statuses,id'],
         ]);
 
-        if (!empty($payload['status'])) {
-            $status = FollowUpStatus::where('title', $payload['status'])->first();
-            if (!$status) {
-                return $this->errorResponse(null, 'Status not found', 404);
+        FirstTimer::whereIn('id', $payload['first_timer_ids'])
+            ->update(['follow_up_status_id' => $payload['status_id']]);
+
+        $updatedFirstTimers = FirstTimer::with('followUpStatus', 'assignedTo')
+            ->whereIn('id', $payload['first_timer_ids'])
+            ->get();
+
+        return $this->successResponse(FirstTimerResource::collection($updatedFirstTimers), 'Statuses updated successfully', Response::HTTP_OK);
+    }
+
+    // Admin
+    public function getFirstTimersAnalytics(Request $request)
+    {
+        $year = (int) $request->query('year', now()->year);
+        $cacheKey = "first_timers_analytics_{$year}";
+        $data = Cache::remember($cacheKey, now()->addDay(), function () use ($year) {
+            // Predefine month names
+            $monthNames = [
+                1 => 'January',
+                2 => 'February',
+                3 => 'March',
+                4 => 'April',
+                5 => 'May',
+                6 => 'June',
+                7 => 'July',
+                8 => 'August',
+                9 => 'September',
+                10 => 'October',
+                11 => 'November',
+                12 => 'December',
+            ];
+
+            // Fetch all statuses once (id => title)
+            $statuses = FollowUpStatus::pluck('title', 'id');
+
+            // Fetch the ID for "Integrated" status
+            $integratedStatusId = FollowUpStatus::where('title', FollowUpStatusEnum::INTEGRATED->value)->value('id');
+
+            /**
+             * Optimized single query:
+             * - Get total counts
+             * - Get integrated counts
+             * - Group by month + follow_up_status_id
+             */
+            $results = DB::table('first_timers')
+                ->selectRaw('
+                MONTH(date_of_visit) as month,
+                follow_up_status_id,
+                COUNT(*) as total,
+                SUM(CASE WHEN follow_up_status_id = ? THEN 1 ELSE 0 END) as integrated_count
+            ', [$integratedStatusId])
+                ->whereYear('date_of_visit', $year)
+                ->groupBy(DB::raw('MONTH(date_of_visit), follow_up_status_id'))
+                ->get();
+
+            /**
+             * Initialize data structures
+             */
+            $statusPerMonth = [];
+            $monthlyTotals = array_fill(1, 12, 0);
+            $monthlyIntegrated = array_fill(1, 12, 0);
+
+            // Initialize rows for each month
+            foreach (range(1, 12) as $month) {
+                $statusRow = ['month' => $monthNames[$month]];
+                foreach ($statuses as $statusTitle) {
+                    $statusRow[$statusTitle] = 0;
+                }
+                $statusPerMonth[$month] = $statusRow;
             }
-        } else {
-            $status = FollowUpStatus::find($payload['status_id']);
-        }
 
-        $firstTimer->follow_up_status_id = $status->id;
-        $firstTimer->save();
+            /**
+             * Fill structures with DB data
+             */
+            foreach ($results as $row) {
+                $month = (int) $row->month;
 
-        return $this->successResponse(new FirstTimerResource($firstTimer->fresh()->load('followUpStatus', 'assignedTo')), 'Status updated');
-    }
-    public function addFollowupNote(Request $request, $id)
-    {
-        $firstTimer = FirstTimer::findOrFail($id);
-        $payload = $request->validate([
-            'note' => 'required|string',
-        ]);
+                // Update totals
+                $monthlyTotals[$month] += $row->total;
 
-        $user = $request->user();
-        // authorization: admin OR leader of followup unit OR assigned followup member
-        $isAdmin = $user->hasRole('admin');
-        $isAssigned = $firstTimer->assigned_to_member_id && $firstTimer->assigned_to_member_id == $user->id;
+                // Update integrated totals
+                if ($row->follow_up_status_id == $integratedStatusId) {
+                    $monthlyIntegrated[$month] += $row->total;
+                }
 
-        $isLeader = $user->leadingUnits()->where('units.name', 'Followup')->exists();
+                // Update per-status count
+                $statusTitle = $statuses[$row->follow_up_status_id] ?? 'Unknown';
+                $statusPerMonth[$month][$statusTitle] = (int) $row->total;
+            }
 
-        if (!($isAdmin || $isAssigned || $isLeader)) {
-            return $this->errorResponse(null, 'Not authorized to add follow-up notes', 403);
-        }
-        $note = FirstTimerFollowUp::create([
-            'first_timer_id' => $firstTimer->id,
-            'user_id' => $user->id,
-            'note' => $payload['note'],
-        ]);
-        return $this->successResponse($note, 'Follow-up note added', 201);
-    }
-    public function listFollowupNotes($id)
-    {
-        $firstTimer = FirstTimer::findOrFail($id);
-        $notes = $firstTimer->followupNotes()->with('user:id,first_name,last_name,email')->orderBy('created_at', 'desc')->get();
-        return $this->successResponse($notes, 'Follow-up notes retrieved');
+            $totalFirstTimers = [];
+            $integratedFirstTimers = [];
+
+            foreach (range(1, 12) as $month) {
+                $totalFirstTimers[] = [
+                    'month' => $monthNames[$month],
+                    'count' => $monthlyTotals[$month],
+                ];
+
+                $integratedFirstTimers[] = [
+                    'month' => $monthNames[$month],
+                    'count' => $monthlyIntegrated[$month],
+                ];
+            }
+
+            return [
+                'year' => $year,
+                'statusesPerMonth' => array_values($statusPerMonth),
+                'totalFirstTimers' => $totalFirstTimers,
+                'integratedFirstTimers' => $integratedFirstTimers,
+            ];
+        });
+
+        return $this->successResponse($data, 'First timers analytics retrieved successfully', Response::HTTP_OK);
     }
 }

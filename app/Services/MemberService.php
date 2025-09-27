@@ -15,12 +15,11 @@ class MemberService
 
     public function getAllMembers(): Collection
     {
-        return User::with(['units', 'assignedFirstTimers', 'permissions'])->get();
-        // return Cache::remember(
-        //     self::CACHE_KEY,
-        //     self::CACHE_TTL,
-        //     fn() =>
-        // );
+        return Cache::remember(
+            self::CACHE_KEY,
+            self::CACHE_TTL,
+            fn() => User::with(['units', 'assignedFirstTimers', 'permissions'])->get()
+        );
     }
 
     public function findMember(int $id): User

@@ -14,12 +14,14 @@ class Form extends Model
         'type',
         'name',
         'phone_number',
+        'isCompleted',
         'wants_to_share_testimony',
         'content',
     ];
 
     protected $casts = [
         'wants_to_share_testimony' => 'boolean',
+        'isCompleted' => 'boolean',
         'type' => FormTypeEnum::class,
     ];
 }

@@ -38,7 +38,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(fn(NotFoundHttpException $e, $request) => response()->json([
             'success' => false,
-            'message' => $e->getMessage() ?: 'No record found for the requested resource.',
+            'message' => 'No record found for the requested resource.',
+            // 'message' => $e->getMessage() ?: 'No record found for the requested resource.',
             'data' => null,
         ], 404));
 

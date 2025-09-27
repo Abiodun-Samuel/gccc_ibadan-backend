@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -20,11 +21,9 @@ class UsherAttendance extends Model
     ];
     protected $casts = [
         'service_date' => 'date',
+        'male' => 'integer',
+        'female' => 'integer',
+        'children' => 'integer',
+        'total_attendance' => 'integer',
     ];
-    protected static function booted(): void
-    {
-        static::saving(function ($attendance) {
-            $attendance->total_attendance = $attendance->male + $attendance->female + $attendance->children;
-        });
-    }
 }

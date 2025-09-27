@@ -18,10 +18,12 @@ class FormFactory extends Factory
     public function definition(): array
     {
         $type = $this->faker->randomElement(FormTypeEnum::values());
+        $isCompleted = $this->faker->randomElement([true, false]);
 
         return [
             'type' => $type,
             'name' => $type === FormTypeEnum::TESTIMONY->value ? $this->faker->name() : null,
+            'isCompleted' => $isCompleted,
             'phone_number' => $type === FormTypeEnum::TESTIMONY->value ? $this->faker->phoneNumber() : null,
             'wants_to_share_testimony' => $type === FormTypeEnum::TESTIMONY->value ? $this->faker->boolean() : null,
             'content' => $this->faker->paragraph(),

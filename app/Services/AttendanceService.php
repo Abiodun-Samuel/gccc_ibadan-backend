@@ -266,82 +266,63 @@ class AttendanceService
             Cache::forget($pattern);
         }
     }
-    public function getUserMonthlyStreak(User $user, Carbon $month): array
+
+    /**
+     * Get monthly attendance statistics (average or total).
+     *
+     * @param string $mode  avg|total
+     * @param int|null $year optional year filter
+     * @return array
+     */
+    public function getMonthlyStats(string $mode = 'avg', ?int $year = null): array
     {
-        $startOfMonth = $month->copy()->startOfMonth();
-        $endOfMonth = $month->copy()->endOfMonth();
+        $aggregates = [
+            'avg' => 'ROUND(AVG(male),2) as male, ROUND(AVG(female),2) as female, ROUND(AVG(children),2) as children',
+            'total' => 'SUM(male) as male, SUM(female) as female, SUM(children) as children',
+        ];
 
-        // 1. Get all services
-        $services = Service::all();
-
-        // 2. Generate service occurrences for the month
-        $occurrences = collect();
-
-        foreach ($services as $service) {
-            if ($service->is_recurring) {
-                // recurring: generate all days matching `day_of_week`
-                $dayName = strtolower($service->day_of_week);
-                $date = $startOfMonth->copy()->next($dayName); // first occurrence in month
-
-                while ($date->lte($endOfMonth)) {
-                    $occurrences->push([
-                        'service_id' => $service->id,
-                        'date' => $date->copy(),
-                    ]);
-                    $date->addWeek();
-                }
-            } else {
-                // custom: add if within month
-                if (
-                    $service->service_date &&
-                    Carbon::parse($service->service_date)->between($startOfMonth, $endOfMonth)
-                ) {
-                    $occurrences->push([
-                        'service_id' => $service->id,
-                        'date' => Carbon::parse($service->service_date),
-                    ]);
-                }
-            }
+        if (!isset($aggregates[$mode])) {
+            throw new \InvalidArgumentException('Invalid mode. Use avg or total.');
         }
 
-        // Sort by date
-        $occurrences = $occurrences->sortBy('date')->values();
+        $query = DB::table('usher_attendances')
+            ->selectRaw("
+                YEAR(service_date) as year,
+                MONTH(service_date) as month_num,
+                DATE_FORMAT(MIN(service_date), '%b') as month_label,
+                {$aggregates[$mode]}
+            ");
 
-        if ($occurrences->isEmpty()) {
+        if ($year) {
+            $query->whereYear('service_date', $year);
+        }
+
+        $results = $query
+            ->groupBy(DB::raw("YEAR(service_date), MONTH(service_date)"))
+            ->orderBy(DB::raw("YEAR(service_date), MONTH(service_date)"))
+            ->get();
+
+        $dataset = $results->map(function ($row) {
             return [
-                'longest_streak' => 0,
-                'current_streak' => 0,
+                'year' => (int) $row->year,
+                'month' => $row->month_label,
+                'monthNum' => (int) $row->month_num,
+                'male' => (float) $row->male,
+                'female' => (float) $row->female,
+                'children' => (float) $row->children,
             ];
-        }
+        });
 
-        // 3. Get user attendance for these services
-        $attendance = Attendance::query()
-            ->where('user_id', $user->id)
-            ->whereBetween('attendance_date', [$startOfMonth, $endOfMonth])
-            ->where('status', 'present')
-            ->get()
-            ->mapWithKeys(fn($att) => [
-                $att->service_id . '_' . Carbon::parse($att->attendance_date)->toDateString() => true
-            ]);
-
-        // 4. Walk through occurrences and calculate streaks
-        $longestStreak = 0;
-        $currentStreak = 0;
-
-        foreach ($occurrences as $occurrence) {
-            $key = $occurrence['service_id'] . '_' . $occurrence['date']->toDateString();
-
-            if ($attendance->has($key)) {
-                $currentStreak++;
-                $longestStreak = max($longestStreak, $currentStreak);
-            } else {
-                $currentStreak = 0;
-            }
-        }
+        $series = [
+            ['type' => 'bar', 'xKey' => 'month', 'yKey' => 'male', 'yName' => 'Male'],
+            ['type' => 'bar', 'xKey' => 'month', 'yKey' => 'female', 'yName' => 'Female'],
+            ['type' => 'bar', 'xKey' => 'month', 'yKey' => 'children', 'yName' => 'Children'],
+        ];
 
         return [
-            'longest_streak' => $longestStreak,
-            'current_streak' => $currentStreak,
+            'dataset' => $dataset,
+            'series' => $series,
+            'mode' => $mode,
         ];
     }
 }

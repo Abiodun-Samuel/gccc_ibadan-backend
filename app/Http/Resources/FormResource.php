@@ -20,6 +20,7 @@ class FormResource extends JsonResource
             'name' => $this->name,
             'phone_number' => $this->phone_number,
             'wants_to_share_testimony' => $this->wants_to_share_testimony,
+            'isCompleted' => $this->isCompleted,
             'content' => $this->content,
             'created_at' => $this->created_at->toDateTimeString(),
             'updated_at' => $this->updated_at->toDateTimeString(),

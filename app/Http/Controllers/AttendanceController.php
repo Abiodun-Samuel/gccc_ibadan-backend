@@ -11,6 +11,7 @@ use App\Services\AttendanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Symfony\Component\HttpFoundation\Response;
 
 class AttendanceController extends Controller
 {
@@ -107,11 +108,16 @@ class AttendanceController extends Controller
         );
     }
 
-    public function attendanceAnalytics(Request $request)
+    public function getAdminAttendanceMonthlyStats(Request $request)
     {
-        $user = $request->user();
-        $month = Carbon::create(2025, 8, 1);
-        $userMonthlyStreak = $this->attendanceService->getUserMonthlyStreak($user, $month);
-        return $this->successResponse($userMonthlyStreak, '');
+        $mode = $request->get('mode', 'avg'); // avg | total
+        $year = $request->get('year', 2025);        // optional
+
+        try {
+            $data = $this->attendanceService->getMonthlyStats($mode, $year);
+            return $this->successResponse($data, '');
+        } catch (\InvalidArgumentException $e) {
+            return $this->successResponse(null, $e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }
