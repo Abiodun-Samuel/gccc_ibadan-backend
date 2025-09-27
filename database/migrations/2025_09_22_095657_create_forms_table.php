@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->id();
             $table->enum('type', FormTypeEnum::values())->index();
             $table->string('name')->nullable()->index();
-            $table->boolean('isCompleted')->nullable()->default(false)->index();
+            $table->boolean('is_completed')->nullable()->default(false)->index();
             $table->string('phone_number', 20)->nullable()->index();
             $table->boolean('wants_to_share_testimony')->nullable();
             $table->longText('content');

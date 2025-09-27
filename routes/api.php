@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\FollowUpStatusController;
 use App\Http\Controllers\PermissionController;
+use App\Models\Form;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ServiceController;
@@ -22,6 +23,7 @@ Route::middleware('guest')->group(function () {
     Route::post('first-timers', [FirstTimerController::class, 'store']);
     Route::post('forms', [FormController::class, 'store']);
 });
+
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -43,8 +45,8 @@ Route::middleware('auth:sanctum')->group(function () {
             // Forms
             Route::prefix('forms')->controller(FormController::class)->group(function () {
                 Route::get('/', 'index');
-                Route::put('/completed', 'markCompleted');
-                Route::delete('{form}', 'destroy');
+                Route::delete('/', 'destroy');
+                Route::patch('/completed', 'markAsCompleted');
             });
         });
 });

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Responses\ApiErrorResponse;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 abstract class Controller
 {
-    protected function paginatedResponse($data, $message = null, $code = Response::HTTP_OK)
+    protected function paginatedResponse($data, $message = null, $code = Response::HTTP_OK): JsonResponse
     {
         $currentPage = $data->currentPage();
         $lastPage = $data->lastPage();
@@ -50,7 +52,7 @@ abstract class Controller
             $code
         );
     }
-    protected function successResponse($data, $message = null, $code = Response::HTTP_OK)
+    protected function successResponse($data, $message = null, $code = Response::HTTP_OK): JsonResponse
     {
         return response()->json([
             'status' => true,
@@ -58,12 +60,17 @@ abstract class Controller
             'data' => $data
         ], $code);
     }
-    protected function errorResponse($data = null, $message = null, $code)
+
+    protected function errorResponse(string $message, int $code = 500): JsonResponse
     {
-        return response()->json([
-            'status' => false,
-            'message' => $message,
-            'data' => $data
-        ], $code);
+        return ApiErrorResponse::create($message, $code);
     }
+    // protected function errorResponse($data = null, $message = null, $code)
+    // {
+    //     return response()->json([
+    //         'status' => false,
+    //         'message' => $message,
+    //         'data' => $data
+    //     ], $code);
+    // }
 }
