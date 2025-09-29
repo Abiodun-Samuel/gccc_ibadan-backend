@@ -27,7 +27,13 @@ class AuthController extends Controller
         if (!$user || !\Hash::check($credentials['password'], $user->password)) {
             return $this->errorResponse('Invalid credentials', 422);
         }
-        $user->load('units');
+        $user->load([
+            'units',
+            'ledUnits',
+            'assistedUnits',
+            'memberUnits',
+            'assignedFirstTimers',
+        ]);
         $token = $user->createToken('auth_token')->plainTextToken;
         $data = ['token' => $token, 'user' => new UserResource($user)];
         return $this->successResponse($data, 'Logged in successfully', 200);

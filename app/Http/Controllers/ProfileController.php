@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Requests\UploadAvatarRequest;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class ProfileController extends Controller
 {
@@ -17,12 +19,20 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $user->update($request->validated());
+        $user->fresh();
 
-        return response()->json([
-            'message' => 'Profile updated successfully',
-            'data' => $user->fresh()
+        $user->load([
+            'units',
+            'ledUnits',
+            'assistedUnits',
+            'memberUnits',
+            'assignedFirstTimers',
         ]);
+
+        $data = ['user' => new UserResource($user)];
+        return $this->successResponse($data, 'Profile updated successfully', Response::HTTP_OK);
     }
+
     public function uploadAvatar(UploadAvatarRequest $request): JsonResponse
     {
         $user = $request->user();
