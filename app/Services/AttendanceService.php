@@ -152,7 +152,7 @@ class AttendanceService
         $serviceId = $data['service_id'];
         $attendanceDate = Carbon::parse($data['date'], self::TIMEZONE)->toDateString();
 
-        return Attendance::with('user:id,first_name,last_name,email,phone_number')
+        return Attendance::with('user:id,first_name,last_name,email,phone_number', 'service')
             ->where('service_id', $serviceId)
             ->whereDate('attendance_date', $attendanceDate)
             ->where('status', 'absent')
@@ -213,7 +213,7 @@ class AttendanceService
      */
     private function upsertAttendance(array $data): Attendance
     {
-        return Attendance::updateOrCreate(
+        $attendance = Attendance::updateOrCreate(
             [
                 'user_id' => $data['user_id'],
                 'service_id' => $data['service_id'],
@@ -224,6 +224,7 @@ class AttendanceService
                 'mode' => $data['mode'],
             ]
         );
+        return $attendance->load(['user', 'service']);
     }
 
     /**

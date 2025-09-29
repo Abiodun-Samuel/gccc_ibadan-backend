@@ -25,6 +25,23 @@ class UnitResource extends JsonResource
             'leader_id' => $this->leader_id,
             'assistant_leader_id' => $this->assistant_leader_id,
 
+            'leader' => $this->whenLoaded('leader') ? [
+                'id' => $this->leader->id,
+                'name' => "{$this->leader->first_name} {$this->leader->last_name}",
+                'email' => $this->leader->email,
+                'phone' => $this->leader->phone_number,
+                'gender' => $this->leader->gender,
+            ] : null,
+            'assistantLeader' => $this->whenLoaded('assistantLeader') ? [
+                'id' => $this->leader->id,
+                'name' => "{$this->leader->first_name} {$this->leader->last_name}",
+                'email' => $this->leader->email,
+                'phone' => $this->leader->phone_number,
+                'gender' => $this->leader->gender,
+            ] : null,
+            'members' => $this->whenLoaded('members'),
+            'members_count' => $this->members_count ?? 0,
+
             'isLeader' => $isLeader,
             'isAssistantLeader' => $isAssistantLeader,
             'isMember' =>

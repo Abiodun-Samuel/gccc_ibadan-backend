@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Storage;
 
 class User extends Authenticatable
 {
@@ -38,6 +39,9 @@ class User extends Authenticatable
         'instagram',
         'linkedin',
         'twitter',
+        'education',
+        'field_of_study',
+        'occupation',
         'email_verified_at'
     ];
 
@@ -49,6 +53,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'pivot'
     ];
 
     /**
@@ -63,6 +68,12 @@ class User extends Authenticatable
             'password' => 'hashed',
             'date_of_birth' => 'date',
         ];
+    }
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar
+            ? Storage::disk('public')->url($this->avatar)
+            : null;
     }
     public function getRolePermissions()
     {

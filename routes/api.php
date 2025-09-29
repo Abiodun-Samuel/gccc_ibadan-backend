@@ -3,6 +3,8 @@
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\FollowUpStatusController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UnitController;
 use App\Models\Form;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -27,6 +29,9 @@ Route::middleware('guest')->group(function () {
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
+    // user profile
+    Route::patch('/profile', [ProfileController::class, 'update']);
+    Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
     // Follow-up statuses
     Route::apiResource('follow-up-statuses', FollowUpStatusController::class);
 
@@ -47,6 +52,14 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/', 'index');
                 Route::delete('/', 'destroy');
                 Route::patch('/completed', 'markAsCompleted');
+            });
+            // Units management
+            Route::apiResource('units', UnitController::class);
+            Route::prefix('units')->group(function () {
+                Route::post('assign-member', [AdminController::class, 'assignMemberToUnit']);
+                Route::post('unassign-member', [AdminController::class, 'unassignMemberFromUnit']);
+                Route::post('assign-leader', [AdminController::class, 'assignLeaderOrAssistantToUnit']);
+                Route::post('unassign-leader', [AdminController::class, 'unassignLeaderOrAssistantFromUnit']);
             });
         });
 });
@@ -116,14 +129,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Usher Attendance
         Route::apiResource('usher-attendance', UsherAttendanceController::class);
-
-        // Units management
-        Route::prefix('units/')->group(function () {
-            Route::post('/assign-member', [AdminController::class, 'assignMemberToUnit']);
-            Route::post('/unassign-member', [AdminController::class, 'unassignMemberFromUnit']);
-            Route::post('/assign-leader', [AdminController::class, 'assignLeaderOrAssistantToUnit']);
-            Route::post('/unassign-leader', [AdminController::class, 'unassignLeaderOrAssistantFromUnit']);
-        });
 
         // Members management
         Route::prefix('members')->group(function () {

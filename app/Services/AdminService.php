@@ -12,7 +12,7 @@ use Carbon\Carbon;
 class AdminService
 {
     public const CACHE_TTL = 180; // 5 minutes
-    public const CACHE_PREFIX = 'Admin_analytics';
+    public const CACHE_PREFIX = 'admin_analytics';
 
     /**
      * Get Admin Analytics (cached)

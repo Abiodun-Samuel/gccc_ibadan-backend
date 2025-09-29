@@ -29,7 +29,7 @@ class MemberController extends Controller
 
             return $this->successResponse(UserResource::collection($members), 'Members retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse(null, $e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -42,7 +42,7 @@ class MemberController extends Controller
             $member = $this->memberService->createMember($request->validated());
             return $this->successResponse(new UserResource($member), 'Member created successfully', Response::HTTP_CREATED);
         } catch (\Exception $e) {
-            return $this->errorResponse(null, 'Failed to create member', Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse('Failed to create member', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -55,9 +55,9 @@ class MemberController extends Controller
             $member = $this->memberService->findMember($id);
             return $this->successResponse(new UserResource($member), 'Member retrieved successfully');
         } catch (ModelNotFoundException $e) {
-            return $this->errorResponse(null, 'Member not found', Response::HTTP_NOT_FOUND);
+            return $this->errorResponse('Member not found', Response::HTTP_NOT_FOUND);
         } catch (\Exception $e) {
-            return $this->errorResponse(null, 'Member not found', Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse('Member not found', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -72,9 +72,9 @@ class MemberController extends Controller
 
             return $this->successResponse(new UserResource($updatedMember), 'Member updated successfully');
         } catch (ModelNotFoundException $e) {
-            return $this->errorResponse(null, 'Member not found', Response::HTTP_NOT_FOUND);
+            return $this->errorResponse('Member not found', Response::HTTP_NOT_FOUND);
         } catch (\Exception $e) {
-            return $this->errorResponse(null, 'Failed to update member', Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse('Failed to update member', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -89,9 +89,9 @@ class MemberController extends Controller
 
             return $this->successResponse(null, 'Member deleted successfully');
         } catch (ModelNotFoundException $e) {
-            return $this->errorResponse(null, 'Member not found', Response::HTTP_NOT_FOUND);
+            return $this->errorResponse('Member not found', Response::HTTP_NOT_FOUND);
         } catch (\Exception $e) {
-            return $this->errorResponse(null, 'Failed to delete member', Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse('Failed to delete member', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -111,7 +111,7 @@ class MemberController extends Controller
 
             return $this->successResponse($results, $message);
         } catch (\Exception $e) {
-            return $this->errorResponse(null, 'Failed to bulk create members', Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse('Failed to bulk create members', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -129,7 +129,7 @@ class MemberController extends Controller
 
             return $this->successResponse($results, $message);
         } catch (\Exception $e) {
-            return $this->errorResponse(null, 'Failed to bulk update members', Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse('Failed to bulk update members', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 

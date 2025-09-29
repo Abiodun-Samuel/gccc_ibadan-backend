@@ -11,10 +11,10 @@ class ApiErrorResponse extends JsonResponse
      * Create a new API error response.
      */
     public static function create(
-        string $message,
+        ?string $message = null,
         int $code = Response::HTTP_INTERNAL_SERVER_ERROR,
         ?array $errors = null,
-        array $headers = []
+        ?array $headers = []
     ): self {
         $data = [
             'success' => false,

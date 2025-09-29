@@ -37,7 +37,7 @@ class ServiceController extends Controller
         }
 
         if (!$service) {
-            return $this->errorResponse(null, 'No service scheduled for today.', 404);
+            return $this->errorResponse('No service scheduled for today.', 404);
         }
 
         $user = $request?->user();
@@ -78,7 +78,7 @@ class ServiceController extends Controller
     //     }
 
     //     if (!$service) {
-    //         return $this->errorResponse(null, 'No service scheduled for today.', 404);
+    //         return $this->errorResponse('No service scheduled for today.', 404);
     //     }
 
     //     // Get attendance window from query params (default: 2 hours before/after)
@@ -92,7 +92,7 @@ class ServiceController extends Controller
     //     $windowEnd = $serviceStart->copy()->addHours($after);
 
     //     if (!$now->between($windowStart, $windowEnd)) {
-    //         return $this->errorResponse(null, 'Attendance not allowed at this time.', 403);
+    //         return $this->errorResponse('Attendance not allowed at this time.', 403);
     //     }
 
     //     return $this->successResponse(new ServiceResource($service), 'Service available', 200);

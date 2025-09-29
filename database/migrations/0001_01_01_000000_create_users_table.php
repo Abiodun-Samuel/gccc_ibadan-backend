@@ -31,6 +31,9 @@ return new class extends Migration {
             $table->string('twitter')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->date('date_of_birth')->nullable();
+            $table->string('education')->nullable();
+            $table->string('field_of_study')->nullable();
+            $table->string('occupation')->nullable();
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();

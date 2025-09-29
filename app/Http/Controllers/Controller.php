@@ -61,7 +61,7 @@ abstract class Controller
         ], $code);
     }
 
-    protected function errorResponse(string $message, int $code = 500): JsonResponse
+    protected function errorResponse(?string $message = null, int $code = 500): JsonResponse
     {
         return ApiErrorResponse::create($message, $code);
     }

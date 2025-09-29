@@ -25,7 +25,7 @@ class AuthController extends Controller
         $loginField = filter_var($credentials['username'], FILTER_VALIDATE_EMAIL) ? 'email' : 'phone_number';
         $user = User::where($loginField, $credentials['username'])->first();
         if (!$user || !\Hash::check($credentials['password'], $user->password)) {
-            return $this->errorResponse(null, 'Invalid credentials', 422);
+            return $this->errorResponse('Invalid credentials', 422);
         }
         $user->load('units');
         $token = $user->createToken('auth_token')->plainTextToken;

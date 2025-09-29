@@ -125,8 +125,4 @@ class AdminController extends Controller
         return $this->successResponse([], $message, Response::HTTP_OK);
     }
 
-    public function getAttendanceAnalytics(Request $request)
-    {
-
-    }
 }

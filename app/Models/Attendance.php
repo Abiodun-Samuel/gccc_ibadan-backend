@@ -23,7 +23,7 @@ class Attendance extends Model
     ];
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class)->select(['id', 'name', 'email', 'phone']);
+        return $this->belongsTo(User::class)->select(['id', 'first_name', 'last_name', 'email', 'gender', 'phone_number']);
     }
     public function service(): BelongsTo
     {
@@ -31,6 +31,7 @@ class Attendance extends Model
             'id',
             'name',
             'day_of_week',
+            'description',
             'start_time',
             'is_recurring',
             'service_date',

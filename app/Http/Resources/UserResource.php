@@ -33,6 +33,10 @@ class UserResource extends JsonResource
             'units' => UnitResource::collection($this->whenLoaded('units')),
             'assignedFirstTimers' => $this->assignedFirstTimers,
 
+            'education' => $this->education,
+            'field_of_study' => $this->field_of_study,
+            'occupation' => $this->occupation,
+
             'roles' => $this->getRoleNames(),
             'permissions' => $this->getPermissionNames(),
 

@@ -16,20 +16,25 @@ class AttendanceResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user_id' => $this?->user?->id,
-            'first_name' => $this?->user?->first_name,
-            'last_name' => $this?->user?->last_name,
-            'email' => $this?->user?->email,
-            'role' => $this?->user?->roles->pluck('name')->first(),
-            'phone_number' => $this?->user?->phone_number,
-            'service_name' => $this->service?->name,
             'attendance_date' => $this->attendance_date,
-            'service_day_of_week' => $this->service?->day_of_week,
             'status' => $this->status,
-            'service_description' => $this->service?->description,
             'mode' => $this->mode,
-            'service_id' => $this->service?->id,
-            'service_start_time' => $this->service?->start_time,
+
+            'user' => $this->whenLoaded('user') ? [
+                'id' => $this->user->id,
+                'name' => "{$this->user->first_name} {$this->user->last_name}",
+                'email' => $this->user->email,
+                'gender' => $this->user->gender,
+                'phone_number' => $this->user->phone_number,
+            ] : null,
+
+            'service' => $this->whenLoaded('service') ? [
+                'id' => $this->service->id,
+                'name' => $this->service?->name,
+                'day_of_week' => $this->service?->day_of_week,
+                'description' => $this->service?->description,
+                'start_time' => $this->service?->start_time,
+            ] : null,
             'created_at' => $this->created_at,
         ];
     }

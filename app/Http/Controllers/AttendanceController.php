@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Attendance\AdminMarkAttendanceRequest;
 use App\Http\Requests\Attendance\GetAbsenteesRequest;
 use App\Http\Requests\Attendance\MarkAbsenteesRequest;
-use App\Http\Requests\MarkAttendanceRequest;
+use App\Http\Requests\Attendance\MarkAttendanceRequest;
 use App\Http\Resources\AttendanceResource;
 use App\Services\AttendanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\Response;
 
 class AttendanceController extends Controller
