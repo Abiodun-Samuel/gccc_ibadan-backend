@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreMemberRequest;
 use App\Http\Requests\UpdateMemberRequest;
-use App\Http\Requests\BulkCreateMembersRequest;
-use App\Http\Requests\BulkUpdateMembersRequest;
 use App\Http\Resources\UserResource;
 use App\Services\MemberService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -14,9 +12,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class MemberController extends Controller
 {
-    public function __construct(
-        private readonly MemberService $memberService
-    ) {
+    public $memberService;
+    public function __construct(MemberService $memberService)
+    {
+        $this->memberService = $memberService;
     }
 
     /**
@@ -92,44 +91,6 @@ class MemberController extends Controller
             return $this->errorResponse('Member not found', Response::HTTP_NOT_FOUND);
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to delete member', Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Bulk create members
-     */
-    public function bulkCreate(BulkCreateMembersRequest $request): JsonResponse
-    {
-        try {
-            $results = $this->memberService->bulkCreateMembers($request->validated('members'));
-
-            $createdCount = count($results['created']);
-            $failedCount = count($results['failed']);
-            $totalProcessed = $results['total_processed'];
-
-            $message = "Bulk create completed. Created: {$createdCount}, Failed: {$failedCount}, Total processed: {$totalProcessed}";
-
-            return $this->successResponse($results, $message);
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to bulk create members', Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public function bulkUpdate(BulkUpdateMembersRequest $request): JsonResponse
-    {
-        try {
-            $results = $this->memberService->bulkUpdateMembersByEmail($request->validated('members'));
-
-            $updatedCount = count($results['updated']);
-            $notFoundCount = count($results['not_found']);
-            $failedCount = count($results['failed']);
-            $totalProcessed = $results['total_processed'];
-
-            $message = "Bulk update completed. Updated: {$updatedCount}, Not found: {$notFoundCount}, Failed: {$failedCount}, Total processed: {$totalProcessed}";
-
-            return $this->successResponse($results, $message);
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to bulk update members', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 

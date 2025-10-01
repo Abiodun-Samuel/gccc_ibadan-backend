@@ -18,13 +18,13 @@ class MemberService
         return Cache::remember(
             self::CACHE_KEY,
             self::CACHE_TTL,
-            fn() => User::with(['units', 'assignedFirstTimers', 'permissions'])->get()
+            fn() => User::withFullProfile()->get()
         );
     }
 
     public function findMember(int $id): User
     {
-        return User::with(['units', 'assignedFirstTimers'])->findOrFail($id);
+        return User::withFullProfile()->findOrFail($id);
     }
 
     public function createMember(array $data): User
@@ -52,7 +52,7 @@ class MemberService
             ]);
 
             $this->clearCache();
-            return $member->load('units');
+            return $member;
         });
     }
 
@@ -86,7 +86,7 @@ class MemberService
             $member->update($updateData);
 
             $this->clearCache();
-            return $member->fresh('units');
+            return $member;
         });
     }
 
@@ -98,138 +98,6 @@ class MemberService
             $this->clearCache();
             return $deleted;
         });
-    }
-
-    public function bulkCreateMembers(array $membersData): array
-    {
-        $results = [
-            'created' => [],
-            'failed' => [],
-            'total_processed' => count($membersData),
-        ];
-
-        DB::transaction(function () use ($membersData, &$results) {
-            foreach ($membersData as $index => $memberData) {
-                try {
-                    // Check for duplicate email
-                    if (User::where('email', $memberData['email'])->exists()) {
-                        $results['failed'][] = [
-                            'index' => $index,
-                            'email' => $memberData['email'],
-                            'error' => 'Email already exists'
-                        ];
-                        continue;
-                    }
-
-                    $member = User::create([
-                        'first_name' => $memberData['first_name'],
-                        'last_name' => $memberData['last_name'],
-                        'email' => $memberData['email'],
-                        'phone_number' => $memberData['phone_number'] ?? null,
-                        'gender' => $memberData['gender'] ?? null,
-                        'avatar' => $memberData['avatar'] ?? null,
-                        'address' => $memberData['address'] ?? null,
-                        'community' => $memberData['community'] ?? null,
-                        'worker' => $memberData['worker'] ?? false,
-                        'status' => $memberData['status'] ?? 'active',
-                        'date_of_birth' => $memberData['date_of_birth'] ?? null,
-                        'country' => $memberData['country'] ?? null,
-                        'city_or_state' => $memberData['city_or_state'] ?? null,
-                        'facebook' => $memberData['facebook'] ?? null,
-                        'instagram' => $memberData['instagram'] ?? null,
-                        'linkedin' => $memberData['linkedin'] ?? null,
-                        'twitter' => $memberData['twitter'] ?? null,
-                        'password' => Hash::make($memberData['phone_number']),
-                    ]);
-
-                    $results['created'][] = [
-                        'index' => $index,
-                        'id' => $member->id,
-                        'email' => $member->email
-                    ];
-
-                } catch (\Exception $e) {
-                    $results['failed'][] = [
-                        'index' => $index,
-                        'email' => $memberData['email'] ?? 'unknown',
-                        'error' => $e->getMessage()
-                    ];
-                }
-            }
-        });
-
-        $this->clearCache();
-        return $results;
-    }
-
-    public function bulkUpdateMembersByEmail(array $membersData): array
-    {
-        $results = [
-            'updated' => [],
-            'not_found' => [],
-            'failed' => [],
-            'total_processed' => count($membersData),
-        ];
-
-        DB::transaction(function () use ($membersData, &$results) {
-            foreach ($membersData as $index => $memberData) {
-                try {
-                    $member = User::where('id', $memberData['id'])->first();
-
-                    if (!$member) {
-                        $results['not_found'][] = [
-                            'index' => $index,
-                            'id' => $memberData['id'],
-                        ];
-                        continue;
-                    }
-
-                    $updateData = array_filter([
-                        'first_name' => $memberData['first_name'] ?? null,
-                        'email' => $memberData['email'],
-                        'last_name' => $memberData['last_name'] ?? null,
-                        'phone_number' => $memberData['phone_number'] ?? null,
-                        'gender' => $memberData['gender'] ?? null,
-                        'avatar' => $memberData['avatar'] ?? null,
-                        'address' => $memberData['address'] ?? null,
-                        'community' => $memberData['community'] ?? null,
-                        'worker' => $memberData['worker'],
-                        'status' => $memberData['status'] ?? null,
-                        'date_of_birth' => $memberData['date_of_birth'] ?? null,
-                        'country' => $memberData['country'],
-                        'city_or_state' => $memberData['city_or_state'] ?? null,
-                        'facebook' => $memberData['facebook'] ?? null,
-                        'instagram' => $memberData['instagram'] ?? null,
-                        'linkedin' => $memberData['linkedin'] ?? null,
-                        'twitter' => $memberData['twitter'] ?? null,
-                    ], fn($value) => $value !== null);
-
-                    if (!empty($memberData['phone_number'])) {
-                        $updateData['password'] = Hash::make($memberData['phone_number']);
-                    }
-
-                    if (!empty($updateData)) {
-                        $member->update($updateData);
-                    }
-
-                    $results['updated'][] = [
-                        'index' => $index,
-                        'id' => $member->id,
-                        'email' => $member->email
-                    ];
-
-                } catch (\Exception $e) {
-                    $results['failed'][] = [
-                        'index' => $index,
-                        'email' => $memberData['email'] ?? 'unknown',
-                        'error' => $e->getMessage()
-                    ];
-                }
-            }
-        });
-
-        $this->clearCache();
-        return $results;
     }
 
     private function clearCache(): void

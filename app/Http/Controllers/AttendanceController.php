@@ -14,9 +14,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AttendanceController extends Controller
 {
-    public function __construct(
-        private readonly AttendanceService $attendanceService
-    ) {
+    public $attendanceService;
+    public function __construct(AttendanceService $attendanceService)
+    {
+        $this->attendanceService = $attendanceService;
     }
 
     /**
@@ -24,10 +25,15 @@ class AttendanceController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $perPage = $request->get('per_page', 15);
-        $attendance = $this->attendanceService->getAllAttendance($perPage);
+        $filters = $request->only([
+            'service_id',
+            'attendance_date',
+            'status',
+            'mode'
+        ]);
+        $attendance = $this->attendanceService->getAllAttendance($filters);
 
-        return $this->paginatedResponse(
+        return $this->successResponse(
             $attendance,
             'Attendance records retrieved successfully'
         );
@@ -51,27 +57,12 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Admin bulk mark attendance for multiple users
-     */
-    public function adminMarkAttendance(AdminMarkAttendanceRequest $request): JsonResponse
-    {
-        $this->attendanceService->adminMarkAttendance($request->validated());
-
-        return $this->successResponse(
-            null,
-            'Attendance updated successfully for selected users'
-        );
-    }
-
-    /**
      * Get attendance history for authenticated user
      */
     public function history(Request $request): JsonResponse
     {
-        $perPage = $request->get('per_page', 15);
         $history = $this->attendanceService->getUserAttendanceHistory(
             $request->user(),
-            $perPage
         );
 
         return $this->paginatedResponse(
@@ -94,17 +85,15 @@ class AttendanceController extends Controller
         );
     }
 
-    /**
-     * Get list of absentees for a specific service and date
-     */
-    public function getAbsentees(GetAbsenteesRequest $request): JsonResponse
+    public function assignAbsenteesToLeaders(Request $request)
     {
-        $absentees = $this->attendanceService->getAbsentees($request->validated());
+        $data = $request->validate([
+            'service_id' => ['required', 'integer', 'exists:services,id'],
+            'date' => ['required', 'date'],
+        ]);
 
-        return $this->successResponse(
-            AttendanceResource::collection($absentees),
-            'Absentees retrieved successfully'
-        );
+
+        return $this->successResponse('assignments', 'Absentees assigned to leaders', Response::HTTP_CREATED);
     }
 
     public function getAdminAttendanceMonthlyStats(Request $request)

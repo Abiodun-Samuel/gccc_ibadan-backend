@@ -87,12 +87,16 @@ class AttendanceSeeder extends Seeder
             $records = [];
 
             foreach ($batch as $combo) {
+
+                $status = fake()->randomElement(['present', 'absent']);
+                $mode = $status == 'absent' ? null : fake()->randomElement(['onsite', 'online']);
+
                 $records[] = [
                     'user_id' => $combo['user_id'],
                     'service_id' => $combo['service_id'],
                     'attendance_date' => $combo['attendance_date'],
-                    'status' => fake()->randomElement(['present', 'absent']),
-                    'mode' => fake()->randomElement(['onsite', 'online', null]),
+                    'status' => $status,
+                    'mode' => $mode,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];

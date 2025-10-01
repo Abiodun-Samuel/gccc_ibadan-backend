@@ -27,13 +27,7 @@ class AuthController extends Controller
         if (!$user || !\Hash::check($credentials['password'], $user->password)) {
             return $this->errorResponse('Invalid credentials', 422);
         }
-        $user->load([
-            'units',
-            'ledUnits',
-            'assistedUnits',
-            'memberUnits',
-            'assignedFirstTimers',
-        ]);
+        $user->loadFullProfile();
         $token = $user->createToken('auth_token')->plainTextToken;
         $data = ['token' => $token, 'user' => new UserResource($user)];
         return $this->successResponse($data, 'Logged in successfully', 200);
@@ -63,55 +57,10 @@ class AuthController extends Controller
         $data = ['token' => $token, 'user' => new UserResource($user)];
         return $this->successResponse($data, 'Logged in successfully', 201);
     }
-    public function bulkRegister(Request $request)
-    {
-        $validated = $request->validate([
-            'users' => 'required|array|min:1',
-            'users.*.first_name' => 'required|string',
-            'users.*.last_name' => 'required|string',
-            'users.*.email' => 'required|email|unique:users,email',
-            'users.*.phone_number' => 'required|string|unique:users,phone_number',
-        ]);
-
-        $results = [];
-        DB::beginTransaction();
-        try {
-            foreach ($validated['users'] as $userData) {
-                $user = User::create([
-                    'first_name' => $userData['first_name'],
-                    'last_name' => $userData['last_name'],
-                    'phone_number' => $userData['phone_number'],
-                    'email' => $userData['email'],
-                    'password' => bcrypt($userData['phone_number']),
-                ]);
-
-                $this->service->assignRoleAndSyncPermissions($user, [RoleEnum::MEMBER->value]);
-
-                $results[] = [
-                    'id' => $user->id,
-                    'email' => $user->email,
-                    'name' => "{$user->first_name} {$user->last_name}",
-                    'status' => 'registered',
-                ];
-            }
-
-            DB::commit();
-            return response()->json([
-                'message' => 'Users registered successfully',
-                'results' => $results,
-            ], 201);
-
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Error registering users',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
     public function me(Request $request)
     {
-        $user = $request->user()->load('units');
+        $user = $request->user()->loadFullProfile();
+        ;
         $data = new UserResource($user);
         return $this->successResponse(['user' => $data], 'user details', 200);
     }

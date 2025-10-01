@@ -11,7 +11,7 @@ class MarkAbsenteesRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->hasRole('admin'); // Example authorization
+        return $this->user()->hasRole('admin');
     }
 
     /**

@@ -21,13 +21,7 @@ class ProfileController extends Controller
         $user->update($request->validated());
         $user->fresh();
 
-        $user->load([
-            'units',
-            'ledUnits',
-            'assistedUnits',
-            'memberUnits',
-            'assignedFirstTimers',
-        ]);
+        $user->loadFullProfile();
 
         $data = ['user' => new UserResource($user)];
         return $this->successResponse($data, 'Profile updated successfully', Response::HTTP_OK);

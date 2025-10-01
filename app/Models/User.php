@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RoleEnum;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -69,6 +70,43 @@ class User extends Authenticatable
             'date_of_birth' => 'date',
         ];
     }
+    // scopes
+    public function scopeAdmins($query)
+    {
+        return $query->role(RoleEnum::ADMIN->value);
+    }
+    public function scopeLeaders($query)
+    {
+        return $query->role(RoleEnum::LEADER->value);
+    }
+    public function scopeWithFullProfile($query)
+    {
+        return $query->with([
+            'units',
+            'assignedFirstTimers',
+            'permissions',
+            'roles',
+            'ledUnits',
+            'assistedUnits',
+            'memberUnits',
+            'absenteeAssignments',
+            'assignedAbsentees.user',
+        ]);
+    }
+    public function loadFullProfile()
+    {
+        return $this->load([
+            'units',
+            'assignedFirstTimers',
+            'permissions',
+            'roles',
+            'ledUnits',
+            'assistedUnits',
+            'memberUnits',
+            'absenteeAssignments',
+            'assignedAbsentees.user',
+        ]);
+    }
     public function getAvatarUrlAttribute(): ?string
     {
         return $this->avatar
@@ -120,5 +158,13 @@ class User extends Authenticatable
     public function scopeInPeriod(Builder $query, Carbon $startDate, Carbon $endDate): Builder
     {
         return $query->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()]);
+    }
+    public function assignedAbsentees()
+    {
+        return $this->hasMany(AbsenteeAssignment::class, 'leader_id');
+    }
+    public function absenteeAssignments()
+    {
+        return $this->hasMany(AbsenteeAssignment::class, 'user_id');
     }
 }

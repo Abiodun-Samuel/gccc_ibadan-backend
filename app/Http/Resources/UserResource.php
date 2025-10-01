@@ -30,19 +30,37 @@ class UserResource extends JsonResource
             'date_of_birth' => $this->date_of_birth?->format('Y-m-d'),
             'country' => $this->country,
             'city_or_state' => $this->city_or_state,
-            'units' => UnitResource::collection($this->whenLoaded('units')),
-            'assignedFirstTimers' => $this->assignedFirstTimers,
 
+            // Relationships
+            'units' => UnitResource::collection($this->whenLoaded('units')),
+            'assignedFirstTimers' => $this->whenLoaded('assignedFirstTimers'),
+
+            'ledUnits' => $this->whenLoaded('ledUnits'),
+            'assistedUnits' => $this->whenLoaded('assistedUnits'),
+            'memberUnits' => $this->whenLoaded('memberUnits'),
+
+            'absenteeAssignments' => $this->whenLoaded('absenteeAssignments'),
+
+            'assignedAbsentees' => $this->whenLoaded(
+                'assignedAbsentees',
+                fn() =>
+                $this->assignedAbsentees->map(fn($absentee) => [
+                    'id' => $absentee->id,
+                    'name' => optional($absentee->user)->full_name,
+                    'email' => optional($absentee->user)->email,
+                    'phone' => optional($absentee->user)->phone_number,
+                    'gender' => optional($absentee->user)->gender,
+                ])
+            ),
+
+            // Spatie roles & permissions
+            'roles' => $this->whenLoaded('roles', fn() => $this->getRoleNames()),
+            'permissions' => $this->whenLoaded('permissions', fn() => $this->getPermissionNames()),
+
+            // Extra fields
             'education' => $this->education,
             'field_of_study' => $this->field_of_study,
             'occupation' => $this->occupation,
-
-            'ledUnits' => $this->ledUnits,
-            'assistedUnits' => $this->assistedUnits,
-            'memberUnits' => $this->memberUnits,
-
-            'roles' => $this->getRoleNames(),
-            'permissions' => $this->getPermissionNames(),
 
             'social_links' => [
                 'facebook' => $this->facebook,
@@ -51,8 +69,8 @@ class UserResource extends JsonResource
                 'twitter' => $this->twitter,
             ],
 
-            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
+            'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
+            'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
         ];
     }
 }
