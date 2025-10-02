@@ -23,7 +23,7 @@ class MarkAbsenteesRequest extends FormRequest
     {
         return [
             'service_id' => 'required|exists:services,id',
-            'date' => 'required|date|before_or_equal:today',
+            'attendance_date' => 'required|date',
         ];
     }
 
@@ -32,8 +32,7 @@ class MarkAbsenteesRequest extends FormRequest
         return [
             'service_id.required' => 'Service selection is required.',
             'service_id.exists' => 'Selected service is invalid.',
-            'date.required' => 'Date is required.',
-            'date.before_or_equal' => 'Date cannot be in the future.',
+            'attendance_date.required' => 'Date is required.',
         ];
     }
 

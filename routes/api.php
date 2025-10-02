@@ -48,6 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('attendance')->group(function () {
         Route::post('/mark', [AttendanceController::class, 'markAttendance']);
         Route::get('/history', [AttendanceController::class, 'history']);
+        Route::get('/monthly-stats', [AttendanceController::class, 'getUserAttendanceMonthlyStats']);
     });
     //media
     Route::get('/media', [MediaController::class, 'index']);
@@ -58,6 +59,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->group(function () {
             // First-timers
             Route::get('first-timers/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics']);
+            // Members
+            Route::get('/members/role/{role}', [MemberController::class, 'getMembersByRole']);
             // Forms
             Route::prefix('forms')->controller(FormController::class)->group(function () {
                 Route::get('/', 'index');

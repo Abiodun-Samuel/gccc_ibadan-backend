@@ -34,6 +34,12 @@ return new class extends Migration {
             $table->string('education')->nullable();
             $table->string('field_of_study')->nullable();
             $table->string('occupation')->nullable();
+
+            $table->unsignedInteger('attendance_badge')->default(0);
+            $table->unsignedTinyInteger('last_badge_month')->nullable();
+            $table->unsignedSmallInteger('last_badge_year')->nullable();
+
+            $table->index(['last_badge_month', 'last_badge_year']);
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();

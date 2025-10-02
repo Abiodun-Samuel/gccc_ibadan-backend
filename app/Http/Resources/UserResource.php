@@ -30,6 +30,9 @@ class UserResource extends JsonResource
             'date_of_birth' => $this->date_of_birth?->format('Y-m-d'),
             'country' => $this->country,
             'city_or_state' => $this->city_or_state,
+            'attendance_badge' => $this->attendance_badge,
+            'last_badge_month' => $this->last_badge_month,
+            'last_badge_year' => $this->last_badge_year,
 
             // Relationships
             'units' => UnitResource::collection($this->whenLoaded('units')),

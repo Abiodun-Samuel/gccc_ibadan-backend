@@ -17,6 +17,7 @@ class UserSeeder extends Seeder
 
     public function run(): void
     {
+
         $commonPassword = Hash::make('password');
         $commonPhoneNumber = '08164650987';
 

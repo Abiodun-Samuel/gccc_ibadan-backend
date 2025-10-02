@@ -8,6 +8,7 @@ use App\Http\Resources\UserResource;
 use App\Services\MemberService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
+use Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class MemberController extends Controller
@@ -18,23 +19,25 @@ class MemberController extends Controller
         $this->memberService = $memberService;
     }
 
-    /**
-     * Display a listing of members
-     */
     public function index(): JsonResponse
     {
         try {
             $members = $this->memberService->getAllMembers();
-
             return $this->successResponse(UserResource::collection($members), 'Members retrieved successfully');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+    public function getMembersByRole(Request $request, string $role)
+    {
+        try {
+            $members = $this->memberService->getUsersByRole($role);
+            return $this->successResponse(UserResource::collection($members), ucfirst($role) . "s retrieved successfully", Response::HTTP_OK);
+        } catch (\InvalidArgumentException $e) {
+            return $this->errorResponse($e->getMessage(), Response::HTTP_BAD_REQUEST);
+        }
+    }
 
-    /**
-     * Store a newly created member
-     */
     public function store(StoreMemberRequest $request): JsonResponse
     {
         try {
@@ -45,9 +48,6 @@ class MemberController extends Controller
         }
     }
 
-    /**
-     * Display the specified member
-     */
     public function show(int $id): JsonResponse
     {
         try {
@@ -60,9 +60,6 @@ class MemberController extends Controller
         }
     }
 
-    /**
-     * Update the specified member
-     */
     public function update(UpdateMemberRequest $request, int $id): JsonResponse
     {
         try {
@@ -77,9 +74,6 @@ class MemberController extends Controller
         }
     }
 
-    /**
-     * Remove the specified member
-     */
     public function destroy(int $id): JsonResponse
     {
         try {

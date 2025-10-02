@@ -56,16 +56,13 @@ class AttendanceController extends Controller
         );
     }
 
-    /**
-     * Get attendance history for authenticated user
-     */
     public function history(Request $request): JsonResponse
     {
         $history = $this->attendanceService->getUserAttendanceHistory(
             $request->user(),
         );
 
-        return $this->paginatedResponse(
+        return $this->successResponse(
             $history,
             'Attendance history retrieved successfully'
         );
@@ -89,11 +86,13 @@ class AttendanceController extends Controller
     {
         $data = $request->validate([
             'service_id' => ['required', 'integer', 'exists:services,id'],
-            'date' => ['required', 'date'],
+            'attendance_date' => ['required', 'date'],
+            'leader_ids' => ['required', 'array'],
+            'leader_ids.*' => ['exists:users,id'],
         ]);
+        $assignments = $this->attendanceService->assignAbsenteesToLeaders($data);
 
-
-        return $this->successResponse('assignments', 'Absentees assigned to leaders', Response::HTTP_CREATED);
+        return $this->successResponse([], $assignments['assigned_count'] . " Absent members assigned to " . $assignments['leaders_count'] . " leaders successfully", Response::HTTP_CREATED);
     }
 
     public function getAdminAttendanceMonthlyStats(Request $request)
@@ -107,5 +106,22 @@ class AttendanceController extends Controller
         } catch (\InvalidArgumentException $e) {
             return $this->successResponse(null, $e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public function getUserAttendanceMonthlyStats(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'month' => 'nullable|integer|min:1|max:12',
+            'year' => 'nullable|integer|min:2020|max:2100',
+        ]);
+
+        $user = $request->user();
+
+        $metrics = $this->attendanceService->getUserAttendanceMetrics(
+            $user,
+            $validated['month'] ?? null,
+            $validated['year'] ?? null
+        );
+        return $this->successResponse($metrics, 'Attendance metrics retrieved successfully');
     }
 }

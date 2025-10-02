@@ -43,7 +43,10 @@ class User extends Authenticatable
         'education',
         'field_of_study',
         'occupation',
-        'email_verified_at'
+        'email_verified_at',
+        'attendance_badge',
+        'last_badge_month',
+        'last_badge_year',
     ];
 
     /**
@@ -68,6 +71,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'date_of_birth' => 'date',
+            'attendance_badge' => 'integer',
+            'last_badge_month' => 'integer',
+            'last_badge_year' => 'integer',
         ];
     }
     // scopes
@@ -78,6 +84,10 @@ class User extends Authenticatable
     public function scopeLeaders($query)
     {
         return $query->role(RoleEnum::LEADER->value);
+    }
+    public function scopeMembers($query)
+    {
+        return $query->role(RoleEnum::MEMBER->value);
     }
     public function scopeWithFullProfile($query)
     {

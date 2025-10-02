@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use InvalidArgumentException;
 
 class MemberService
 {
@@ -19,6 +20,22 @@ class MemberService
             self::CACHE_KEY,
             self::CACHE_TTL,
             fn() => User::withFullProfile()->get()
+        );
+    }
+
+    public function getUsersByRole(string $role): Collection
+    {
+        $cacheKey = self::CACHE_KEY . "_role_{$role}";
+
+        return Cache::remember(
+            $cacheKey,
+            self::CACHE_TTL,
+            fn() => match ($role) {
+                'admin' => User::admins()->withFullProfile()->get(),
+                'leader' => User::leaders()->withFullProfile()->get(),
+                'member' => User::members()->withFullProfile()->get(),
+                default => throw new InvalidArgumentException("Invalid role: {$role}"),
+            }
         );
     }
 
@@ -103,5 +120,8 @@ class MemberService
     private function clearCache(): void
     {
         Cache::forget(self::CACHE_KEY);
+        foreach (['admin', 'leader', 'member'] as $role) {
+            Cache::forget(self::CACHE_KEY . "_role_{$role}");
+        }
     }
 }
