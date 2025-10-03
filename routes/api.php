@@ -6,7 +6,7 @@ use App\Http\Controllers\MediaController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UnitController;
-use App\Models\Form;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ServiceController;
@@ -31,9 +31,10 @@ Route::middleware('guest')->group(function () {
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
-    // user profile
+    // Users (for leaders, admin and members)
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
+    Route::get('/leaders/absentees', [UserController::class, 'getAssignedAbsentees']);
     // Follow-up statuses
     Route::apiResource('follow-up-statuses', FollowUpStatusController::class);
 
@@ -52,6 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     //media
     Route::get('/media', [MediaController::class, 'index']);
+
+
 
     // Admin-only routes
     Route::prefix('admin')

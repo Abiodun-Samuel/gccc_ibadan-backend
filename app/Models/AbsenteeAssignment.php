@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class AbsenteeAssignment extends Model
 {
     protected $table = 'absentee_assignments';
-
     protected $fillable = [
         'leader_id',
         'user_id',

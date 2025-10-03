@@ -42,25 +42,24 @@ class UserResource extends JsonResource
             'assistedUnits' => $this->whenLoaded('assistedUnits'),
             'memberUnits' => $this->whenLoaded('memberUnits'),
 
-            'absenteeAssignments' => $this->whenLoaded('absenteeAssignments'),
+            // 'absenteeAssignments' => $this->whenLoaded('absenteeAssignments'),
 
-            'assignedAbsentees' => $this->whenLoaded(
-                'assignedAbsentees',
-                fn() =>
-                $this->assignedAbsentees->map(fn($absentee) => [
-                    'id' => $absentee->id,
-                    'name' => optional($absentee->user)->full_name,
-                    'email' => optional($absentee->user)->email,
-                    'phone' => optional($absentee->user)->phone_number,
-                    'gender' => optional($absentee->user)->gender,
-                ])
-            ),
+            // 'assignedAbsentees' => $this->whenLoaded(
+            //     'assignedAbsentees',
+            //     fn() =>
+            //     $this->assignedAbsentees->map(fn($absentee) => [
+            //         'id' => $absentee->id,
+            //         'name' => optional($absentee->user)->full_name,
+            //         'email' => optional($absentee->user)->email,
+            //         'phone' => optional($absentee->user)->phone_number,
+            //         'gender' => optional($absentee->user)->gender,
+            //         'attendance' => optional($absentee->attendance),
+            //     ])
+            // ),
 
-            // Spatie roles & permissions
             'roles' => $this->whenLoaded('roles', fn() => $this->getRoleNames()),
             'permissions' => $this->whenLoaded('permissions', fn() => $this->getPermissionNames()),
 
-            // Extra fields
             'education' => $this->education,
             'field_of_study' => $this->field_of_study,
             'occupation' => $this->occupation,
