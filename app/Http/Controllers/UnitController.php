@@ -2,50 +2,52 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateUnitRequest;
 use App\Http\Resources\UnitResource;
 use App\Models\Unit;
-use Illuminate\Http\Request;
+use App\Services\UnitService;
+use Symfony\Component\HttpFoundation\Response;
 
 class UnitController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    public $unitService;
+    public function __construct(UnitService $unitService)
+    {
+        $this->unitService = $unitService;
+    }
     public function index()
     {
-        $units = Unit::with(['leader', 'assistantLeader', 'members'])->withCount('members')->get();
-        return $this->successResponse(UnitResource::collection($units), '');
+        $units = Unit::with(['leader', 'assistantLeader', 'members'])->withCount('members')->latest()->get();
+        return $this->successResponse(UnitResource::collection($units), Response::HTTP_OK);
     }
 
-    // /**
-    //  * Store a newly created resource in storage.
-    //  */
-    // public function store(Request $request)
-    // {
-    //     //
-    // }
+    public function store(UpdateUnitRequest $request)
+    {
+        $validated = $request->validated();
 
-    // /**
-    //  * Display the specified resource.
-    //  */
-    // public function show(Unit $unit)
-    // {
-    //     //
-    // }
+        $unit = $this->unitService->createUnit($validated);
 
-    // /**
-    //  * Update the specified resource in storage.
-    //  */
-    // public function update(Request $request, Unit $unit)
-    // {
-    //     //
-    // }
+        return $this->successResponse(
+            new UnitResource($unit),
+            'Unit created successfully.',
+            Response::HTTP_CREATED
+        );
+    }
 
-    // /**
-    //  * Remove the specified resource from storage.
-    //  */
-    // public function destroy(Unit $unit)
-    // {
-    //     //
-    // }
+    public function update(UpdateUnitRequest $request, Unit $unit)
+    {
+        $validated = $request->validated();
+        $this->unitService->updateUnit($unit, $validated);
+
+        return $this->successResponse(
+            $unit->fresh(['leader', 'assistantLeader', 'members']),
+            'Unit updated successfully.',
+            Response::HTTP_OK
+        );
+    }
+    public function destroy(Unit $unit)
+    {
+        $this->unitService->deleteUnit($unit);
+        return $this->successResponse([], 'Unit deleted successfully.', Response::HTTP_OK);
+    }
 }

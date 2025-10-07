@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\AbsenteeResource;
 use App\Services\UserService;
-use Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -24,4 +23,5 @@ class UserController extends Controller
             ->getAssignedAbsenteesForLeader($user->id);
         return $this->successResponse(AbsenteeResource::collection($absentees), '');
     }
+
 }

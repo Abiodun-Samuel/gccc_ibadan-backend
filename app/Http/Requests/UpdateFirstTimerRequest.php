@@ -38,6 +38,7 @@ class UpdateFirstTimerRequest extends FormRequest
             'occupation' => 'nullable|string|max:255',
             'invited_by' => 'nullable|string|max:255',
             'service_experience' => 'nullable|string',
+            'is_student' => 'nullable|boolean',
             'prayer_point' => 'nullable|string',
             'notes' => 'nullable|string',
             'week_ending' => 'nullable|date',

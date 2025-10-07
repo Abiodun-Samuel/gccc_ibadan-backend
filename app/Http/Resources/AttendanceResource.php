@@ -22,7 +22,8 @@ class AttendanceResource extends JsonResource
 
             'user' => $this->whenLoaded('user') ? [
                 'id' => $this->user->id,
-                'name' => "{$this->user->first_name} {$this->user->last_name}",
+                'first_name' => $this->user->first_name,
+                'last_name' => $this->user->last_name,
                 'email' => $this->user->email,
                 'gender' => $this->user->gender,
                 'phone_number' => $this->user->phone_number,

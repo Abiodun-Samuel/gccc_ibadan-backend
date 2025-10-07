@@ -32,6 +32,7 @@ class StoreFirstTimerRequest extends FormRequest
             'interest' => 'nullable|in:Yes,No,Maybe',
             'born_again' => 'nullable|in:Yes,No,Uncertain',
             'whatsapp_interest' => 'nullable|boolean',
+            'is_student' => 'nullable|boolean',
             'address' => 'nullable|string|max:500',
             'date_of_visit' => 'required|date',
             'date_of_birth' => 'nullable|date',

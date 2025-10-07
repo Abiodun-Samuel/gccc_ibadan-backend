@@ -24,6 +24,8 @@ class User extends Authenticatable
     protected $fillable = [
         'first_name',
         'last_name',
+        'full_name',
+        'initials',
         'phone_number',
         'email',
         'password',
@@ -92,36 +94,28 @@ class User extends Authenticatable
     public function scopeWithFullProfile($query)
     {
         return $query->with([
-            'units',
-            'assignedFirstTimers',
+            'units.leader',
+            'units.assistantLeader',
+            'units.members',
             'permissions',
             'roles',
             'ledUnits',
             'assistedUnits',
             'memberUnits',
-            'absenteeAssignments',
-            'assignedAbsentees.user',
         ]);
     }
     public function loadFullProfile()
     {
         return $this->load([
-            'units',
-            'assignedFirstTimers',
+            'units.leader',
+            'units.assistantLeader',
+            'units.members',
             'permissions',
             'roles',
             'ledUnits',
             'assistedUnits',
             'memberUnits',
-            'absenteeAssignments',
-            'assignedAbsentees.user',
         ]);
-    }
-    public function getAvatarUrlAttribute(): ?string
-    {
-        return $this->avatar
-            ? Storage::disk('public')->url($this->avatar)
-            : null;
     }
     public function getRolePermissions()
     {
@@ -135,10 +129,6 @@ class User extends Authenticatable
     {
         return $this->attendances()
             ->where('attendance_date', '>=', now()->subDays($days));
-    }
-    public function getFullNameAttribute()
-    {
-        return trim("{$this->first_name} {$this->last_name}");
     }
 
     public function units()
@@ -163,7 +153,7 @@ class User extends Authenticatable
     public function assignedFirstTimers()
     {
         // where status is active
-        return $this->hasMany(FirstTimer::class, 'assigned_to_member_id');
+        return $this->hasMany(FirstTimer::class, 'assigned_to_member_id')->orderBy('date_of_visit', 'desc');
     }
     public function scopeInPeriod(Builder $query, Carbon $startDate, Carbon $endDate): Builder
     {

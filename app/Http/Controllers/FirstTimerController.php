@@ -11,6 +11,7 @@ use App\Models\FollowUpStatus;
 use App\Services\FirstTimerService;
 use Cache;
 use DB;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -59,6 +60,13 @@ class FirstTimerController extends Controller
             ->get();
 
         return $this->successResponse(FirstTimerResource::collection($updatedFirstTimers), 'Statuses updated successfully', Response::HTTP_OK);
+    }
+
+    public function getFirsttimersAssigned(Request $request): JsonResponse
+    {
+        $member = $request->user();
+        $firstTimers = $this->firstTimerService->getFirstTimersAssigned($member->id);
+        return $this->successResponse(FirstTimerResource::collection($firstTimers), 'First timers retrieved successfully', Response::HTTP_OK);
     }
 
     // Admin

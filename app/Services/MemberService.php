@@ -19,7 +19,7 @@ class MemberService
         return Cache::remember(
             self::CACHE_KEY,
             self::CACHE_TTL,
-            fn() => User::withFullProfile()->get()
+            fn() => User::get()
         );
     }
 
@@ -31,9 +31,9 @@ class MemberService
             $cacheKey,
             self::CACHE_TTL,
             fn() => match ($role) {
-                'admin' => User::admins()->withFullProfile()->get(),
-                'leader' => User::leaders()->withFullProfile()->get(),
-                'member' => User::members()->withFullProfile()->get(),
+                'admin' => User::admins()->get(),
+                'leader' => User::leaders()->get(),
+                'member' => User::members()->get(),
                 default => throw new InvalidArgumentException("Invalid role: {$role}"),
             }
         );

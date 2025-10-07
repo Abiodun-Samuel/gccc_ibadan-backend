@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Enums\UnitEnum;
+use App\Models\FirstTimer;
 use App\Models\User;
 use App\Models\Unit;
+use Illuminate\Support\Collection;
 
 class FirstTimerService
 {
@@ -21,5 +23,9 @@ class FirstTimerService
             ->orderBy('assigned_first_timers_count')
             ->orderBy('id')
             ->first();
+    }
+    public function getFirstTimersAssigned(int $memberId): ?Collection
+    {
+        return FirstTimer::where('assigned_to_member_id', $memberId)->with(['followUpStatus', 'assignedTo'])->orderBy('date_of_visit', 'desc')->get();
     }
 }

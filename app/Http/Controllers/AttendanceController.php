@@ -34,7 +34,7 @@ class AttendanceController extends Controller
         $attendance = $this->attendanceService->getAllAttendance($filters);
 
         return $this->successResponse(
-            $attendance,
+            AttendanceResource::collection($attendance),
             'Attendance records retrieved successfully'
         );
     }
@@ -58,12 +58,19 @@ class AttendanceController extends Controller
 
     public function history(Request $request): JsonResponse
     {
+        $filters = $request->only([
+            'service_id',
+            'attendance_date',
+            'status',
+            'mode'
+        ]);
         $history = $this->attendanceService->getUserAttendanceHistory(
             $request->user(),
+            $filters
         );
 
         return $this->successResponse(
-            $history,
+            AttendanceResource::collection($history),
             'Attendance history retrieved successfully'
         );
     }

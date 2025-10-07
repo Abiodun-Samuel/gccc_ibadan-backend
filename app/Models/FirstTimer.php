@@ -22,6 +22,7 @@ class FirstTimer extends Model
         'date_of_visit',
         'date_of_birth',
         'occupation',
+        'is_student',
         'invited_by',
         'service_experience',
         'prayer_point',
@@ -44,6 +45,7 @@ class FirstTimer extends Model
         'assigned_at' => 'datetime',
         'located_in_ibadan' => 'boolean',
         'whatsapp_interest' => 'boolean',
+        'is_student' => 'boolean'
     ];
     public function followUpStatus()
     {

@@ -8,7 +8,6 @@ use App\Models\Attendance;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -49,10 +48,7 @@ class AttendanceService
                 return $q->whereIn('attendance_date', $dates);
             });
 
-            return $query->with([
-                'user:id,first_name,last_name,email,phone_number',
-                'service:id,name,start_time,day_of_week,service_date'
-            ])
+            return $query->with(['user', 'service'])
                 ->select([
                     'id',
                     'user_id',
@@ -119,12 +115,32 @@ class AttendanceService
         return $service->date ?? Carbon::now(self::TIMEZONE)->toDateString();
     }
 
-    public function getUserAttendanceHistory(User $user): Collection
+    public function getUserAttendanceHistory(User $user, array $filters): Collection
     {
         return $user->attendances()
-            ->with('service:id,name,start_time')
+            ->with(['user', 'service'])
+            ->when(
+                !empty($filters['service_id']),
+                fn($q) => $q->where('service_id', $filters['service_id'])
+            )
+            ->when(
+                !empty($filters['status']),
+                fn($q) => $q->where('status', $filters['status'])
+            )
+            ->when(
+                !empty($filters['mode']),
+                fn($q) => $q->where('mode', $filters['mode'])
+            )
+            ->when(!empty($filters['attendance_date']), function ($q) use ($filters) {
+                $dates = is_array($filters['attendance_date'])
+                    ? $filters['attendance_date']
+                    : [$filters['attendance_date']];
+
+                return $q->whereIn('attendance_date', $dates);
+            })
             ->select([
                 'id',
+                'user_id',
                 'service_id',
                 'attendance_date',
                 'status',
@@ -187,58 +203,122 @@ class AttendanceService
         $serviceId = (int) $data['service_id'];
         $attendanceDate = Carbon::parse($data['attendance_date'], self::TIMEZONE)->toDateString();
 
-        // Validate leaders exist
-        $validLeaderIds = User::whereIn('id', $leaderIds)->pluck('id')->toArray();
-
-        if (count($validLeaderIds) !== count($leaderIds)) {
+        // Validate leaders
+        $leaders = User::whereIn('id', $leaderIds)->get(['id', 'last_name', 'email']);
+        if ($leaders->count() !== count($leaderIds)) {
             throw new AttendanceException('One or more leader IDs are invalid');
         }
-
-        if (empty($validLeaderIds)) {
+        if ($leaders->isEmpty()) {
             throw new AttendanceException('At least one valid leader is required');
         }
 
-        // Validate service exists
+        // Validate service
         if (!Service::where('id', $serviceId)->exists()) {
             throw new AttendanceException('Service not found');
         }
 
-        return DB::transaction(function () use ($validLeaderIds, $serviceId, $attendanceDate) {
-            // Fetch absent members as [user_id => attendance_id]
+        return DB::transaction(function () use ($leaders, $serviceId, $attendanceDate) {
+            // Fetch absent members
             $absentMembers = Attendance::where('service_id', $serviceId)
                 ->whereDate('attendance_date', $attendanceDate)
                 ->where('status', 'absent')
-                ->pluck('id', 'user_id')   // key = user_id, value = attendance_id
+                ->pluck('id', 'user_id')
                 ->toArray();
 
             if (empty($absentMembers)) {
                 throw new AttendanceException('No absent members found');
             }
 
-            // Distribute members evenly using round-robin
+            // Build assignments (round-robin distribution)
             $assignments = $this->buildAssignments(
                 $absentMembers,
-                $validLeaderIds,
+                $leaders->pluck('id')->toArray(),
                 $serviceId,
                 $attendanceDate
             );
 
-            // Bulk insert for maximum performance
             AbsenteeAssignment::insertOrIgnore($assignments);
 
-            // Calculate distribution for response
+            // Distribution report
             $distribution = $this->calculateDistribution($assignments);
 
-            // Clear relevant cache
+            // Clear cache
             $this->clearAssignmentCache($serviceId, $attendanceDate);
+            // === Send email to all leaders ===
+            app(MailService::class)->sendAbsentMemberAssignmentEmail(
+                $leaders->map(fn($leader) => [
+                    'email' => $leader->email,
+                    'name' => "{$leader->last_name}",
+                ])->toArray()
+            );
 
             return [
                 'assigned_count' => count($absentMembers),
-                'leaders_count' => count($validLeaderIds),
+                'leaders_count' => $leaders->count(),
                 'distribution' => $distribution,
             ];
         });
     }
+
+
+    // public function assignAbsenteesToLeaders(array $data): array
+    // {
+    //     $leaderIds = $data['leader_ids'];
+    //     $serviceId = (int) $data['service_id'];
+    //     $attendanceDate = Carbon::parse($data['attendance_date'], self::TIMEZONE)->toDateString();
+
+    //     // Validate leaders exist
+    //     $validLeaderIds = User::whereIn('id', $leaderIds)->pluck('id')->toArray();
+
+    //     if (count($validLeaderIds) !== count($leaderIds)) {
+    //         throw new AttendanceException('One or more leader IDs are invalid');
+    //     }
+
+    //     if (empty($validLeaderIds)) {
+    //         throw new AttendanceException('At least one valid leader is required');
+    //     }
+
+    //     // Validate service exists
+    //     if (!Service::where('id', $serviceId)->exists()) {
+    //         throw new AttendanceException('Service not found');
+    //     }
+
+    //     return DB::transaction(function () use ($validLeaderIds, $serviceId, $attendanceDate) {
+    //         // Fetch absent members as [user_id => attendance_id]
+    //         $absentMembers = Attendance::where('service_id', $serviceId)
+    //             ->whereDate('attendance_date', $attendanceDate)
+    //             ->where('status', 'absent')
+    //             ->pluck('id', 'user_id')   // key = user_id, value = attendance_id
+    //             ->toArray();
+
+    //         if (empty($absentMembers)) {
+    //             throw new AttendanceException('No absent members found');
+    //         }
+
+    //         // Distribute members evenly using round-robin
+    //         $assignments = $this->buildAssignments(
+    //             $absentMembers,
+    //             $validLeaderIds,
+    //             $serviceId,
+    //             $attendanceDate
+    //         );
+
+    //         // Bulk insert for maximum performance
+    //         AbsenteeAssignment::insertOrIgnore($assignments);
+
+    //         // Calculate distribution for response
+    //         $distribution = $this->calculateDistribution($assignments);
+
+    //         // Clear relevant cache
+    //         $this->clearAssignmentCache($serviceId, $attendanceDate);
+
+    //         return [
+    //             'assigned_count' => count($absentMembers),
+    //             'leaders_count' => count($validLeaderIds),
+    //             'distribution' => $distribution,
+    //         ];
+    //     });
+    // }
 
 
     private function buildAssignments(
@@ -407,7 +487,6 @@ class AttendanceService
             ]);
         return $affected;
     }
-
 
     private function calculateTotalServicesForMonth(Carbon $startDate, Carbon $endDate): int
     {

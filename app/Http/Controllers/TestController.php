@@ -35,12 +35,12 @@ class TestController extends Controller
         ];
 
         try {
-            $result = $this->mailService->sendEmail($data);
+            // $result = $this->mailService->sendEmail($data);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Email sent successfully',
-                'data' => $result
+                // 'data' => $result
             ]);
         } catch (\Exception $e) {
             return response()->json([

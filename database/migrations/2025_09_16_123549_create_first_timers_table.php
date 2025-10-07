@@ -22,6 +22,7 @@ return new class extends Migration {
             $table->enum('status', Status::values())->index()->default(Status::ACTIVE->value);
             $table->enum('born_again', ['Yes', 'No', 'Uncertain'])->nullable();
             $table->boolean('whatsapp_interest')->nullable()->default(true);
+            $table->boolean('is_student')->nullable()->default(false);
             $table->string('address')->nullable();
             $table->date('date_of_visit')->nullable()->index();
             $table->date('date_of_birth')->nullable();

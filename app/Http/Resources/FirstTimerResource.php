@@ -34,6 +34,7 @@ class FirstTimerResource extends JsonResource
             'prayer_point' => $this->prayer_point,
             'friend_family' => $this->friend_family,
             'how_did_you_learn' => $this->how_did_you_learn,
+            'is_student' => $this->is_student,
             'notes' => $this->notes,
             'week_ending' => optional($this->week_ending)->format('Y-m-d'),
             'visitation_report' => $this->visitation_report,

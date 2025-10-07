@@ -20,6 +20,7 @@ class UserResource extends JsonResource
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'full_name' => $this->full_name,
+            'initials' => $this->initials,
             'email' => $this->email,
             'phone_number' => $this->phone_number,
             'gender' => $this->gender,
@@ -34,28 +35,11 @@ class UserResource extends JsonResource
             'last_badge_month' => $this->last_badge_month,
             'last_badge_year' => $this->last_badge_year,
 
-            // Relationships
             'units' => UnitResource::collection($this->whenLoaded('units')),
-            'assignedFirstTimers' => $this->whenLoaded('assignedFirstTimers'),
 
             'ledUnits' => $this->whenLoaded('ledUnits'),
             'assistedUnits' => $this->whenLoaded('assistedUnits'),
             'memberUnits' => $this->whenLoaded('memberUnits'),
-
-            // 'absenteeAssignments' => $this->whenLoaded('absenteeAssignments'),
-
-            // 'assignedAbsentees' => $this->whenLoaded(
-            //     'assignedAbsentees',
-            //     fn() =>
-            //     $this->assignedAbsentees->map(fn($absentee) => [
-            //         'id' => $absentee->id,
-            //         'name' => optional($absentee->user)->full_name,
-            //         'email' => optional($absentee->user)->email,
-            //         'phone' => optional($absentee->user)->phone_number,
-            //         'gender' => optional($absentee->user)->gender,
-            //         'attendance' => optional($absentee->attendance),
-            //     ])
-            // ),
 
             'roles' => $this->whenLoaded('roles', fn() => $this->getRoleNames()),
             'permissions' => $this->whenLoaded('permissions', fn() => $this->getPermissionNames()),

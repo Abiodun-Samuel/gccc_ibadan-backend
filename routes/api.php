@@ -42,6 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('first-timers')->controller(FirstTimerController::class)->group(function () {
         Route::get('/', 'index');
         Route::post('status', 'setFollowupStatus');
+        Route::get('/assigned', 'getFirsttimersAssigned');
+
     });
     //members
     Route::apiResource('members', MemberController::class);
@@ -56,7 +58,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 
-    // Admin-only routes
+    // leaders-only routes
+    Route::prefix('leaders')
+        ->middleware(['role:' . RoleEnum::ADMIN->value . '|' . RoleEnum::LEADER->value])
+        ->group(function () {
+            Route::apiResource('units', UnitController::class);
+        });
+
+
     Route::prefix('admin')
         ->middleware("role:" . RoleEnum::ADMIN->value)
         ->group(function () {
@@ -69,14 +78,6 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/', 'index');
                 Route::delete('/', 'destroy');
                 Route::patch('/completed', 'markAsCompleted');
-            });
-            // Units management
-            Route::apiResource('units', UnitController::class);
-            Route::prefix('units')->group(function () {
-                Route::post('assign-member', [AdminController::class, 'assignMemberToUnit']);
-                Route::post('unassign-member', [AdminController::class, 'unassignMemberFromUnit']);
-                Route::post('assign-leader', [AdminController::class, 'assignLeaderOrAssistantToUnit']);
-                Route::post('unassign-leader', [AdminController::class, 'unassignLeaderOrAssistantFromUnit']);
             });
             // attendance
             Route::prefix('attendance')->group(function () {

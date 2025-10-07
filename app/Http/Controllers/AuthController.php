@@ -60,7 +60,6 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         $user = $request->user()->loadFullProfile();
-        ;
         $data = new UserResource($user);
         return $this->successResponse(['user' => $data], 'user details', 200);
     }
