@@ -61,16 +61,8 @@ abstract class Controller
         ], $code);
     }
 
-    protected function errorResponse(?string $message = null, int $code = 500): JsonResponse
+    protected function errorResponse(?string $message = null, int $code = Response::HTTP_INTERNAL_SERVER_ERROR): JsonResponse
     {
         return ApiErrorResponse::create($message, $code);
     }
-    // protected function errorResponse($data = null, $message = null, $code)
-    // {
-    //     return response()->json([
-    //         'status' => false,
-    //         'message' => $message,
-    //         'data' => $data
-    //     ], $code);
-    // }
 }

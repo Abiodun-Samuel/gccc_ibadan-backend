@@ -7,6 +7,7 @@ use App\Models\FirstTimer;
 use App\Models\User;
 use App\Models\Unit;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class FirstTimerService
 {
@@ -23,6 +24,15 @@ class FirstTimerService
             ->orderBy('assigned_first_timers_count')
             ->orderBy('id')
             ->first();
+    }
+
+    public function updateFirstTimer(FirstTimer $firstTimer, array $data): FirstTimer
+    {
+        return DB::transaction(function () use ($firstTimer, $data) {
+            $firstTimer->update($data);
+            $firstTimer->load(['followUpStatus', 'assignedTo']);
+            return $firstTimer->fresh(['followUpStatus', 'assignedTo']);
+        });
     }
     public function getFirstTimersAssigned(int $memberId): ?Collection
     {

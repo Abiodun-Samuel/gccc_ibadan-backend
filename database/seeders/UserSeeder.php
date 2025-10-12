@@ -27,6 +27,7 @@ class UserSeeder extends Seeder
             [
                 'first_name' => 'Admin',
                 'last_name' => 'Admin',
+                'gender' => 'Male',
                 'full_name' => "Admin Admin",
                 'initials' => "AA",
                 'password' => $commonPassword,
@@ -46,6 +47,7 @@ class UserSeeder extends Seeder
                 'last_name' => "Abiodun",
                 'full_name' => "Abiodun Samuel",
                 'initials' => "AS",
+                'gender' => 'Male',
                 'password' => $commonPassword,
                 'phone_number' => $commonPhoneNumber,
             ]
@@ -61,6 +63,7 @@ class UserSeeder extends Seeder
                 'first_name' => 'Sunkanmi',
                 'last_name' => "Gbadegensin",
                 'full_name' => "Sunkanmi Gbadegesin",
+                'gender' => 'Female',
                 'initials' => "SK",
                 'password' => $commonPassword,
                 'phone_number' => $commonPhoneNumber,
@@ -72,7 +75,7 @@ class UserSeeder extends Seeder
         ]);
 
         // ----- Members -----
-        for ($i = 1; $i <= 3; $i++) {
+        for ($i = 1; $i <= 2; $i++) {
             $member = User::firstOrCreate(
                 ['email' => "member{$i}@gmail.com"],
                 [

@@ -15,14 +15,15 @@ return new class extends Migration {
             $table->id();
             $table->string('first_name');
             $table->string('last_name');
-            $table->string('full_name');
-            $table->string('initials');
+            $table->string('full_name')->nullable();
+            $table->string('initials')->nullable();
             $table->string('email')->unique();
             $table->string('phone_number')->nullable();
             $table->enum('gender', ['Male', 'Female', 'Other'])->nullable();
+            $table->string('role')->nullable();
             $table->enum('worker', ['Yes', 'No',])->nullable();
             $table->string('avatar')->nullable();
-            $table->enum('status', Status::values())->nullable()->index()->default(Status::ACTIVE->value);
+            $table->enum('status', Status::values())->nullable()->index()->default(Status::ACTIVE->value)->nullable();
             $table->string('address')->nullable();
             $table->string('community')->nullable()->index();
             $table->string('country')->nullable();
@@ -37,7 +38,7 @@ return new class extends Migration {
             $table->string('field_of_study')->nullable();
             $table->string('occupation')->nullable();
 
-            $table->unsignedInteger('attendance_badge')->default(0);
+            $table->unsignedInteger('attendance_badge')->default(0)->nullable();
             $table->unsignedTinyInteger('last_badge_month')->nullable();
             $table->unsignedSmallInteger('last_badge_year')->nullable();
 

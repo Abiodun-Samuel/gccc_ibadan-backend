@@ -25,9 +25,12 @@ class StoreFirstTimerRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
             'phone_number' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255|unique:first_timers,email',
             'gender' => 'nullable|in:Male,Female,Other',
+            'status' => ['string', Rule::in(array_column(Status::cases(), 'value'))],
             'located_in_ibadan' => 'nullable|boolean',
             'interest' => 'nullable|in:Yes,No,Maybe',
             'born_again' => 'nullable|in:Yes,No,Uncertain',
@@ -42,7 +45,6 @@ class StoreFirstTimerRequest extends FormRequest
             'prayer_point' => 'nullable|string',
             'notes' => 'nullable|string',
             'visitation_report' => 'nullable|string',
-            'status' => ['string', Rule::in(array_column(Status::cases(), 'value'))],
             'pastorate_call' => 'nullable|string',
             'friend_family' => 'nullable|string',
             'how_did_you_learn' => 'nullable|string',

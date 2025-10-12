@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Enums\FollowUpStatusEnum;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\FollowUpRequest;
 use App\Http\Requests\StoreFirstTimerRequest;
+use App\Http\Requests\UpdateFirstTimerRequest;
 use App\Http\Resources\FirstTimerResource;
+use App\Http\Resources\FollowUpResource;
 use App\Models\FirstTimer;
 use App\Models\FollowUpStatus;
 use App\Services\FirstTimerService;
+use App\Services\FollowUpService;
+use App\Services\MailService;
 use Cache;
 use DB;
 use Illuminate\Http\JsonResponse;
@@ -17,10 +22,14 @@ use Symfony\Component\HttpFoundation\Response;
 
 class FirstTimerController extends Controller
 {
+    protected MailService $mailService;
     public $firstTimerService;
-    public function __construct(FirstTimerService $firstTimerService)
+    public $followUpService;
+    public function __construct(FirstTimerService $firstTimerService, MailService $mailService, FollowUpService $followUpService)
     {
         $this->firstTimerService = $firstTimerService;
+        $this->mailService = $mailService;
+        $this->followUpService = $followUpService;
     }
 
     public function index()
@@ -36,12 +45,14 @@ class FirstTimerController extends Controller
 
         $firstTimer = FirstTimer::create(array_merge($data, [
             'assigned_to_member_id' => optional($followupMember)->id,
-            'follow_up_status_id' => FollowUpStatus::DEFAULT_STATUS_ID,
+            'follow_up_status_id' => FollowUpStatus::NOT_CONTACTED_ID,
             'assigned_at' => now(),
             'week_ending' => getNextSunday()?->toDateString()
         ]));
+        $firstTimer->load(['followUpStatus', 'assignedTo']);
+        $data = new FirstTimerResource($firstTimer);
 
-        return $this->successResponse($firstTimer, 'First timer created successfully', Response::HTTP_CREATED);
+        return $this->successResponse($data, 'First timer created successfully', Response::HTTP_CREATED);
     }
 
     public function setFollowupStatus(Request $request)
@@ -60,6 +71,45 @@ class FirstTimerController extends Controller
             ->get();
 
         return $this->successResponse(FirstTimerResource::collection($updatedFirstTimers), 'Statuses updated successfully', Response::HTTP_OK);
+    }
+
+    public function show(FirstTimer $firstTimer): JsonResponse
+    {
+        try {
+            $firstTimer->load(['followUpStatus', 'assignedTo']);
+            $data = new FirstTimerResource($firstTimer);
+            return $this->successResponse(
+                $data,
+                'First timer retrieved successfully',
+                Response::HTTP_OK
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                $e->getMessage(),
+                Response::HTTP_NOT_FOUND
+            );
+        }
+    }
+
+    public function update(UpdateFirstTimerRequest $request, FirstTimer $firstTimer): JsonResponse
+    {
+        try {
+            $validated = $request->validated();
+            $updatedFirstTimer = $this->firstTimerService->updateFirstTimer($firstTimer, $validated);
+            $data = new FirstTimerResource($updatedFirstTimer);
+            return $this->successResponse(
+                $data,
+                'First timer updated successfully',
+                Response::HTTP_OK
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                $e->getMessage(),
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
     }
 
     public function getFirsttimersAssigned(Request $request): JsonResponse
@@ -173,5 +223,49 @@ class FirstTimerController extends Controller
         });
 
         return $this->successResponse($data, 'First timers analytics retrieved successfully', Response::HTTP_OK);
+    }
+
+    public function sendFirstTimerWelcomeEmail(FirstTimer $firstTimer, Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'name' => 'required|string'
+        ]);
+        try {
+            $recipients = [['name' => $data['name'], 'email' => $data['email']]];
+            $validated = ['follow_up_status_id' => FollowUpStatus::CONTACTED_ID];
+            $updatedFirstTimer = $this->firstTimerService->updateFirstTimer($firstTimer, $validated);
+            $data = new FirstTimerResource($updatedFirstTimer);
+            $this->mailService->sendFirstTimerWelcomeEmail($recipients);
+            return $this->successResponse(
+                $data,
+                'Welcome message mail has been sent successfully',
+                Response::HTTP_OK
+            );
+        } catch (\Exception $ex) {
+            return $this->errorResponse($ex->getMessage());
+        }
+    }
+
+    public function getFollowups(FirstTimer $firstTimer): JsonResponse
+    {
+        $followUps = $this->followUpService->getFollowUpsByFirstTimer($firstTimer);
+        return $this->successResponse(
+            FollowUpResource::collection($followUps),
+            '',
+            Response::HTTP_OK
+        );
+    }
+    public function storeFollowups(FollowUpRequest $request, FirstTimer $firstTimer): JsonResponse
+    {
+        $followUp = $this->followUpService->createFollowUp(
+            $firstTimer,
+            $request->validated()
+        );
+        return $this->successResponse(
+            new FollowUpResource($followUp),
+            'Followup feedback has been saved successfully',
+            Response::HTTP_OK
+        );
     }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\FollowUpStatusController;
+use App\Http\Controllers\MailController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
@@ -39,12 +40,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('follow-up-statuses', FollowUpStatusController::class);
 
     // First-timers
-    Route::prefix('first-timers')->controller(FirstTimerController::class)->group(function () {
-        Route::get('/', 'index');
-        Route::post('status', 'setFollowupStatus');
-        Route::get('/assigned', 'getFirsttimersAssigned');
-
-    });
+    Route::prefix('first-timers')
+        ->controller(FirstTimerController::class)
+        ->name('first-timers.')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/assigned', 'getFirsttimersAssigned')->name('assigned');
+            Route::post('/status', 'setFollowupStatus')->name('set-status');
+            Route::post('/{firstTimer}/welcome-email', 'sendFirstTimerWelcomeEmail')->name('welcome-email');
+            Route::post('/{firstTimer}/store-follow-ups', 'storeFollowups');
+            Route::get('/{firstTimer}/get-follow-ups', 'getFollowups');
+            Route::get('/{firstTimer}', 'show')->name('show');
+            Route::put('/{firstTimer}', 'update')->name('update');
+        });
     //members
     Route::apiResource('members', MemberController::class);
     // Attendance

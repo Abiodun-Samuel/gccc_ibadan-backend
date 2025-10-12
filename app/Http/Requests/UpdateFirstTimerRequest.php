@@ -16,40 +16,53 @@ class UpdateFirstTimerRequest extends FormRequest
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            'name' => 'sometimes|required|string|max:255',
-            'phone_number' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'gender' => 'nullable|in:Male,Female,Other',
-            'located_in_ibadan' => 'nullable|boolean',
-            'interest' => 'nullable|in:Yes,No,Maybe',
-            'born_again' => 'nullable|in:Yes,No,Uncertain',
-            'whatsapp_interest' => 'nullable|boolean',
-            'address' => 'nullable|string|max:500',
-            'date_of_visit' => 'sometimes|required|date',
-            'date_of_birth' => 'nullable|date',
-            'occupation' => 'nullable|string|max:255',
-            'invited_by' => 'nullable|string|max:255',
-            'service_experience' => 'nullable|string',
-            'is_student' => 'nullable|boolean',
-            'prayer_point' => 'nullable|string',
-            'notes' => 'nullable|string',
-            'week_ending' => 'nullable|date',
-            'visitation_report' => 'nullable|string',
-            'pastorate_call' => 'nullable|string',
-            'follow_up_status_id' => 'nullable|exists:follow_up_statuses,id',
-            'assigned_to_member_id' => 'nullable|exists:users,id',
-            'assigned_at' => 'nullable|date',
+            'name' => ['sometimes', 'string', 'max:255'],
+            'last_name' => ['sometimes', 'string', 'max:255'],
+            'first_name' => ['sometimes', 'string', 'max:255'],
+            'phone_number' => ['sometimes', 'string', 'max:20'],
+            'email' => ['sometimes', 'email', 'max:255',],
+            'gender' => ['sometimes', 'string', Rule::in(['Male', 'Female', 'Other'])],
             'status' => ['string', Rule::in(array_column(Status::cases(), 'value'))],
-            'friend_family' => 'nullable|string',
-            'how_did_you_learn' => 'nullable|string',
+            'located_in_ibadan' => ['sometimes', 'boolean'],
+            'interest' => 'nullable|in:Yes,No,Maybe',
+            'born_again' => ['sometimes', 'boolean'],
+            'whatsapp_interest' => ['sometimes', 'boolean'],
+            'is_student' => ['sometimes', 'boolean'],
+            'address' => ['sometimes', 'string', 'max:500'],
+            'date_of_visit' => ['sometimes', 'date'],
+            'date_of_birth' => ['sometimes', 'date', 'before:today'],
+            'occupation' => ['sometimes', 'string', 'max:255'],
+            'invited_by' => ['sometimes', 'string', 'max:255'],
+            'service_experience' => ['sometimes', 'string', 'max:1000'],
+            'prayer_point' => ['sometimes', 'string', 'max:1000'],
+            'notes' => ['sometimes', 'string', 'max:2000'],
+            'visitation_report' => ['sometimes', 'string', 'max:2000'],
+            'pastorate_call' => ['sometimes', 'boolean'],
+            'friend_family' => ['sometimes', 'string', 'max:255'],
+            'how_did_you_learn' => ['sometimes', 'string', 'max:255'],
+            'follow_up_status_id' => ['sometimes', 'integer', 'exists:follow_up_statuses,id'],
+            'assigned_to_member_id' => ['sometimes', 'integer', 'exists:users,id'],
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'email.unique' => 'This email address is already registered.',
+            'date_of_birth.before' => 'Date of birth must be in the past.',
+            'follow_up_status_id.exists' => 'The selected follow-up status is invalid.',
+            'assigned_to_member_id.exists' => 'The selected member does not exist.',
+        ];
+    }
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('assigned_to_member_id') && $this->assigned_to_member_id && !$this->has('assigned_at')) {
+            $this->merge([
+                'assigned_at' => now(),
+            ]);
+        }
     }
 }
