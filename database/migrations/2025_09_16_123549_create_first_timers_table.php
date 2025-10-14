@@ -13,17 +13,17 @@ return new class extends Migration {
     {
         Schema::create('first_timers', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->nullable();
             $table->string('first_name')->index();
             $table->string('last_name')->index();
             $table->string('phone_number')->nullable();
             $table->string('email')->nullable()->index();
+            $table->string('avatar')->nullable();
             $table->enum('gender', ['Male', 'Female', 'Other'])->nullable();
             $table->boolean('located_in_ibadan')->nullable()->default(false);
-            $table->enum('interest', ['Yes', 'No', 'Maybe'])->nullable();
+            $table->enum('membership_interest', ['Yes', 'No', 'Maybe'])->nullable();
             $table->enum('status', Status::values())->index()->default(Status::ACTIVE->value);
             $table->enum('born_again', ['Yes', 'No', 'Uncertain'])->nullable();
-            $table->boolean('whatsapp_interest')->nullable()->default(true);
+            $table->boolean('whatsapp_interest')->nullable()->default(false);
             $table->boolean('is_student')->nullable()->default(false);
             $table->string('address')->nullable();
             $table->date('date_of_visit')->nullable()->index();
@@ -34,10 +34,10 @@ return new class extends Migration {
             $table->string('invited_by')->nullable();
             $table->text('service_experience')->nullable();
             $table->text('prayer_point')->nullable();
-            $table->text('notes')->nullable();
+            $table->longText('notes')->nullable();
             $table->date('week_ending')->nullable();
-            $table->text('visitation_report')->nullable();
-            $table->text('pastorate_call')->nullable();
+            $table->longText('visitation_report')->nullable();
+            $table->longText('pastorate_call')->nullable();
             $table->dateTime('assigned_at')->nullable();
             $table->timestamps();
         });

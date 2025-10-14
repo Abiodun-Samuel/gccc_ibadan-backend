@@ -27,6 +27,7 @@ class FollowUpService
                 'user_id' => auth()->id(),
                 'note' => $data['note'],
                 'type' => $data['type'] ?? null,
+                'service_date' => $data['service_date'] ?? null,
             ]);
             $followUp->load(['user', 'firstTimer']);
             $this->clearCache($firstTimer->id);

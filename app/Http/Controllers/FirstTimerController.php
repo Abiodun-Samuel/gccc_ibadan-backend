@@ -14,22 +14,26 @@ use App\Models\FollowUpStatus;
 use App\Services\FirstTimerService;
 use App\Services\FollowUpService;
 use App\Services\MailService;
+use App\Services\UploadService;
 use Cache;
 use DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
 
 class FirstTimerController extends Controller
 {
     protected MailService $mailService;
     public $firstTimerService;
+    public $uploadService;
     public $followUpService;
-    public function __construct(FirstTimerService $firstTimerService, MailService $mailService, FollowUpService $followUpService)
+    public function __construct(FirstTimerService $firstTimerService, MailService $mailService, FollowUpService $followUpService, UploadService $uploadService)
     {
         $this->firstTimerService = $firstTimerService;
         $this->mailService = $mailService;
         $this->followUpService = $followUpService;
+        $this->uploadService = $uploadService;
     }
 
     public function index()
@@ -96,21 +100,62 @@ class FirstTimerController extends Controller
     {
         try {
             $validated = $request->validated();
+            if (!empty($validated['avatar'])) {
+                try {
+                    $validated['avatar'] = $this->uploadService->upload(
+                        $validated['avatar'],
+                        $request->folder ?? 'first-timers'
+                    );
+                } catch (InvalidArgumentException $e) {
+                    return $this->errorResponse(
+                        $e->getMessage(),
+                        Response::HTTP_UNPROCESSABLE_ENTITY
+                    );
+                }
+            }
             $updatedFirstTimer = $this->firstTimerService->updateFirstTimer($firstTimer, $validated);
-            $data = new FirstTimerResource($updatedFirstTimer);
             return $this->successResponse(
-                $data,
+                new FirstTimerResource($updatedFirstTimer),
                 'First timer updated successfully',
                 Response::HTTP_OK
             );
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->errorResponse(
+                'Validation failed',
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
         } catch (\Exception $e) {
             return $this->errorResponse(
-                $e->getMessage(),
+                'An error occurred while updating the record. Please try again.',
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
     }
+
+    // public function update(UpdateFirstTimerRequest $request, FirstTimer $firstTimer): JsonResponse
+    // {
+    //     try {
+    //         $validated = $request->validated();
+    //         if (!empty($validated['avatar'])) {
+    //             $validated['avatar'] = $this->uploadService->upload($validated['avatar'], $request->folder);
+    //         }
+    //         $updatedFirstTimer = $this->firstTimerService->updateFirstTimer($firstTimer, $validated);
+
+    //         $data = new FirstTimerResource($updatedFirstTimer);
+    //         return $this->successResponse(
+    //             $data,
+    //             'First timer updated successfully',
+    //             Response::HTTP_OK
+    //         );
+
+    //     } catch (\Exception $e) {
+    //         return $this->errorResponse(
+    //             $e->getMessage(),
+    //             Response::HTTP_INTERNAL_SERVER_ERROR
+    //         );
+    //     }
+    // }
 
     public function getFirsttimersAssigned(Request $request): JsonResponse
     {
@@ -227,23 +272,40 @@ class FirstTimerController extends Controller
 
     public function sendFirstTimerWelcomeEmail(FirstTimer $firstTimer, Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $validated = $request->validate([
             'email' => 'required|email',
-            'name' => 'required|string'
+            'name' => 'required|string|max:255'
         ]);
+        DB::beginTransaction();
         try {
-            $recipients = [['name' => $data['name'], 'email' => $data['email']]];
-            $validated = ['follow_up_status_id' => FollowUpStatus::CONTACTED_ID];
-            $updatedFirstTimer = $this->firstTimerService->updateFirstTimer($firstTimer, $validated);
-            $data = new FirstTimerResource($updatedFirstTimer);
+            $updatedFirstTimer = $this->firstTimerService->updateFirstTimer(
+                $firstTimer,
+                ['follow_up_status_id' => FollowUpStatus::CONTACTED_ID]
+            );
+
+            $recipients = [
+                [
+                    'name' => $validated['name'],
+                    'email' => $validated['email']
+                ]
+            ];
+            // Send welcome email
             $this->mailService->sendFirstTimerWelcomeEmail($recipients);
+
+            DB::commit();
+
             return $this->successResponse(
-                $data,
-                'Welcome message mail has been sent successfully',
+                new FirstTimerResource($updatedFirstTimer),
+                'Welcome email sent successfully',
                 Response::HTTP_OK
             );
-        } catch (\Exception $ex) {
-            return $this->errorResponse($ex->getMessage());
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(
+                $e->getMessage(),
+                Response::HTTP_SERVICE_UNAVAILABLE
+            );
         }
     }
 

@@ -16,14 +16,16 @@ class FirstTimerResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'full_name' => "{$this->first_name} {$this->last_name}",
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
+            'initials' => generateInitials($this->first_name, $this->last_name),
+            'avatar' => $this->avatar,
             'phone_number' => $this->phone_number,
             'email' => $this->email,
             'gender' => $this->gender,
             'located_in_ibadan' => (bool) $this->located_in_ibadan,
-            'interest' => $this->interest,
+            'membership_interest' => $this->membership_interest,
             'born_again' => $this->born_again,
             'whatsapp_interest' => (bool) $this->whatsapp_interest,
             'address' => $this->address,
@@ -52,7 +54,7 @@ class FirstTimerResource extends JsonResource
 
             'assigned_to_member' => $this->whenLoaded('assignedTo', fn() => [
                 'id' => $this->assignedTo->id,
-                'name' => $this->assignedTo->first_name . ' ' . $this->assignedTo->last_name,
+                'full_name' => $this->assignedTo->first_name . ' ' . $this->assignedTo->last_name,
                 'email' => $this->assignedTo->email,
                 'gender' => $this->assignedTo->gender,
             ]),

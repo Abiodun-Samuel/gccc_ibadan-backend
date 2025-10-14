@@ -27,16 +27,16 @@ class UnitResource extends JsonResource
 
             'leader' => $this->whenLoaded('leader') ? [
                 'id' => $this->leader?->id,
-                'name' => $this->leader?->full_name,
-                'initials' => $this->leader?->initials,
+                'full_name' => "{$this->leader?->first_name} {$this->leader?->last_name}",
+                'initials' => generateInitials($this->leader?->first_name, $this->leader?->last_name),
                 'email' => $this->leader?->email,
                 'phone' => $this->leader?->phone_number,
                 'gender' => $this->leader?->gender,
             ] : null,
             'assistantLeader' => $this->whenLoaded('assistantLeader') ? [
                 'id' => $this->assistantLeader?->id,
-                'name' => $this->assistantLeader?->full_name,
-                'initials' => $this->assistantLeader?->initials,
+                'full_name' => "{$this->assistantLeader?->first_name} {$this->assistantLeader?->last_name}",
+                'initials' => generateInitials($this->assistantLeader?->first_name, $this->assistantLeader?->last_name),
                 'email' => $this->assistantLeader?->email,
                 'phone' => $this->assistantLeader?->phone_number,
                 'gender' => $this->assistantLeader?->gender,

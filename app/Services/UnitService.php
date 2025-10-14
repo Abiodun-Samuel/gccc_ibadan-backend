@@ -55,28 +55,30 @@ class UnitService
     public function updateUnit(Unit $unit, array $data): void
     {
         DB::transaction(function () use ($unit, $data) {
-            // Store previous leader/assistant for cleanup
             $previousLeaderId = $unit->leader_id;
             $previousAssistantId = $unit->assistant_leader_id;
+            $memberIds = $data['member_ids'] ?? [];
 
-            // Update basic unit information
             if (isset($data['name'])) {
                 $unit->update(['name' => $data['name']]);
             }
 
-            // Handle leader assignment/update
             if (array_key_exists('leader_id', $data)) {
+                if ($data['leader_id'] !== null)
+                    $memberIds[] = $data['leader_id'];
                 $this->updateLeader($unit, $data['leader_id'], $previousLeaderId);
             }
 
-            // Handle assistant assignment/update
             if (array_key_exists('assistant_leader_id', $data)) {
+                if ($data['assistant_leader_id'] !== null)
+                    $memberIds[] = $data['assistant_leader_id'];
                 $this->updateAssistant($unit, $data['assistant_leader_id'], $previousAssistantId);
             }
 
-            // Handle member assignments
-            if (isset($data['member_ids'])) {
-                $this->syncMembers($unit, $data['member_ids']);
+            if (!empty($memberIds)) {
+                $this->syncMembers($unit, $memberIds);
+            } else {
+                $unit->members()->detach();
             }
         });
     }
@@ -137,7 +139,6 @@ class UnitService
     private function updateAssistant(Unit $unit, ?int $newAssistantId, ?int $previousAssistantId): void
     {
         $unit->update(['assistant_leader_id' => $newAssistantId]);
-
         // Assign role to new assistant
         if ($newAssistantId) {
             $newAssistant = User::findOrFail($newAssistantId);

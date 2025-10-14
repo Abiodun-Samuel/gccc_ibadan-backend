@@ -1,16 +1,20 @@
 <?php
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 if (!function_exists('getNextSunday')) {
-    /**
-     * Get the next Sunday's date.
-     * If today is Sunday, return today's date.
-     *
-     * @return \Carbon\Carbon
-     */
     function getNextSunday(): Carbon
     {
         $today = Carbon::today();
         return $today->isSunday() ? $today : $today->next(\Carbon\CarbonInterface::SUNDAY);
     }
 }
+if (!function_exists('generateInitials')) {
+    function generateInitials(string $firstName, string $lastName): string
+    {
+        $firstInitial = Str::upper(Str::substr($firstName, 0, 1));
+        $lastInitial = Str::upper(Str::substr($lastName, 0, 1));
+        return "$firstInitial$lastInitial";
+    }
+}
+

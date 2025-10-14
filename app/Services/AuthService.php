@@ -42,9 +42,6 @@ class AuthService
     public function register(array $data): array
     {
         $data['password'] = Hash::make($data['phone_number']);
-        $data['full_name'] = trim("{$data['first_name']} {$data['last_name']}");
-        $data['initials'] = $this->generateInitials($data['first_name'], $data['last_name']);
-
         $user = User::create($data);
         $role = $data['role'] ?? RoleEnum::MEMBER->value;
         $this->rolePermissionService->assignRoleAndSyncPermissions($user, [$role]);
@@ -55,14 +52,6 @@ class AuthService
             'token' => $token,
             'user' => UserResource::make($user),
         ];
-    }
-
-    private function generateInitials(string $firstName, string $lastName): string
-    {
-        $firstInitial = Str::upper(Str::substr($firstName, 0, 1));
-        $lastInitial = Str::upper(Str::substr($lastName, 0, 1));
-
-        return $firstInitial . $lastInitial;
     }
 
     /**

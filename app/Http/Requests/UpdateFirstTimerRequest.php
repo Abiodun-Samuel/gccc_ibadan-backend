@@ -19,7 +19,6 @@ class UpdateFirstTimerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'string', 'max:255'],
             'last_name' => ['sometimes', 'string', 'max:255'],
             'first_name' => ['sometimes', 'string', 'max:255'],
             'phone_number' => ['sometimes', 'string', 'max:20'],
@@ -27,24 +26,25 @@ class UpdateFirstTimerRequest extends FormRequest
             'gender' => ['sometimes', 'string', Rule::in(['Male', 'Female', 'Other'])],
             'status' => ['string', Rule::in(array_column(Status::cases(), 'value'))],
             'located_in_ibadan' => ['sometimes', 'boolean'],
-            'interest' => 'nullable|in:Yes,No,Maybe',
             'born_again' => ['sometimes', 'boolean'],
             'whatsapp_interest' => ['sometimes', 'boolean'],
+            'membership_interest' => 'nullable|in:Yes,No,Maybe',
             'is_student' => ['sometimes', 'boolean'],
-            'address' => ['sometimes', 'string', 'max:500'],
-            'date_of_visit' => ['sometimes', 'date'],
-            'date_of_birth' => ['sometimes', 'date', 'before:today'],
-            'occupation' => ['sometimes', 'string', 'max:255'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'date_of_visit' => ['sometimes', 'nullable', 'date'],
+            'date_of_birth' => ['sometimes', 'nullable', 'date', 'before:today'],
+            'occupation' => ['sometimes', 'nullable', 'string', 'max:255'],
             'invited_by' => ['sometimes', 'string', 'max:255'],
             'service_experience' => ['sometimes', 'string', 'max:1000'],
             'prayer_point' => ['sometimes', 'string', 'max:1000'],
-            'notes' => ['sometimes', 'string', 'max:2000'],
-            'visitation_report' => ['sometimes', 'string', 'max:2000'],
-            'pastorate_call' => ['sometimes', 'boolean'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'visitation_report' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'pastorate_call' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'friend_family' => ['sometimes', 'string', 'max:255'],
             'how_did_you_learn' => ['sometimes', 'string', 'max:255'],
             'follow_up_status_id' => ['sometimes', 'integer', 'exists:follow_up_statuses,id'],
             'assigned_to_member_id' => ['sometimes', 'integer', 'exists:users,id'],
+            'avatar' => ['sometimes', 'regex:/^data:image\/(jpeg|png|jpg|gif|webp);base64,/'],
         ];
     }
 

@@ -15,7 +15,8 @@ return new class extends Migration {
             $table->foreignId('first_timer_id')->constrained('first_timers')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->enum('type', ['Pre-Service', 'Post-Service', 'Admin', 'Pastor', 'Unit-Leader', 'Others'])->nullable();
-            $table->text('note');
+            $table->longText('note');
+            $table->date('service_date')->nullable();
             $table->timestamps();
         });
     }

@@ -15,7 +15,7 @@ class MailService
         $this->apiKey = config('services.zeptomail.api_key');
     }
 
-    private function sendEmail(array $data)
+    private function sendEmail(array $data): array
     {
         $response = Http::withHeaders([
             'accept' => 'application/json',
@@ -27,266 +27,107 @@ class MailService
             ->post($this->apiUrl, $data);
 
         if (!$response->successful()) {
-            $data = json_decode($response->json(), true);
-            $message = $data->error->details[0]->message;
-            throw new \Exception("ZeptoMail API Error: $message");
+            $this->handleApiError($response);
         }
 
         return $response->json();
     }
 
-    public function sendAbsentMemberAssignmentEmail($recipients = [], $ccRecipients = [], $bccRecipients = [])
+    private function handleApiError($response): void
     {
-        $toArray = [];
-        foreach ($recipients as $recipient) {
-            $toArray[] = [
-                "email_address" => [
-                    "address" => $recipient['email'],
-                    "name" => $recipient['name'] ?? ''
-                ]
-            ];
+        $statusCode = $response->status();
+        $responseBody = $response->json();
+
+        $errorMessage = 'Email service error occurred';
+
+        if (isset($responseBody['error']['details'][0]['message'])) {
+            $errorMessage = $responseBody['error']['details'][0]['message'];
+        } elseif (isset($responseBody['message'])) {
+            $errorMessage = $responseBody['message'];
+        } elseif (isset($responseBody['error'])) {
+            $errorMessage = is_string($responseBody['error'])
+                ? $responseBody['error']
+                : json_encode($responseBody['error']);
         }
 
-        $ccArray = [];
-        foreach ($ccRecipients as $cc) {
-            $ccArray[] = [
-                "email_address" => [
-                    "address" => $cc['email'],
-                    "name" => $cc['name'] ?? ''
-                ]
-            ];
-        }
+        $userMessage = match ($statusCode) {
+            400 => 'Invalid email request. Please check the email details.',
+            401 => 'Email service authentication failed.',
+            403 => 'Not authorized to send emails.',
+            429 => 'Too many email requests. Please try again later.',
+            500, 502, 503, 504 => 'Email service is temporarily unavailable.',
+            default => "Failed to send email: {$errorMessage}",
+        };
+        throw new \Exception($userMessage, $statusCode);
+    }
 
-        $bccArray = [];
-        foreach ($bccRecipients as $bcc) {
-            $bccArray[] = [
-                "email_address" => [
-                    "address" => $bcc['email'],
-                    "name" => $bcc['name'] ?? ''
-                ]
-            ];
-        }
+    private function buildRecipientsArray(array $recipients): array
+    {
+        return array_map(fn($recipient) => [
+            "email_address" => [
+                "address" => $recipient['email'],
+                "name" => $recipient['name'] ?? ''
+            ]
+        ], $recipients);
+    }
 
+    public function sendAbsentMemberAssignmentEmail(
+        array $recipients = [],
+        array $ccRecipients = [],
+        array $bccRecipients = []
+    ): array {
         $data = [
             "mail_template_key" => env('assisgnment_email_template_id'),
             "from" => [
                 "address" => "admin@gcccibadan.org",
                 "name" => "Admin from GCCC IBADAN"
             ],
-            "to" => $toArray,
+            "to" => $this->buildRecipientsArray($recipients),
         ];
 
-        if (!empty($ccArray))
-            $data['cc'] = $ccArray;
-
-        if (!empty($bccArray))
-            $data['bcc'] = $bccArray;
-
-        try {
-            $result = $this->sendEmail($data);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Email sent successfully',
-                'data' => $result
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to send email',
-                'error' => $e->getMessage()
-            ], 500);
+        if (!empty($ccRecipients)) {
+            $data['cc'] = $this->buildRecipientsArray($ccRecipients);
         }
+
+        if (!empty($bccRecipients)) {
+            $data['bcc'] = $this->buildRecipientsArray($bccRecipients);
+        }
+
+        return $this->sendEmail($data);
     }
 
-    public function sendFirstTimerWelcomeEmail($recipients, $ccRecipients = [], $bccRecipients = [])
-    {
-        $toArray = [];
-        foreach ($recipients as $recipient) {
-            $toArray[] = [
-                "email_address" => [
-                    "address" => $recipient['email'],
-                    "name" => $recipient['name']
-                ]
-            ];
+    public function sendFirstTimerWelcomeEmail(
+        array $recipients,
+        array $ccRecipients = [],
+        array $bccRecipients = []
+    ): array {
+        if (empty($recipients)) {
+            throw new \Exception('No recipients provided for welcome email.');
         }
 
-        $ccArray = [];
-        foreach ($ccRecipients as $cc) {
-            $ccArray[] = [
-                "email_address" => [
-                    "address" => $cc['email'],
-                    "name" => $cc['name'] ?? ''
-                ]
-            ];
-        }
-
-        $bccArray = [];
-        foreach ($bccRecipients as $bcc) {
-            $bccArray[] = [
-                "email_address" => [
-                    "address" => $bcc['email'],
-                    "name" => $bcc['name'] ?? ''
-                ]
-            ];
-        }
+        $firstRecipient = $recipients[0];
 
         $data = [
+            // "mail_template_key" => config('services.zeptomail.templates.first_timer_welcome'),
             "mail_template_key" => env('firsttimer_welcome_email_template_id'),
             "from" => [
                 "address" => "admin@gcccibadan.org",
                 "name" => "Admin from GCCC IBADAN"
             ],
-            "to" => $toArray,
+            "to" => $this->buildRecipientsArray($recipients),
             "merge_info" => [
-                "name" => $recipient['name'],
+                "name" => $firstRecipient['name'] ?? '',
             ]
         ];
 
-        if (!empty($ccArray)) {
-            $data['cc'] = $ccArray;
+        if (!empty($ccRecipients)) {
+            $data['cc'] = $this->buildRecipientsArray($ccRecipients);
         }
 
-        if (!empty($bccArray)) {
-            $data['bcc'] = $bccArray;
+        if (!empty($bccRecipients)) {
+            $data['bcc'] = $this->buildRecipientsArray($bccRecipients);
         }
 
-        try {
-            $result = $this->sendEmail($data);
-            return response()->json([
-                'success' => true,
-                'message' => 'Email sent successfully',
-                'data' => $result
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to send email',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return $this->sendEmail($data);
     }
-
-    //     // ============================================
-// // USAGE EXAMPLES
-// // ============================================
-
-    //     // Example 1: Multiple TO recipients
-//     public function exampleMultipleTo()
-//     {
-//         $recipients = [
-//             ['email' => 'user1@example.com', 'name' => 'User One'],
-//             ['email' => 'user2@example.com', 'name' => 'User Two'],
-//             ['email' => 'user3@example.com', 'name' => 'User Three']
-//         ];
-
-    //         return $this->sendAbsentMemberAssignmentEmail($recipients);
-//     }
-
-    //     // Example 2: TO recipients with CC
-//     public function exampleWithCC()
-//     {
-//         $recipients = [
-//             ['email' => 'primary@example.com', 'name' => 'Primary User']
-//         ];
-
-    //         $ccRecipients = [
-//             ['email' => 'admin@gcccibadan.org', 'name' => 'Admin'],
-//             ['email' => 'manager@gcccibadan.org', 'name' => 'Manager']
-//         ];
-
-    //         return $this->sendAbsentMemberAssignmentEmail($recipients, $ccRecipients);
-//     }
-
-    //     // Example 3: TO, CC, and BCC recipients
-//     public function exampleWithAll()
-//     {
-//         $recipients = [
-//             ['email' => 'member1@example.com', 'name' => 'Member One'],
-//             ['email' => 'member2@example.com', 'name' => 'Member Two']
-//         ];
-
-    //         $ccRecipients = [
-//             ['email' => 'supervisor@gcccibadan.org', 'name' => 'Supervisor']
-//         ];
-
-    //         $bccRecipients = [
-//             ['email' => 'archive@gcccibadan.org', 'name' => 'Archive']
-//         ];
-
-    //         return $this->sendAbsentMemberAssignmentEmail($recipients, $ccRecipients, $bccRecipients);
-//     }
-
-    //     // ============================================
-// // SIMPLE HARDCODED VERSION (Quick Fix)
-// // ============================================
-
-    //     public function sendAbsentMemberAssignmentEmailSimple()
-//     {
-//         $data = [
-//             "mail_template_key" => "",
-//             "from" => [
-//                 "address" => "admin@gcccibadan.org",
-//                 "name" => "Daphne from GCCC IBADAN"
-//             ],
-//             // Multiple TO recipients
-//             "to" => [
-//                 [
-//                     "email_address" => [
-//                         "address" => "abiodunsamyemi@gmail.com",
-//                         "name" => "Daphne"
-//                     ]
-//                 ],
-//                 [
-//                     "email_address" => [
-//                         "address" => "user2@example.com",
-//                         "name" => "User Two"
-//                     ]
-//                 ],
-//                 [
-//                     "email_address" => [
-//                         "address" => "user3@example.com",
-//                         "name" => "User Three"
-//                     ]
-//                 ]
-//             ],
-//             // CC recipients (optional)
-//             "cc" => [
-//                 [
-//                     "email_address" => [
-//                         "address" => "manager@gcccibadan.org",
-//                         "name" => "Manager"
-//                     ]
-//                 ]
-//             ],
-//             // BCC recipients (optional)
-//             "bcc" => [
-//                 [
-//                     "email_address" => [
-//                         "address" => "archive@gcccibadan.org",
-//                         "name" => "Archive"
-//                     ]
-//                 ]
-//             ],
-//             "merge_info" => [
-//                 "name" => "Daphne",
-//             ]
-//         ];
-
-    //         try {
-//             $result = $this->sendEmail($data);
-
-    //             return response()->json([
-//                 'success' => true,
-//                 'message' => 'Email sent successfully',
-//                 'data' => $result
-//             ]);
-//         } catch (\Exception $e) {
-//             return response()->json([
-//                 'success' => false,
-//                 'message' => 'Failed to send email',
-//                 'error' => $e->getMessage()
-//             ], 500);
-//         }
-//     }
 }

@@ -2487,7 +2487,7 @@ class FirstTimerSeeder extends Seeder
                     : null,
                 'status' => 'active',
                 'located_in_ibadan' => null,
-                'interest' => null,
+                'membership_interest' => null,
                 'born_again' => null,
                 'whatsapp_interest' => null,
                 'address' => null,

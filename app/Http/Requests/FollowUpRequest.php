@@ -35,6 +35,12 @@ class FollowUpRequest extends FormRequest
                     'Others'
                 ])
             ],
+            'service_date' => [
+                'nullable',
+                'date',
+                Rule::requiredIf(fn() => $this->input('type') &&
+                    stripos($this->input('type'), 'service') !== false)
+            ],
         ];
     }
 }

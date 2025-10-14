@@ -24,17 +24,17 @@ class StoreFirstTimerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
             'phone_number' => 'nullable|string|max:255',
+            'avatar' => 'nullable|string',
             'email' => 'nullable|email|max:255|unique:first_timers,email',
             'gender' => 'nullable|in:Male,Female,Other',
             'status' => ['string', Rule::in(array_column(Status::cases(), 'value'))],
             'located_in_ibadan' => 'nullable|boolean',
-            'interest' => 'nullable|in:Yes,No,Maybe',
-            'born_again' => 'nullable|in:Yes,No,Uncertain',
             'whatsapp_interest' => 'nullable|boolean',
+            'membership_interest' => 'nullable|in:Yes,No,Maybe',
+            'born_again' => 'nullable|in:Yes,No,Uncertain',
             'is_student' => 'nullable|boolean',
             'address' => 'nullable|string|max:500',
             'date_of_visit' => 'required|date',

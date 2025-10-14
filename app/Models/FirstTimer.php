@@ -10,14 +10,14 @@ class FirstTimer extends Model
 {
     protected $hidden = ['pivot'];
     protected $fillable = [
-        'name',
+        'avatar',
         'first_name',
         'last_name',
         'phone_number',
         'email',
         'status',
         'located_in_ibadan',
-        'interest',
+        'membership_interest',
         'born_again',
         'whatsapp_interest',
         'address',
