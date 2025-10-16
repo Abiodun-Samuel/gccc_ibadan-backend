@@ -8,6 +8,7 @@ use App\Http\Requests\FollowUpRequest;
 use App\Http\Requests\StoreFirstTimerRequest;
 use App\Http\Requests\UpdateFirstTimerRequest;
 use App\Http\Resources\FirstTimerResource;
+use App\Http\Resources\FollowupFeedbackResource;
 use App\Http\Resources\FollowUpResource;
 use App\Models\FirstTimer;
 use App\Models\FollowUpStatus;
@@ -102,6 +103,9 @@ class FirstTimerController extends Controller
             $validated = $request->validated();
             if (!empty($validated['avatar'])) {
                 try {
+                    if ($firstTimer->avatar != null) {
+                        $this->uploadService->delete($firstTimer->avatar);
+                    }
                     $validated['avatar'] = $this->uploadService->upload(
                         $validated['avatar'],
                         $request->folder ?? 'first-timers'
@@ -132,30 +136,6 @@ class FirstTimerController extends Controller
             );
         }
     }
-
-    // public function update(UpdateFirstTimerRequest $request, FirstTimer $firstTimer): JsonResponse
-    // {
-    //     try {
-    //         $validated = $request->validated();
-    //         if (!empty($validated['avatar'])) {
-    //             $validated['avatar'] = $this->uploadService->upload($validated['avatar'], $request->folder);
-    //         }
-    //         $updatedFirstTimer = $this->firstTimerService->updateFirstTimer($firstTimer, $validated);
-
-    //         $data = new FirstTimerResource($updatedFirstTimer);
-    //         return $this->successResponse(
-    //             $data,
-    //             'First timer updated successfully',
-    //             Response::HTTP_OK
-    //         );
-
-    //     } catch (\Exception $e) {
-    //         return $this->errorResponse(
-    //             $e->getMessage(),
-    //             Response::HTTP_INTERNAL_SERVER_ERROR
-    //         );
-    //     }
-    // }
 
     public function getFirsttimersAssigned(Request $request): JsonResponse
     {
@@ -309,25 +289,15 @@ class FirstTimerController extends Controller
         }
     }
 
-    public function getFollowups(FirstTimer $firstTimer): JsonResponse
+    public function getFirstTimersWithFollowups()
     {
-        $followUps = $this->followUpService->getFollowUpsByFirstTimer($firstTimer);
-        return $this->successResponse(
-            FollowUpResource::collection($followUps),
-            '',
-            Response::HTTP_OK
-        );
-    }
-    public function storeFollowups(FollowUpRequest $request, FirstTimer $firstTimer): JsonResponse
-    {
-        $followUp = $this->followUpService->createFollowUp(
-            $firstTimer,
-            $request->validated()
-        );
-        return $this->successResponse(
-            new FollowUpResource($followUp),
-            'Followup feedback has been saved successfully',
-            Response::HTTP_OK
-        );
+        $firstTimers = FirstTimer::with([
+            'followUpStatus',
+            'assignedTo',
+            'followupFeedbacks.user' => function ($query) {
+                $query->select('id', 'first_name', 'last_name', 'avatar');
+            }
+        ])->where('status', 'active')->orderBy('date_of_visit', 'desc')->get();
+        return $this->successResponse(FirstTimerResource::collection($firstTimers), 'First timers retrieved successfully', Response::HTTP_OK);
     }
 }

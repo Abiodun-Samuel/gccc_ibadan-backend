@@ -40,10 +40,10 @@ class FirstTimerResource extends JsonResource
             'how_did_you_learn' => $this->how_did_you_learn,
             'is_student' => $this->is_student,
             'notes' => $this->notes,
-            'week_ending' => optional($this->week_ending)->format('Y-m-d'),
+            'week_ending' => optional($this->week_ending)?->format('Y-m-d'),
             'visitation_report' => $this->visitation_report,
             'pastorate_call' => $this->pastorate_call,
-            'assigned_at' => optional($this->assigned_at)->toDateTimeString(),
+            'assigned_at' => optional($this->assigned_at)?->toDateTimeString(),
 
             // Relationships
             'follow_up_status' => $this->whenLoaded('followUpStatus', fn() => [
@@ -54,12 +54,12 @@ class FirstTimerResource extends JsonResource
 
             'assigned_to_member' => $this->whenLoaded('assignedTo', fn() => [
                 'id' => $this->assignedTo->id,
-                'full_name' => $this->assignedTo->first_name . ' ' . $this->assignedTo->last_name,
+                'full_name' => "{$this->assignedTo->first_name} {$this->assignedTo->last_name}",
                 'email' => $this->assignedTo->email,
                 'gender' => $this->assignedTo->gender,
             ]),
 
-            'followupNotes' => $this->whenLoaded('followupNotes'),
+            'followupFeedbacks' => $this->whenLoaded('followupFeedbacks'),
 
             'created_at' => $this->created_at?->toDateTimeString(),
             'updated_at' => $this->updated_at?->toDateTimeString(),

@@ -87,5 +87,4 @@ class MemberController extends Controller
             return $this->errorResponse('Failed to delete member', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-
 }

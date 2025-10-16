@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class FirstTimer extends Model
 {
@@ -57,9 +58,9 @@ class FirstTimer extends Model
     {
         return $this->belongsTo(User::class, 'assigned_to_member_id');
     }
-    public function followupNotes()
+    public function followupFeedbacks(): MorphMany
     {
-        return $this->hasMany(FirstTimerFollowUp::class);
+        return $this->morphMany(FollowupFeedback::class, 'followupable')->latest();
     }
     public function scopeInPeriod(Builder $query, Carbon $startDate, Carbon $endDate): Builder
     {

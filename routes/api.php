@@ -1,11 +1,10 @@
 <?php
 
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\FollowupFeedbackController;
 use App\Http\Controllers\FollowUpStatusController;
-use App\Http\Controllers\MailController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\PermissionController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -33,12 +32,15 @@ Route::middleware('guest')->group(function () {
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
     // Users (for leaders, admin and members)
-    Route::patch('/profile', [ProfileController::class, 'update']);
-    Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
+    Route::put('/update-profile', [UserController::class, 'update']);
     Route::get('/leaders/absentees', [UserController::class, 'getAssignedAbsentees']);
     // Follow-up statuses
     Route::apiResource('follow-up-statuses', FollowUpStatusController::class);
-
+    // followup feedbacks
+    Route::apiResource('followup-feedbacks', FollowupFeedbackController::class);
+    // Route::get('first-timers/{firstTimer}/followup-feedbacks', [FollowupFeedbackController::class, 'forFirstTimer']);
+    // Route::get('members/{user}/followup-feedbacks', [FollowupFeedbackController::class, 'forMember']);
+    Route::get('/first-timers/{firstTimer}/followup-feedbacks', [FollowupFeedbackController::class, 'getFollowUpsByFirstTimer']);
     // First-timers
     Route::prefix('first-timers')
         ->controller(FirstTimerController::class)
@@ -48,10 +50,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/assigned', 'getFirsttimersAssigned')->name('assigned');
             Route::post('/status', 'setFollowupStatus')->name('set-status');
             Route::post('/{firstTimer}/welcome-email', 'sendFirstTimerWelcomeEmail')->name('welcome-email');
-            Route::post('/{firstTimer}/store-follow-ups', 'storeFollowups');
-            Route::get('/{firstTimer}/get-follow-ups', 'getFollowups');
             Route::get('/{firstTimer}', 'show')->name('show');
             Route::put('/{firstTimer}', 'update')->name('update');
+            // Route::get('/followups', 'getFirstTimersWithFollowups');
+            //
         });
     //members
     Route::apiResource('members', MemberController::class);

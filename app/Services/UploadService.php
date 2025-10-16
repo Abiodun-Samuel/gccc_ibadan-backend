@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use Cloudinary\Cloudinary;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Exception;
 
@@ -40,7 +38,6 @@ class UploadService
             $uploadResult = $this->cloudinary->uploadApi()->upload($avatar, [
                 'folder' => $folder,
                 'resource_type' => 'auto',
-                'timeout' => 60,
             ]);
             if (empty($uploadResult['secure_url'])) {
                 throw new InvalidArgumentException('Upload failed: No URL returned from Cloudinary.');
@@ -63,21 +60,15 @@ class UploadService
      * @return bool
      * @throws Exception
      */
-    public function delete(string $publicId): bool
+    public function delete(string $url): bool
     {
+        $publicId = $this->getPublicIdFromUrl($url);
         try {
             $result = $this->cloudinary->uploadApi()->destroy($publicId);
-            return $result['result'] === 'ok';
+            return isset($result['result']) && $result['result'] === 'ok';
         } catch (Exception $e) {
-            return false;
+            throw new Exception('Cloudinary delete failed: ' . $e->getMessage());
         }
-        // try {
-        //     $result = $this->cloudinary->uploadApi()->destroy($publicId);
-        //     return isset($result['result']) && $result['result'] === 'ok';
-        // } catch (Exception $e) {
-        //     Log::error('Cloudinary delete error', ['message' => $e->getMessage()]);
-        //     throw new Exception('Cloudinary delete failed: ' . $e->getMessage());
-        // }
     }
     public function getPublicIdFromUrl(string $url): ?string
     {

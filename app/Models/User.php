@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -165,5 +166,14 @@ class User extends Authenticatable
     public function absenteeAssignments()
     {
         return $this->hasMany(AbsenteeAssignment::class, 'user_id');
+    }
+
+    public function followupFeedbacks(): MorphMany
+    {
+        return $this->morphMany(FollowupFeedback::class, 'followupable')->latest();
+    }
+    public function createdFollowupFeedbacks(): HasMany
+    {
+        return $this->hasMany(FollowupFeedback::class, 'user_id')->latest();
     }
 }
