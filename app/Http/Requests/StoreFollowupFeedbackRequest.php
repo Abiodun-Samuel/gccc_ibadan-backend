@@ -61,8 +61,8 @@ class StoreFollowupFeedbackRequest extends FormRequest
     {
         if ($this->has('subject_type')) {
             $typeMap = [
-                'first_timer' => FirstTimer::class,
-                'member' => User::class,
+                'first-timers' => FirstTimer::class,
+                'members' => User::class,
                 'user' => User::class,
             ];
 

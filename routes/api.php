@@ -38,9 +38,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('follow-up-statuses', FollowUpStatusController::class);
     // followup feedbacks
     Route::apiResource('followup-feedbacks', FollowupFeedbackController::class);
-    // Route::get('first-timers/{firstTimer}/followup-feedbacks', [FollowupFeedbackController::class, 'forFirstTimer']);
-    // Route::get('members/{user}/followup-feedbacks', [FollowupFeedbackController::class, 'forMember']);
+
+    Route::get('/first-timers/followup-feedbacks', [FollowupFeedbackController::class, 'getFirstTimersWithFollowups']);
+    Route::get('/absent-members/followup-feedbacks', [FollowupFeedbackController::class, 'getAbsentMembersWithFollowups']);
+    Route::get('/all-members/followup-feedbacks', [FollowupFeedbackController::class, 'getMembersWithFollowups']);
+    Route::get('/members/{user}/followup-feedbacks', [FollowupFeedbackController::class, 'getFollowUpsByMember']);
     Route::get('/first-timers/{firstTimer}/followup-feedbacks', [FollowupFeedbackController::class, 'getFollowUpsByFirstTimer']);
+
     // First-timers
     Route::prefix('first-timers')
         ->controller(FirstTimerController::class)
@@ -52,8 +56,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/{firstTimer}/welcome-email', 'sendFirstTimerWelcomeEmail')->name('welcome-email');
             Route::get('/{firstTimer}', 'show')->name('show');
             Route::put('/{firstTimer}', 'update')->name('update');
-            // Route::get('/followups', 'getFirstTimersWithFollowups');
-            //
         });
     //members
     Route::apiResource('members', MemberController::class);

@@ -288,16 +288,4 @@ class FirstTimerController extends Controller
             );
         }
     }
-
-    public function getFirstTimersWithFollowups()
-    {
-        $firstTimers = FirstTimer::with([
-            'followUpStatus',
-            'assignedTo',
-            'followupFeedbacks.user' => function ($query) {
-                $query->select('id', 'first_name', 'last_name', 'avatar');
-            }
-        ])->where('status', 'active')->orderBy('date_of_visit', 'desc')->get();
-        return $this->successResponse(FirstTimerResource::collection($firstTimers), 'First timers retrieved successfully', Response::HTTP_OK);
-    }
 }

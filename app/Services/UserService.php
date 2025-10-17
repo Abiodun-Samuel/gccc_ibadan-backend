@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\AbsenteeAssignment;
-use App\Models\FirstTimer;
 
 class UserService
 {

@@ -2479,7 +2479,8 @@ class FirstTimerSeeder extends Seeder
             $assignedToMemberId = $userMap[$value['Follow-up By']] ?? null;
 
             FirstTimer::create([
-                'name' => $value['name'],
+                'last_name' => $value['name'],
+                'first_name' => $value['name'],
                 'phone_number' => (string) ($value['phone_number'] ?? ''),
                 'email' => $value['email'],
                 'gender' => !empty($value['gender']) && in_array($value['gender'], ['Male', 'Female', 'Other'])

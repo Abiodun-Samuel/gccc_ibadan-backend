@@ -37,6 +37,11 @@ class UserResource extends JsonResource
 
             'units' => UnitResource::collection($this->whenLoaded('units')),
 
+            'followupFeedbacks' => $this->when(
+                $this?->relationLoaded('followupFeedbacks'),
+                fn() => FollowupFeedbackResource::collection($this->followupFeedbacks)
+            ),
+
             'ledUnits' => $this->whenLoaded('ledUnits'),
             'assistedUnits' => $this->whenLoaded('assistedUnits'),
             'memberUnits' => $this->whenLoaded('memberUnits'),

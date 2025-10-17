@@ -199,130 +199,126 @@ class AttendanceService
 
     public function assignAbsenteesToLeaders(array $data): array
     {
+        $this->validateAssignmentData($data);
+
         $leaderIds = $data['leader_ids'];
         $serviceId = (int) $data['service_id'];
         $attendanceDate = Carbon::parse($data['attendance_date'], self::TIMEZONE)->toDateString();
 
-        // Validate leaders
-        $leaders = User::whereIn('id', $leaderIds)->get(['id', 'last_name', 'email']);
-        if ($leaders->count() !== count($leaderIds)) {
-            throw new AttendanceException('One or more leader IDs are invalid');
-        }
-        if ($leaders->isEmpty()) {
-            throw new AttendanceException('At least one valid leader is required');
-        }
-
-        // Validate service
-        if (!Service::where('id', $serviceId)->exists()) {
-            throw new AttendanceException('Service not found');
-        }
+        // Eager load and validate in one query
+        $leaders = $this->validateAndGetLeaders($leaderIds);
+        $this->validateService($serviceId);
 
         return DB::transaction(function () use ($leaders, $serviceId, $attendanceDate) {
-            // Fetch absent members
-            $absentMembers = Attendance::where('service_id', $serviceId)
-                ->whereDate('attendance_date', $attendanceDate)
-                ->where('status', 'absent')
-                ->pluck('id', 'user_id')
-                ->toArray();
+            $absentMembers = $this->getAbsentMembers($serviceId, $attendanceDate);
 
-            if (empty($absentMembers)) {
-                throw new AttendanceException('No absent members found');
+            if ($absentMembers->isEmpty()) {
+                throw new AttendanceException('No absent members found for this service');
             }
 
-            // Build assignments (round-robin distribution)
             $assignments = $this->buildAssignments(
-                $absentMembers,
+                $absentMembers->pluck('id', 'user_id')->toArray(),
                 $leaders->pluck('id')->toArray(),
                 $serviceId,
                 $attendanceDate
             );
 
-            AbsenteeAssignment::insertOrIgnore($assignments);
+            $this->upsertAssignments($assignments);
 
-            // Distribution report
             $distribution = $this->calculateDistribution($assignments);
 
-            // Clear cache
             $this->clearAssignmentCache($serviceId, $attendanceDate);
-            // === Send email to all leaders ===
-            app(MailService::class)->sendAbsentMemberAssignmentEmail(
-                $leaders->map(fn($leader) => [
-                    'email' => $leader->email,
-                    'name' => "{$leader->last_name}",
-                ])->toArray()
-            );
+
+            $this->notifyLeaders($leaders);
 
             return [
-                'assigned_count' => count($absentMembers),
+                'assigned_count' => $absentMembers->count(),
                 'leaders_count' => $leaders->count(),
                 'distribution' => $distribution,
             ];
         });
     }
 
+    private function validateAssignmentData(array $data): void
+    {
+        if (empty($data['leader_ids']) || !is_array($data['leader_ids'])) {
+            throw new AttendanceException('Leader IDs must be a non-empty array');
+        }
 
-    // public function assignAbsenteesToLeaders(array $data): array
-    // {
-    //     $leaderIds = $data['leader_ids'];
-    //     $serviceId = (int) $data['service_id'];
-    //     $attendanceDate = Carbon::parse($data['attendance_date'], self::TIMEZONE)->toDateString();
+        if (empty($data['service_id'])) {
+            throw new AttendanceException('Service ID is required');
+        }
 
-    //     // Validate leaders exist
-    //     $validLeaderIds = User::whereIn('id', $leaderIds)->pluck('id')->toArray();
+        if (empty($data['attendance_date'])) {
+            throw new AttendanceException('Attendance date is required');
+        }
+    }
 
-    //     if (count($validLeaderIds) !== count($leaderIds)) {
-    //         throw new AttendanceException('One or more leader IDs are invalid');
-    //     }
+    private function validateAndGetLeaders(array $leaderIds): Collection
+    {
+        $leaders = User::whereIn('id', $leaderIds)
+            ->select('id', 'last_name', 'email')
+            ->get();
 
-    //     if (empty($validLeaderIds)) {
-    //         throw new AttendanceException('At least one valid leader is required');
-    //     }
+        if ($leaders->count() !== count($leaderIds)) {
+            $foundIds = $leaders->pluck('id')->toArray();
+            $missingIds = array_diff($leaderIds, $foundIds);
 
-    //     // Validate service exists
-    //     if (!Service::where('id', $serviceId)->exists()) {
-    //         throw new AttendanceException('Service not found');
-    //     }
+            throw new AttendanceException(
+                'Invalid leader IDs: ' . implode(', ', $missingIds)
+            );
+        }
 
-    //     return DB::transaction(function () use ($validLeaderIds, $serviceId, $attendanceDate) {
-    //         // Fetch absent members as [user_id => attendance_id]
-    //         $absentMembers = Attendance::where('service_id', $serviceId)
-    //             ->whereDate('attendance_date', $attendanceDate)
-    //             ->where('status', 'absent')
-    //             ->pluck('id', 'user_id')   // key = user_id, value = attendance_id
-    //             ->toArray();
+        return $leaders;
+    }
 
-    //         if (empty($absentMembers)) {
-    //             throw new AttendanceException('No absent members found');
-    //         }
+    private function validateService(int $serviceId): void
+    {
+        if (!Cache::remember("service_exists_{$serviceId}", 3600, fn() => Service::where('id', $serviceId)->exists())) {
+            throw new AttendanceException("Service with ID {$serviceId} not found");
+        }
+    }
 
-    //         // Distribute members evenly using round-robin
-    //         $assignments = $this->buildAssignments(
-    //             $absentMembers,
-    //             $validLeaderIds,
-    //             $serviceId,
-    //             $attendanceDate
-    //         );
+    private function getAbsentMembers(int $serviceId, string $attendanceDate): Collection
+    {
+        return Attendance::where('service_id', $serviceId)
+            ->whereDate('attendance_date', $attendanceDate)
+            ->where('status', 'absent')
+            ->select('id', 'user_id')
+            ->get();
+    }
 
-    //         // Bulk insert for maximum performance
-    //         AbsenteeAssignment::insertOrIgnore($assignments);
+    private function upsertAssignments(array $assignments): void
+    {
+        if (empty($assignments)) {
+            return;
+        }
+        // Add timestamps to all assignments
+        $now = now();
+        $assignments = array_map(fn($assignment) => array_merge($assignment, [
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]), $assignments);
 
-    //         // Calculate distribution for response
-    //         $distribution = $this->calculateDistribution($assignments);
+        AbsenteeAssignment::upsert(
+            $assignments,
+            ['service_id', 'attendance_date', 'user_id'], // Unique keys
+            ['leader_id', 'attendance_id', 'updated_at'] // Columns to update
+        );
+    }
 
-    //         // Clear relevant cache
-    //         $this->clearAssignmentCache($serviceId, $attendanceDate);
+    private function notifyLeaders(Collection $leaders): void
+    {
+        $leaderData = $leaders->map(fn($leader) => [
+            'email' => $leader->email,
+            'name' => $leader->last_name,
+        ])->toArray();
 
-    //         return [
-    //             'assigned_count' => count($absentMembers),
-    //             'leaders_count' => count($validLeaderIds),
-    //             'distribution' => $distribution,
-    //         ];
-    //     });
-    // }
-
+        app(MailService::class)->sendAbsentMemberAssignmentEmail($leaderData);
+    }
 
     private function buildAssignments(
-        array $members,       // [user_id => attendance_id]
+        array $members,
         array $leaderIds,
         int $serviceId,
         string $attendanceDate
@@ -344,7 +340,6 @@ class AttendanceService
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
             ];
-
             $i++;
         }
 

@@ -38,50 +38,50 @@ class UserSeeder extends Seeder
             RoleEnum::MEMBER->value,
         ]);
 
-        // $leader = User::firstOrCreate(
-        //     ['email' => "abiodunsamyemi@gmail.com"],
-        //     [
-        //         'first_name' => 'Samuel',
-        //         'last_name' => "Abiodun",
-        //         'gender' => 'Male',
-        //         'password' => $commonPassword,
-        //         'phone_number' => $commonPhoneNumber,
-        //     ]
-        // );
-        // $this->service->assignRoleAndSyncPermissions($leader, [
-        //     RoleEnum::LEADER->value,
-        //     RoleEnum::MEMBER->value,
-        // ]);
+        $leader = User::firstOrCreate(
+            ['email' => "abiodunsamyemi@gmail.com"],
+            [
+                'first_name' => 'Samuel',
+                'last_name' => "Abiodun",
+                'gender' => 'Male',
+                'password' => $commonPassword,
+                'phone_number' => $commonPhoneNumber,
+            ]
+        );
+        $this->service->assignRoleAndSyncPermissions($leader, [
+            RoleEnum::LEADER->value,
+            RoleEnum::MEMBER->value,
+        ]);
 
-        // $leader1 = User::firstOrCreate(
-        //     ['email' => "samyemidele@gmail.com"],
-        //     [
-        //         'first_name' => 'Sunkanmi',
-        //         'last_name' => "Gbadegensin",
-        //         'gender' => 'Female',
-        //         'password' => $commonPassword,
-        //         'phone_number' => $commonPhoneNumber,
-        //     ]
-        // );
-        // $this->service->assignRoleAndSyncPermissions($leader1, [
-        //     RoleEnum::LEADER->value,
-        //     RoleEnum::MEMBER->value,
-        // ]);
+        $leader1 = User::firstOrCreate(
+            ['email' => "samyemidele@gmail.com"],
+            [
+                'first_name' => 'Sunkanmi',
+                'last_name' => "Gbadegensin",
+                'gender' => 'Female',
+                'password' => $commonPassword,
+                'phone_number' => $commonPhoneNumber,
+            ]
+        );
+        $this->service->assignRoleAndSyncPermissions($leader1, [
+            RoleEnum::LEADER->value,
+            RoleEnum::MEMBER->value,
+        ]);
 
-        // // ----- Members -----
-        // for ($i = 1; $i <= 2; $i++) {
-        //     $member = User::firstOrCreate(
-        //         ['email' => "member{$i}@gmail.com"],
-        //         [
-        //             'first_name' => "Member {$i}",
-        //             'last_name' => "Member {$i}",
-        //             'password' => $commonPassword,
-        //             'phone_number' => $commonPhoneNumber,
-        //         ]
-        //     );
-        //     $this->service->assignRoleAndSyncPermissions($member, [
-        //         RoleEnum::MEMBER->value,
-        //     ]);
-        // }
+        // ----- Members -----
+        for ($i = 1; $i <= 2; $i++) {
+            $member = User::firstOrCreate(
+                ['email' => "member{$i}@gmail.com"],
+                [
+                    'first_name' => "Member {$i}",
+                    'last_name' => "Member {$i}",
+                    'password' => $commonPassword,
+                    'phone_number' => $commonPhoneNumber,
+                ]
+            );
+            $this->service->assignRoleAndSyncPermissions($member, [
+                RoleEnum::MEMBER->value,
+            ]);
+        }
     }
 }

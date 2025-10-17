@@ -20,7 +20,7 @@ return new class extends Migration {
             $table->timestamps();
 
             $table->unique(['service_id', 'attendance_date', 'user_id'], 'unique_service_date_user');
-            $table->index(['leader_id']);
+            $table->index(['leader_id', 'updated_at']);
         });
     }
 

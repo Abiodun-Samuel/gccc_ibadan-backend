@@ -67,5 +67,4 @@ class UserController extends Controller
             ->getAssignedAbsenteesForLeader($user->id);
         return $this->successResponse(AbsenteeResource::collection($absentees), '');
     }
-
 }

@@ -7,7 +7,6 @@ use App\Http\Requests\StoreFormRequest;
 use App\Http\Resources\FormResource;
 use App\Models\Form;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -31,7 +30,7 @@ class FormController extends Controller
             ->latest()
             ->paginate($perPage);
 
-        return $this->paginatedResponse(
+        return $this->successResponse(
             FormResource::collection($forms),
             'Forms retrieved successfully',
             Response::HTTP_OK

@@ -152,7 +152,6 @@ class User extends Authenticatable
     }
     public function assignedFirstTimers()
     {
-        // where status is active
         return $this->hasMany(FirstTimer::class, 'assigned_to_member_id')->orderBy('date_of_visit', 'desc');
     }
     public function scopeInPeriod(Builder $query, Carbon $startDate, Carbon $endDate): Builder
