@@ -1,6 +1,5 @@
 <?php
 namespace App\Http\Controllers;
-use App\Enums\RoleEnum;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;

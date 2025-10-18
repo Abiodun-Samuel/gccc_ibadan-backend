@@ -68,7 +68,7 @@ class FollowupFeedbackController extends Controller
     public function getMembersWithFollowups()
     {
         $members = User::with(['followupFeedbacks.createdBy', 'assignedTo'])
-            ->orderByDesc('updated_at')->get();
+            ->orderByDesc('assigned_at')->get();
         return $this->successResponse(UserResource::collection($members), 'All members retrieved successfully', Response::HTTP_OK);
     }
 }

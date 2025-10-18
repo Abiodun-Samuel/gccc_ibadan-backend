@@ -52,7 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('first-timers.')
         ->group(function () {
             Route::get('/', 'index')->name('index');
-            Route::get('/assigned', 'getFirsttimersAssigned')->name('assigned');
+            Route::get('/assigned', 'getAssignedFirstTimers')->name('assigned');
             Route::post('/status', 'setFollowupStatus')->name('set-status');
             Route::post('/{firstTimer}/welcome-email', 'sendFirstTimerWelcomeEmail')->name('welcome-email');
             Route::get('/{firstTimer}', 'show')->name('show');

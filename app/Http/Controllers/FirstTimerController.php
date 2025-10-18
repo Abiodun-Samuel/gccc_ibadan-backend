@@ -136,14 +136,18 @@ class FirstTimerController extends Controller
             );
         }
     }
-
-    public function getFirsttimersAssigned(Request $request): JsonResponse
+    public function getAssignedFirstTimers(Request $request): JsonResponse
     {
-        $member = $request->user();
-        $firstTimers = $this->firstTimerService->getFirstTimersAssigned($member->id);
-        return $this->successResponse(FirstTimerResource::collection($firstTimers), 'First timers retrieved successfully', Response::HTTP_OK);
-    }
+        $firstTimers = $this->firstTimerService->getAssignedFirstTimers(
+            $request->user()
+        );
 
+        return $this->successResponse(
+            FirstTimerResource::collection($firstTimers),
+            'First timers retrieved successfully',
+            Response::HTTP_OK
+        );
+    }
     // Admin
     public function getFirstTimersAnalytics(Request $request)
     {

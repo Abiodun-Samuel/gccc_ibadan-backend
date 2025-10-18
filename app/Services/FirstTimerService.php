@@ -34,8 +34,11 @@ class FirstTimerService
             return $firstTimer->fresh(['followUpStatus', 'assignedTo']);
         });
     }
-    public function getFirstTimersAssigned(int $memberId): ?Collection
+
+    public function getAssignedFirstTimers(User $member): Collection
     {
-        return FirstTimer::where('assigned_to_member_id', $memberId)->with(['followUpStatus', 'assignedTo'])->orderBy('date_of_visit', 'desc')->get();
+        return $member->assignedFirstTimers()
+            ->with(['followUpStatus', 'assignedTo'])
+            ->get();
     }
 }
