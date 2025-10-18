@@ -67,4 +67,9 @@ class UserController extends Controller
             ->getAssignedAbsenteesForLeader($user->id);
         return $this->successResponse(AbsenteeResource::collection($absentees), '');
     }
+    public function getAssignedMembers(Request $request): JsonResponse
+    {
+        $user = $request->user()->load(['assignedUsers']);
+        return $this->successResponse($user, '');
+    }
 }

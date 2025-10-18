@@ -46,6 +46,12 @@ class UserResource extends JsonResource
             'assistedUnits' => $this->whenLoaded('assistedUnits'),
             'memberUnits' => $this->whenLoaded('memberUnits'),
 
+            'assigned_to_member' => $this->whenLoaded('assignedTo', fn() => [
+                'id' => $this->assignedTo->id,
+                'full_name' => $this->assignedTo->first_name . ' ' . $this->assignedTo->last_name,
+                'avatar' => $this->assignedTo->avatar,
+            ]),
+
             'roles' => $this->whenLoaded('roles', fn() => $this->getRoleNames()),
             'permissions' => $this->whenLoaded('permissions', fn() => $this->getPermissionNames()),
 
@@ -60,6 +66,7 @@ class UserResource extends JsonResource
                 'twitter' => $this->twitter,
             ],
 
+            'assigned_at' => $this->assigned_at?->format('Y-m-d H:i:s'),
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
         ];

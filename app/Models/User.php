@@ -12,7 +12,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-use Storage;
 
 class User extends Authenticatable
 {
@@ -49,6 +48,8 @@ class User extends Authenticatable
         'attendance_badge',
         'last_badge_month',
         'last_badge_year',
+        'assigned_to_user_id',
+        'assigned_at',
     ];
 
     /**
@@ -71,6 +72,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'assigned_at' => 'datetime',
             'password' => 'hashed',
             'date_of_birth' => 'date',
             'attendance_badge' => 'integer',
@@ -115,6 +117,7 @@ class User extends Authenticatable
             'ledUnits',
             'assistedUnits',
             'memberUnits',
+            'assignedTo'
         ]);
     }
     public function getRolePermissions()
@@ -174,5 +177,15 @@ class User extends Authenticatable
     public function createdFollowupFeedbacks(): HasMany
     {
         return $this->hasMany(FollowupFeedback::class, 'user_id')->latest();
+    }
+
+    public function assignedTo()
+    {
+        return $this->belongsTo(User::class, 'assigned_to_user_id');
+    }
+
+    public function assignedUsers()
+    {
+        return $this->hasMany(User::class, 'assigned_to_user_id');
     }
 }

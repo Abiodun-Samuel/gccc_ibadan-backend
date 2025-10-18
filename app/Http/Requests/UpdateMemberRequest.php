@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Status;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateMemberRequest extends FormRequest
 {
@@ -11,7 +13,7 @@ class UpdateMemberRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->hasRole('admin');
+        return true;
     }
 
     /**
@@ -22,28 +24,32 @@ class UpdateMemberRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'first_name' => 'sometimes|required|string|max:255',
-            'last_name' => 'sometimes|required|string|max:255',
-            'email' => ['sometimes', 'required', 'email', 'max:255'],
-            'phone_number' => ['nullable', 'string', 'max:50'],
-            'gender' => 'nullable|in:male,female,other',
-            'address' => 'nullable|string|max:500',
-            'community' => 'nullable|string|max:255',
-            'avatar' => 'nullable|string',
-            'status' => 'nullable|string',
-            'worker' => 'nullable|string',
-            'date_of_birth' => 'nullable|date',
-            'country' => 'nullable|string|max:255',
-            'city_or_state' => 'nullable|string|max:255',
-            'facebook' => 'nullable|url',
-            'instagram' => 'nullable|url',
-            'linkedin' => 'nullable|url',
-            'twitter' => 'nullable|url',
-            'password' => 'nullable|string|min:8|confirmed',
-            'unit_ids' => 'array',
-            'unit_ids.*' => 'exists:units,id',
-            'leader_unit_ids' => 'array',
-            'leader_unit_ids.*' => 'exists:units,id',
+            'first_name' => ['sometimes', 'string', 'max:100'],
+            'last_name' => ['sometimes', 'string', 'max:100'],
+            'email' => ['sometimes', 'email', Rule::unique('users')->ignore($this->member->id)],
+            'phone_number' => ['nullable', 'string', 'max:20'],
+            'gender' => ['nullable', Rule::in(['Male', 'Female', 'Other'])],
+            'role' => ['nullable', 'string', 'max:100'],
+            'worker' => ['nullable', Rule::in(['Yes', 'No'])],
+            'avatar' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', Rule::in(Status::values())],
+            'address' => ['nullable', 'string', 'max:255'],
+            'community' => ['nullable', 'string', 'max:100'],
+            'country' => ['nullable', 'string', 'max:100'],
+            'city_or_state' => ['nullable', 'string', 'max:100'],
+            'facebook' => ['nullable', 'string', 'max:255'],
+            'instagram' => ['nullable', 'string', 'max:255'],
+            'linkedin' => ['nullable', 'string', 'max:255'],
+            'twitter' => ['nullable', 'string', 'max:255'],
+            'education' => ['nullable', 'string', 'max:255'],
+            'field_of_study' => ['nullable', 'string', 'max:255'],
+            'occupation' => ['nullable', 'string', 'max:255'],
+            'date_of_birth' => ['nullable', 'date', 'before_or_equal:today'],
+            'attendance_badge' => ['nullable', 'integer', 'min:0'],
+            'last_badge_month' => ['nullable', 'integer', 'between:1,12'],
+            'last_badge_year' => ['nullable', 'integer', 'min:2000', 'max:' . now()->year],
+            'assigned_to_user_id' => ['nullable', 'integer', 'exists:users,id', 'different:user.id'],
+            'assigned_at' => ['nullable', 'date'],
         ];
     }
 }

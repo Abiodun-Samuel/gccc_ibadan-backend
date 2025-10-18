@@ -12,9 +12,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class FormController extends Controller
 {
-    /**
-     * Display a listing of the forms by type.
-     */
     public function index(Request $request)
     {
         $validated = $request->validate([

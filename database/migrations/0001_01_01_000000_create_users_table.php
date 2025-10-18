@@ -13,6 +13,11 @@ return new class extends Migration {
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('assigned_to_user_id')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
             $table->string('first_name');
             $table->string('last_name');
             $table->string('email')->unique();
@@ -30,8 +35,6 @@ return new class extends Migration {
             $table->string('instagram')->nullable();
             $table->string('linkedin')->nullable();
             $table->string('twitter')->nullable();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->date('date_of_birth')->nullable();
             $table->string('education')->nullable();
             $table->string('field_of_study')->nullable();
             $table->string('occupation')->nullable();
@@ -40,10 +43,15 @@ return new class extends Migration {
             $table->unsignedTinyInteger('last_badge_month')->nullable();
             $table->unsignedSmallInteger('last_badge_year')->nullable();
 
-            $table->index(['last_badge_month', 'last_badge_year']);
+            $table->timestamp('assigned_at')->nullable();
+            $table->date('date_of_birth')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
+
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
+
+            $table->index(['last_badge_month', 'last_badge_year']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

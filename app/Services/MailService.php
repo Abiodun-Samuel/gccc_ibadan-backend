@@ -95,6 +95,36 @@ class MailService
 
         return $this->sendEmail($data);
     }
+    public function sendAssignedMemberEmail(
+        array $recipients = [],
+        array $ccRecipients = [],
+        array $bccRecipients = []
+    ): array {
+
+        $firstRecipient = $recipients[0];
+
+        $data = [
+            "mail_template_key" => env('assigned_member_email_template_id'),
+            "from" => [
+                "address" => "admin@gcccibadan.org",
+                "name" => "Admin from GCCC IBADAN"
+            ],
+            "to" => $this->buildRecipientsArray($recipients),
+            "merge_info" => [
+                "name" => $firstRecipient['name'] ?? '',
+            ]
+        ];
+
+        if (!empty($ccRecipients)) {
+            $data['cc'] = $this->buildRecipientsArray($ccRecipients);
+        }
+
+        if (!empty($bccRecipients)) {
+            $data['bcc'] = $this->buildRecipientsArray($bccRecipients);
+        }
+
+        return $this->sendEmail($data);
+    }
 
     public function sendFirstTimerWelcomeEmail(
         array $recipients,

@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Users (for leaders, admin and members)
     Route::put('/update-profile', [UserController::class, 'update']);
     Route::get('/leaders/absentees', [UserController::class, 'getAssignedAbsentees']);
+    Route::get('/members/assigned', [UserController::class, 'getAssignedMembers']);
     // Follow-up statuses
     Route::apiResource('follow-up-statuses', FollowUpStatusController::class);
     // followup feedbacks

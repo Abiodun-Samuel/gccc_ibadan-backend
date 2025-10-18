@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreMemberRequest;
 use App\Http\Requests\UpdateMemberRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
 use App\Services\MemberService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -48,10 +49,10 @@ class MemberController extends Controller
         }
     }
 
-    public function show(int $id): JsonResponse
+    public function show(User $member): JsonResponse
     {
         try {
-            $member = $this->memberService->findMember($id);
+            $member = $this->memberService->findMember($member);
             return $this->successResponse(new UserResource($member), 'Member retrieved successfully');
         } catch (ModelNotFoundException $e) {
             return $this->errorResponse('Member not found', Response::HTTP_NOT_FOUND);
@@ -60,24 +61,20 @@ class MemberController extends Controller
         }
     }
 
-    public function update(UpdateMemberRequest $request, int $id): JsonResponse
+    public function update(UpdateMemberRequest $request, User $member): JsonResponse
     {
         try {
-            $member = $this->memberService->findMember($id);
             $updatedMember = $this->memberService->updateMember($member, $request->validated());
-
             return $this->successResponse(new UserResource($updatedMember), 'Member updated successfully');
-        } catch (ModelNotFoundException $e) {
-            return $this->errorResponse('Member not found', Response::HTTP_NOT_FOUND);
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to update member', Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse("Failed to update member:" . ${$e->getMessage()}, Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(User $member): JsonResponse
     {
         try {
-            $member = $this->memberService->findMember($id);
+            $member = $this->memberService->findMember($member);
             $this->memberService->deleteMember($member);
 
             return $this->successResponse(null, 'Member deleted successfully');
@@ -86,5 +83,15 @@ class MemberController extends Controller
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to delete member', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public function unassign(User $member)
+    {
+        $member->update([
+            'assigned_to_user_id' => null,
+            'assigned_at' => null,
+        ]);
+
+        return response()->json(['message' => 'User unassigned successfully.']);
     }
 }
