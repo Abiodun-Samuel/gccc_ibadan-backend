@@ -6,38 +6,49 @@ use App\Enums\RoleEnum;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\UserRolePermissionService;
+use Carbon\Carbon;
+use DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use RuntimeException;
+use Str;
 
 class AuthService
 {
-    public function __construct(
-        private readonly UserRolePermissionService $rolePermissionService
-    ) {
+    private const TOKEN_EXPIRY_MINUTES = 60;
+    public $rolePermissionService;
+    public $mailService;
+    public function __construct(UserRolePermissionService $rolePermissionService, MailService $mailService)
+    {
+        $this->rolePermissionService = $rolePermissionService;
+        $this->mailService = $mailService;
     }
-
     /**
      * Authenticate user with credentials
      */
-    public function authenticate(array $credentials): ?array
+    public function authenticate(array $credentials): array
     {
-        $loginField = $this->determineLoginField($credentials['username']);
+        $user = User::where('email', $credentials['email'])->first();
 
-        $user = User::where($loginField, $credentials['username'])->first();
+        if (!$user) {
+            throw new RuntimeException('user_not_found');
+        }
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
-            return null;
+        if (!Hash::check($credentials['password'], $user->password)) {
+            throw new RuntimeException('invalid_password');
         }
 
         $user->loadFullProfile();
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken($user->email)->plainTextToken;
 
         return [
             'token' => $token,
             'user' => UserResource::make($user),
         ];
     }
-
+    private function findUserByEmail(string $email): ?User
+    {
+        return User::where('email', $email)->first();
+    }
 
     public function register(array $data): array
     {
@@ -54,11 +65,97 @@ class AuthService
         ];
     }
 
-    /**
-     * Determine if login field is email or phone
-     */
-    private function determineLoginField(string $username): string
+    public function sendResetLink(string $email): void
     {
-        return filter_var($username, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone_number';
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            throw new RuntimeException('User does not exist');
+        }
+
+        // Delete any existing tokens for this email
+        $this->deleteExistingTokens($email);
+
+        // Generate new token
+        $token = $this->generateToken();
+
+        // Store token in database
+        DB::table('password_reset_tokens')->insert([
+            'email' => $email,
+            'token' => Hash::make($token),
+            'created_at' => Carbon::now(),
+        ]);
+
+        $recipients = [
+            [
+                'name' => $user->first_name,
+                'email' => $user->email
+            ]
+        ];
+        $resetUrl = env('FRONTEND_URL') . '/reset-password?token=' . $token . '&email=' . urlencode($user->email);
+        $this->mailService->sendResetPasswordEmail($resetUrl, $recipients);
+    }
+    public function resetPassword(array $data): void
+    {
+        $tokenData = $this->getTokenData($data['email']);
+
+        if (!$tokenData) {
+            throw new RuntimeException('invalid_token');
+        }
+
+        // Verify token hasn't expired
+        if ($this->isTokenExpired($tokenData->created_at)) {
+            $this->deleteExistingTokens($data['email']);
+            throw new RuntimeException('invalid_token');
+        }
+
+        // Verify token matches
+        if (!Hash::check($data['token'], $tokenData->token)) {
+            throw new RuntimeException('invalid_token');
+        }
+
+        // Find and update user password
+        $user = User::where('email', $data['email'])->first();
+
+        if (!$user) {
+            throw new RuntimeException('user_not_found');
+        }
+
+        $user->update([
+            'password' => Hash::make($data['password']),
+        ]);
+
+        // Delete used token
+        $this->deleteExistingTokens($data['email']);
+
+        // Revoke all existing tokens for security
+        $user->tokens()->delete();
+    }
+
+    private function generateToken(): string
+    {
+        return Str::random(64);
+    }
+
+    private function deleteExistingTokens(string $email): void
+    {
+        DB::table('password_reset_tokens')
+            ->where('email', $email)
+            ->delete();
+    }
+
+    private function getTokenData(string $email): ?object
+    {
+        return DB::table('password_reset_tokens')
+            ->where('email', $email)
+            ->first();
+    }
+
+    private function isTokenExpired(string $createdAt): bool
+    {
+        $expiryTime = Carbon::parse($createdAt)
+            ->addMinutes(self::TOKEN_EXPIRY_MINUTES);
+
+        return Carbon::now()->isAfter($expiryTime);
     }
 }

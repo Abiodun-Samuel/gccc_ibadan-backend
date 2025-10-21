@@ -6,9 +6,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
@@ -17,7 +14,6 @@ return new class extends Migration {
                 ->nullable()
                 ->constrained('users')
                 ->nullOnDelete();
-
             $table->string('first_name');
             $table->string('last_name');
             $table->string('email')->unique();
@@ -26,7 +22,7 @@ return new class extends Migration {
             $table->string('role')->nullable();
             $table->enum('worker', ['Yes', 'No',])->nullable();
             $table->string('avatar')->nullable();
-            $table->enum('status', Status::values())->nullable()->index()->default(Status::ACTIVE->value)->nullable();
+            $table->enum('status', Status::values())->nullable()->index()->default(Status::ACTIVE->value);
             $table->string('address')->nullable();
             $table->string('community')->nullable()->index();
             $table->string('country')->nullable();
@@ -45,6 +41,7 @@ return new class extends Migration {
 
             $table->timestamp('assigned_at')->nullable();
             $table->date('date_of_birth')->nullable();
+            $table->date('date_of_visit')->nullable();
             $table->timestamp('email_verified_at')->nullable();
 
             $table->string('password');

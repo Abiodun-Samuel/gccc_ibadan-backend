@@ -160,4 +160,29 @@ class MailService
 
         return $this->sendEmail($data);
     }
+    public function sendResetPasswordEmail($resetUrl, array $recipients): array
+    {
+        if (empty($recipients)) {
+            throw new \Exception('No recipients provided for welcome email.');
+        }
+
+        $firstRecipient = $recipients[0];
+
+        $data = [
+            // "mail_template_key" => config('services.zeptomail.templates.first_timer_welcome'),
+            "mail_template_key" => env('password_reset_email_template_id'),
+            "from" => [
+                "address" => "admin@gcccibadan.org",
+                "name" => "Admin from GCCC IBADAN"
+            ],
+            "to" => $this->buildRecipientsArray($recipients),
+            "merge_info" => [
+                "name" => $firstRecipient['name'] ?? '',
+                "email" => $firstRecipient['email'] ?? '',
+                "resetUrl" => $resetUrl,
+            ]
+        ];
+
+        return $this->sendEmail($data);
+    }
 }

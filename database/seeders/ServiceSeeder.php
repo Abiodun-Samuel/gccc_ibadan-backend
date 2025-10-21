@@ -38,14 +38,6 @@ class ServiceSeeder extends Seeder
                 'is_recurring' => true,
                 'service_date' => null
             ],
-            [
-                'name' => 'Saturday Service',
-                'description' => '',
-                'day_of_week' => 'saturday',
-                'start_time' => '08:00:00',
-                'is_recurring' => true,
-                'service_date' => null
-            ],
         ];
         foreach ($services as $service) {
             Service::updateOrCreate(

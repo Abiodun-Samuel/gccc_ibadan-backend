@@ -17,10 +17,8 @@ class DatabaseSeeder extends Seeder
             ServiceSeeder::class,
             UserSeeder::class,
             FollowUpStatusSeeder::class,
-            FirstTimerSeeder::class,
-                // FormSeeder::class,
+                // FirstTimerSeeder::class,
             UsherAttendanceSeeder::class,
-            AttendanceSeeder::class
         ]);
     }
 }

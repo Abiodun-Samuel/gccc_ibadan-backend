@@ -67,7 +67,7 @@ class MemberController extends Controller
             $updatedMember = $this->memberService->updateMember($member, $request->validated());
             return $this->successResponse(new UserResource($updatedMember), 'Member updated successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse("Failed to update member:" . ${$e->getMessage()}, Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse("Failed to update member:" . $e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 

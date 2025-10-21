@@ -75,6 +75,7 @@ class User extends Authenticatable
             'assigned_at' => 'datetime',
             'password' => 'hashed',
             'date_of_birth' => 'date',
+            'date_of_visit' => 'date',
             'attendance_badge' => 'integer',
             'last_badge_month' => 'integer',
             'last_badge_year' => 'integer',
