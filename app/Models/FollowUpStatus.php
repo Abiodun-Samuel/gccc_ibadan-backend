@@ -14,6 +14,6 @@ class FollowUpStatus extends Model
 
     public function firstTimers()
     {
-        return $this->hasMany(FirstTimer::class, 'follow_up_status_id');
+        return $this->hasMany(User::class, 'follow_up_status_id');
     }
 }

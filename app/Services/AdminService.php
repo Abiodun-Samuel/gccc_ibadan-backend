@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\RoleEnum;
 use App\Models\Form;
 use App\Models\Unit;
 use App\Models\User;
-use App\Models\FirstTimer;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
@@ -51,8 +51,8 @@ class AdminService
     private function getBasicAnalytics(): array
     {
         return [
-            'firsttimers' => FirstTimer::count(),
-            'members' => User::count(),
+            'firsttimers' => User::firstTimers()->count(),
+            'members' => User::members()->count(),
             'forms' => Form::count(),
             'units' => Unit::count(),
         ];

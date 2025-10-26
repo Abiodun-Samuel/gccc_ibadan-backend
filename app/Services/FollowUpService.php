@@ -2,9 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\FirstTimer;
 use App\Models\FollowupFeedback;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;

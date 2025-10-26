@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UpdateUserProfileRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\AbsenteeResource;
 use App\Http\Resources\UserResource;
 use App\Services\UploadService;
@@ -23,7 +23,7 @@ class UserController extends Controller
         $this->userService = $userService;
         $this->uploadService = $uploadService;
     }
-    public function update(UpdateUserProfileRequest $request): JsonResponse
+    public function update(UpdateUserRequest $request): JsonResponse
     {
         try {
             $user = $request->user();
@@ -69,7 +69,7 @@ class UserController extends Controller
     }
     public function getAssignedMembers(Request $request): JsonResponse
     {
-        $user = $request->user()->load(['assignedUsers']);
+        $user = $request->user()->load(['assignedUsers'])->members();
         return $this->successResponse($user, '');
     }
 }

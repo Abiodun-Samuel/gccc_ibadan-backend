@@ -25,22 +25,26 @@ class UnitResource extends JsonResource
             'leader_id' => $this->leader_id,
             'assistant_leader_id' => $this->assistant_leader_id,
 
-            'leader' => $this->whenLoaded('leader') ? [
+            'leader' => $this->whenLoaded('leader', fn() => [
                 'id' => $this->leader?->id,
                 'full_name' => "{$this->leader?->first_name} {$this->leader?->last_name}",
                 'initials' => generateInitials($this->leader?->first_name, $this->leader?->last_name),
                 'email' => $this->leader?->email,
                 'phone' => $this->leader?->phone_number,
                 'gender' => $this->leader?->gender,
-            ] : null,
-            'assistantLeader' => $this->whenLoaded('assistantLeader') ? [
+                'avatar' => $this->leader?->avatar,
+            ]),
+
+            'assistantLeader' => $this->whenLoaded('assistantLeader', fn()=>  [
                 'id' => $this->assistantLeader?->id,
                 'full_name' => "{$this->assistantLeader?->first_name} {$this->assistantLeader?->last_name}",
                 'initials' => generateInitials($this->assistantLeader?->first_name, $this->assistantLeader?->last_name),
                 'email' => $this->assistantLeader?->email,
                 'phone' => $this->assistantLeader?->phone_number,
                 'gender' => $this->assistantLeader?->gender,
-            ] : null,
+                'avatar' => $this->assistantLeader?->avatar,
+            ]),
+
             'members' => $this->whenLoaded('members'),
             'members_count' => $this->members_count ?? 0,
 

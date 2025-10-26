@@ -15,7 +15,20 @@ class AdminController extends Controller
     {
         $this->adminService = $adminService;
     }
+    // public function assignRoles(User $user, Request $request)
+    // {
+    //     $validated = $request->validate([
+    //         'roles' => ['array', 'min:1'],
+    //         'roles.*' => ['string', 'in:admin,leader,member'],
+    //     ]);
 
+    //     $this->service->assignRoleAndSyncPermissions($user, $validated['roles']);
+
+    //     return response()->json([
+    //         'user' => $user->fresh()->only(['id', 'name']),
+    //         'roles' => $user->getRoleNames(),
+    //     ]);
+    // }
     public function getAdminAnalytics(Request $request)
     {
 

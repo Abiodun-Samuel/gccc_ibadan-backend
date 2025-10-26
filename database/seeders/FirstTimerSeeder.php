@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\FirstTimer;
 use App\Models\FollowUpStatus;
 use App\Models\User;
 use Carbon\Carbon;
@@ -2478,7 +2477,7 @@ class FirstTimerSeeder extends Seeder
             // 5. Resolve follow-up member's ID by email
             $assignedToMemberId = $userMap[$value['Follow-up By']] ?? null;
 
-            FirstTimer::create([
+            User::create([
                 'last_name' => $value['name'],
                 'first_name' => $value['name'],
                 'phone_number' => (string) ($value['phone_number'] ?? ''),
@@ -2500,12 +2499,11 @@ class FirstTimerSeeder extends Seeder
                 'visitation_report' => null,
                 'occupation' => null,
                 'how_did_you_learn' => null,
-                'friend_family' => null,
                 'service_experience' => null,
                 'prayer_point' => null,
                 'pastorate_call' => null,
                 'follow_up_status_id' => $followUpStatusId,
-                'assigned_to_member_id' => $assignedToMemberId,
+                'followup_by_id' => $assignedToMemberId,
                 'assigned_at' => $assignedAt,
             ]);
         }

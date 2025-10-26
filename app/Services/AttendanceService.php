@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Cache;
 class AttendanceService
 {
     private const TIMEZONE = 'Africa/Lagos';
-    private const CACHE_TTL = 300;
+    private const CACHE_TTL = 60;
 
 
     public function getAllAttendance(array $filters = []): Collection

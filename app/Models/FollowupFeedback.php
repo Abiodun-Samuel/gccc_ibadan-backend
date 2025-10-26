@@ -35,11 +35,11 @@ class FollowupFeedback extends Model
     }
     public function isForFirstTimer(): bool
     {
-        return $this->followupable_type === FirstTimer::class;
+        return $this->followupable_type === User::class;
     }
     public function scopeForFirstTimers(Builder $query): Builder
     {
-        return $query->where('followupable_type', FirstTimer::class);
+        return $query->where('followupable_type', User::class);
     }
     public function scopeForMembers(Builder $query): Builder
     {

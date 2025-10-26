@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Auth;
 
-use Auth;
 use Illuminate\Foundation\Http\FormRequest;
 use RateLimiter;
 use Str;

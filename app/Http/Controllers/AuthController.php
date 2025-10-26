@@ -1,12 +1,10 @@
 <?php
 namespace App\Http\Controllers;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
+use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
-use App\Http\Requests\LoginRequest;
-use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
-use App\Services\UserRolePermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
@@ -16,7 +14,6 @@ class AuthController extends Controller
 {
     public function __construct(
         private readonly AuthService $authService,
-        private readonly UserRolePermissionService $rolePermissionService
     ) {
     }
 
@@ -47,20 +44,6 @@ class AuthController extends Controller
                 Response::HTTP_UNPROCESSABLE_ENTITY
             );
         }
-    }
-
-
-    public function register(RegisterRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
-
-        $result = $this->authService->register($validated);
-
-        return $this->successResponse(
-            $result,
-            'Registration successful',
-            Response::HTTP_CREATED
-        );
     }
 
     /**

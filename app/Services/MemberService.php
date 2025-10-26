@@ -25,7 +25,7 @@ class MemberService
         return Cache::remember(
             self::CACHE_KEY,
             self::CACHE_TTL,
-            fn() => User::get()
+            fn() => User::members()->get()
         );
     }
 
@@ -40,6 +40,7 @@ class MemberService
                 'admin' => User::admins()->get(),
                 'leader' => User::leaders()->get(),
                 'member' => User::members()->get(),
+                'firstTimer' => User::firstTimers()->get(),
                 default => throw new InvalidArgumentException("Invalid role: {$role}"),
             }
         );
@@ -85,9 +86,9 @@ class MemberService
                 $validatedData['password'] = Hash::make($validatedData['phone_number']);
             }
 
-            if (!empty($validatedData['assigned_to_user_id'])) {
+            if (!empty($validatedData['followup_by_id'])) {
                 $assignedUser = User::select('id', 'first_name', 'email')
-                    ->find($validatedData['assigned_to_user_id']);
+                    ->find($validatedData['followup_by_id']);
 
                 if ($assignedUser) {
                     $recipients = [
@@ -100,8 +101,8 @@ class MemberService
                 }
             }
 
-            // Set assigned_at timestamp if assigned_to_user_id is being set
-            $validatedData['assigned_at'] = !empty($validatedData['assigned_to_user_id']) ? now() : null;
+            // Set assigned_at timestamp if followup_by_id is being set
+            $validatedData['assigned_at'] = !empty($validatedData['followup_by_id']) ? now() : null;
 
             // Update the member
             $member->update($validatedData);

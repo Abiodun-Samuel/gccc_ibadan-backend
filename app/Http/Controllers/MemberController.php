@@ -39,7 +39,7 @@ class MemberController extends Controller
         }
     }
 
-    public function store(StoreMemberRequest $request): JsonResponse
+    public function store(StoreUserRequest $request): JsonResponse
     {
         try {
             $member = $this->memberService->createMember($request->validated());
@@ -88,7 +88,7 @@ class MemberController extends Controller
     public function unassign(User $member)
     {
         $member->update([
-            'assigned_to_user_id' => null,
+            'followup_by_id' => null,
             'assigned_at' => null,
         ]);
 

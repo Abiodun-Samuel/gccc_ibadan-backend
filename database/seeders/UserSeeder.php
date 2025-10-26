@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\RoleEnum;
 use App\Models\User;
-use App\Services\UserRolePermissionService;
+use App\Services\UserRoleService;
 use DB;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -13,7 +13,7 @@ use Schema;
 class UserSeeder extends Seeder
 {
     public function __construct(
-        private readonly UserRolePermissionService $service
+        private readonly UserRoleService $service
     ) {
     }
 
@@ -34,10 +34,28 @@ class UserSeeder extends Seeder
                 'address' => null,
                 'community' => null,
                 'worker' => 'No',
-
                 'status' => null,
                 'email_verified_at' => null,
                 'password' => '',
+                'remember_token' => null,
+                'date_of_birth' => null,
+                'date_of_visit' => null,
+                'created_at' => '31-08-25 1:02',
+                'updated_at' => '31-08-25 1:02',
+            ],
+            [
+                'id' => '75',
+                'first_name' => 'Opeyemi',
+                'last_name' => 'Okunola',
+                'email' => 'opeyemiadebowale1759@gmail.com',
+                'phone_number' => '08146412563',
+                'gender' => 'Male',
+                'address' => null,
+                'community' => null,
+                'worker' => 'Yes',
+                'status' => null,
+                'email_verified_at' => null,
+                'password' => '$2y$12$xz7x3sqbZjimj5K6kRQx3.5zQclaQLJYLVbsFqCeQpwv139zSGK2S',
                 'remember_token' => null,
                 'date_of_birth' => null,
                 'date_of_visit' => null,
@@ -54,10 +72,29 @@ class UserSeeder extends Seeder
                 'address' => null,
                 'community' => null,
                 'worker' => 'No',
-
                 'status' => null,
                 'email_verified_at' => null,
                 'password' => '',
+                'remember_token' => null,
+                'date_of_birth' => null,
+                'date_of_visit' => null,
+                'created_at' => '31-08-25 1:02',
+                'updated_at' => '31-08-25 1:02',
+            ],
+             [
+                'id' => '98',
+                'first_name' => 'Abiodun',
+                'last_name' => 'Samuel Oluyemi',
+                'email' => 'abiodunsamyemi@gmail.com',
+                'phone_number' => '08164650987',
+                'gender' => 'Male',
+                'address' => null,
+                'community' => null,
+                'worker' => 'Yes',
+
+                'status' => null,
+                'email_verified_at' => null,
+                'password' => '$2y$12$bN89yfg1TV.MhZIkrFgyMuI9NGIt3UdB6UuObj1MNpaFyysy7u5Y6',
                 'remember_token' => null,
                 'date_of_birth' => null,
                 'date_of_visit' => null,
@@ -805,7 +842,7 @@ class UserSeeder extends Seeder
                 'first_name' => 'Ayomide',
                 'last_name' => 'Fasasi',
                 'email' => 'AyomideFasasi@gmail.com',
-                'phone_number' => null,
+                'phone_number' => 'Ayomide',
                 'gender' => 'Male',
                 'address' => null,
                 'community' => null,
@@ -1417,26 +1454,7 @@ class UserSeeder extends Seeder
                 'created_at' => '31-08-25 1:02',
                 'updated_at' => '31-08-25 1:02',
             ],
-            [
-                'id' => '75',
-                'first_name' => 'Opeyemi',
-                'last_name' => 'Okunola',
-                'email' => 'opeyemiadebowale1759@gmail.com',
-                'phone_number' => '08146412563',
-                'gender' => 'Male',
-                'address' => null,
-                'community' => null,
-                'worker' => 'Yes',
 
-                'status' => null,
-                'email_verified_at' => null,
-                'password' => '$2y$12$xz7x3sqbZjimj5K6kRQx3.5zQclaQLJYLVbsFqCeQpwv139zSGK2S',
-                'remember_token' => null,
-                'date_of_birth' => null,
-                'date_of_visit' => null,
-                'created_at' => '31-08-25 1:02',
-                'updated_at' => '31-08-25 1:02',
-            ],
             [
                 'id' => '76',
                 'first_name' => 'Israel',
@@ -1774,26 +1792,7 @@ class UserSeeder extends Seeder
                 'created_at' => '31-08-25 1:02',
                 'updated_at' => '31-08-25 1:02',
             ],
-            [
-                'id' => '98',
-                'first_name' => 'Abiodun',
-                'last_name' => 'Samuel Oluyemi',
-                'email' => 'abiodunsamyemi@gmail.com',
-                'phone_number' => '08164650987',
-                'gender' => 'Male',
-                'address' => null,
-                'community' => null,
-                'worker' => 'Yes',
 
-                'status' => null,
-                'email_verified_at' => null,
-                'password' => '$2y$12$bN89yfg1TV.MhZIkrFgyMuI9NGIt3UdB6UuObj1MNpaFyysy7u5Y6',
-                'remember_token' => null,
-                'date_of_birth' => null,
-                'date_of_visit' => null,
-                'created_at' => '31-08-25 1:02',
-                'updated_at' => '31-08-25 1:02',
-            ],
             [
                 'id' => '99',
                 'first_name' => 'Oluwapelumi',
@@ -2396,21 +2395,24 @@ class UserSeeder extends Seeder
 
         foreach ($users as $userData) {
             $userData['password'] = Hash::make($userData['phone_number']);
-
             $userData['created_at'] = now();
             $userData['updated_at'] = now();
             $userData['status'] = 'active';
             $userData['date_of_visit'] = null;
 
-            $user = User::create($userData);
-            if ($userData['email'] == 'admin@gcccibadan.org' || $userData['email'] == 'abiodundigitalhub@gmail.com') {
-                $this->service->assignRoleAndSyncPermissions($user, [
+            $user = User::create($userData); //
+            if ($userData['email'] == 'admin@gcccibadan.org'  || $userData['email'] == 'Opeyemiadebowale1759@gmail.com') {
+                $this->service->assignUserRoles($user, [
                     RoleEnum::ADMIN->value,
                     RoleEnum::LEADER->value,
                     RoleEnum::MEMBER->value,
                 ]);
-            } else {
-                $this->service->assignRoleAndSyncPermissions($user, [
+            } else if($userData['email'] == 'abiodunsamyemi@gmail.com'){
+                $this->service->assignUserRoles($user, [
+                    RoleEnum::LEADER->value,
+                ]);
+            }else{
+                 $this->service->assignUserRoles($user, [
                     RoleEnum::MEMBER->value,
                 ]);
             }

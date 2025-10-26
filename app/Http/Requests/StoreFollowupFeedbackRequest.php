@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\FirstTimer;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,7 +16,7 @@ class StoreFollowupFeedbackRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'followupable_type' => ['required', 'string', Rule::in([FirstTimer::class, User::class])],
+            'followupable_type' => ['required', 'string', Rule::in([User::class, User::class])],
             'followupable_id' => [
                 'required',
                 'integer',
@@ -61,7 +60,7 @@ class StoreFollowupFeedbackRequest extends FormRequest
     {
         if ($this->has('subject_type')) {
             $typeMap = [
-                'first-timers' => FirstTimer::class,
+                'first-timers' => User::class,
                 'members' => User::class,
                 'user' => User::class,
             ];

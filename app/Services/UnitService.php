@@ -10,7 +10,7 @@ use DB;
 class UnitService
 {
     public function __construct(
-        private UserRolePermissionService $userRolePermissionService
+        private UserRoleService $userRoleService
     ) {
     }
 
@@ -36,14 +36,14 @@ class UnitService
             }
             if (isset($data['leader_id'])) {
                 $leader = User::find($data['leader_id']);
-                $this->userRolePermissionService->assignRoleAndSyncPermissions(
+                $this->userRoleService->assignUserRoles(
                     $leader,
                     [RoleEnum::LEADER->value]
                 );
             }
             if (isset($data['assistant_leader_id'])) {
                 $assistant = User::find($data['assistant_leader_id']);
-                $this->userRolePermissionService->assignRoleAndSyncPermissions(
+                $this->userRoleService->assignUserRoles(
                     $assistant,
                     [RoleEnum::LEADER->value]
                 );
@@ -110,7 +110,7 @@ class UnitService
             ->exists();
 
         if (!$stillLeading && $user->hasRole(RoleEnum::LEADER->value)) {
-            $this->userRolePermissionService->removeRoleAndPermissions(
+            $this->userRoleService->removeRole(
                 $user,
                 RoleEnum::LEADER->value
             );
@@ -124,7 +124,7 @@ class UnitService
         // Assign role to new leader
         if ($newLeaderId) {
             $newLeader = User::findOrFail($newLeaderId);
-            $this->userRolePermissionService->assignRoleAndSyncPermissions(
+            $this->userRoleService->assignUserRoles(
                 $newLeader,
                 [RoleEnum::LEADER->value]
             );
@@ -142,7 +142,7 @@ class UnitService
         // Assign role to new assistant
         if ($newAssistantId) {
             $newAssistant = User::findOrFail($newAssistantId);
-            $this->userRolePermissionService->assignRoleAndSyncPermissions(
+            $this->userRoleService->assignUserRoles(
                 $newAssistant,
                 [RoleEnum::LEADER->value]
             );

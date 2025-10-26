@@ -2,10 +2,8 @@
 
 namespace App\Services;
 
-use App\Enums\RoleEnum;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use App\Services\UserRolePermissionService;
 use Carbon\Carbon;
 use DB;
 use Illuminate\Support\Facades\Hash;
@@ -15,11 +13,9 @@ use Str;
 class AuthService
 {
     private const TOKEN_EXPIRY_MINUTES = 60;
-    public $rolePermissionService;
     public $mailService;
-    public function __construct(UserRolePermissionService $rolePermissionService, MailService $mailService)
+    public function __construct(MailService $mailService)
     {
-        $this->rolePermissionService = $rolePermissionService;
         $this->mailService = $mailService;
     }
     /**
@@ -48,21 +44,6 @@ class AuthService
     private function findUserByEmail(string $email): ?User
     {
         return User::where('email', $email)->first();
-    }
-
-    public function register(array $data): array
-    {
-        $data['password'] = Hash::make($data['phone_number']);
-        $user = User::create($data);
-        $role = $data['role'] ?? RoleEnum::MEMBER->value;
-        $this->rolePermissionService->assignRoleAndSyncPermissions($user, [$role]);
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return [
-            'token' => $token,
-            'user' => UserResource::make($user),
-        ];
     }
 
     public function sendResetLink(string $email): void

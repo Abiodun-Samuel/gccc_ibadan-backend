@@ -36,7 +36,6 @@ class FirstTimerResource extends JsonResource
             'invited_by' => $this->invited_by,
             'service_experience' => $this->service_experience,
             'prayer_point' => $this->prayer_point,
-            'friend_family' => $this->friend_family,
             'how_did_you_learn' => $this->how_did_you_learn,
             'is_student' => $this->is_student,
             'notes' => $this->notes,

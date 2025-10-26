@@ -38,10 +38,6 @@ class Attendance extends Model
         ]);
     }
     // Query scopes for common filters
-    public function scopeInPeriod(Builder $query, Carbon $startDate, Carbon $endDate): Builder
-    {
-        return $query->whereBetween('attendance_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-    }
     public function scopePresent(Builder $query): Builder
     {
         return $query->where('status', 'present');

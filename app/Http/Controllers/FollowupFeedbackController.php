@@ -8,7 +8,6 @@ use App\Http\Resources\FirstTimerResource;
 use App\Http\Resources\FollowupFeedbackResource;
 use App\Http\Resources\UserResource;
 use App\Models\AbsenteeAssignment;
-use App\Models\FirstTimer;
 use App\Models\User;
 use App\Services\FollowUpService;
 use Illuminate\Http\JsonResponse;
@@ -30,7 +29,7 @@ class FollowupFeedbackController extends Controller
             Response::HTTP_OK
         );
     }
-    public function getFollowUpsByFirstTimer(FirstTimer $firstTimer): JsonResponse
+    public function getFollowUpsByFirstTimer(User $firstTimer): JsonResponse
     {
         $followUps = $this->followUpService->getFollowUps($firstTimer);
         return $this->successResponse(
@@ -50,7 +49,7 @@ class FollowupFeedbackController extends Controller
     }
     public function getFirstTimersWithFollowups()
     {
-        $firstTimers = FirstTimer::with([
+        $firstTimers = User::firstTimers()->with([
             'followUpStatus',
             'assignedTo',
             'followupFeedbacks.createdBy' => function ($query) {
@@ -67,7 +66,7 @@ class FollowupFeedbackController extends Controller
     }
     public function getMembersWithFollowups()
     {
-        $members = User::with(['followupFeedbacks.createdBy', 'assignedTo'])
+        $members = User::members()->with(['followupFeedbacks.createdBy', 'assignedTo'])
             ->orderByDesc('assigned_at')->get();
         return $this->successResponse(UserResource::collection($members), 'All members retrieved successfully', Response::HTTP_OK);
     }

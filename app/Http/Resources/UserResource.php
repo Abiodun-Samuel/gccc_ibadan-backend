@@ -53,7 +53,6 @@ class UserResource extends JsonResource
             ]),
 
             'roles' => $this->whenLoaded('roles', fn() => $this->getRoleNames()),
-            'permissions' => $this->whenLoaded('permissions', fn() => $this->getPermissionNames()),
 
             'education' => $this->education,
             'field_of_study' => $this->field_of_study,
@@ -65,6 +64,9 @@ class UserResource extends JsonResource
                 'linkedin' => $this->linkedin,
                 'twitter' => $this->twitter,
             ],
+
+            'profile_completed' => $this->isProfileCompleted(),
+            'completion_percent' => $this->profile_completion_percent,
 
             'assigned_at' => $this->assigned_at?->format('Y-m-d H:i:s'),
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),

@@ -1,10 +1,8 @@
 <?php
 
-use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\FollowupFeedbackController;
 use App\Http\Controllers\FollowUpStatusController;
 use App\Http\Controllers\MediaController;
-use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -53,7 +51,6 @@ Route::middleware('auth:sanctum')->group(function () {
         ->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/assigned', 'getAssignedFirstTimers')->name('assigned');
-            Route::post('/status', 'setFollowupStatus')->name('set-status');
             Route::post('/{firstTimer}/welcome-email', 'sendFirstTimerWelcomeEmail')->name('welcome-email');
             Route::get('/{firstTimer}', 'show')->name('show');
             Route::put('/{firstTimer}', 'update')->name('update');
@@ -148,11 +145,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(['role:' . RoleEnum::ADMIN->value])->prefix('admin')->group(function () {
 
         Route::get('/analytics', [AdminController::class, 'getAdminAnalytics']);
-        //permision
-        Route::post('users/{user}/roles', [AdminUserController::class, 'assignRoles']);
-        Route::post('users/{user}/permissions', [AdminUserController::class, 'assignPermissions']);
-        Route::apiResource('permissions', PermissionController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
-
         // Usher Attendance
         Route::apiResource('usher-attendance', UsherAttendanceController::class);
     });
