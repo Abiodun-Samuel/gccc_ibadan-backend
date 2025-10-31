@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\RoleEnum;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -19,7 +20,6 @@ class MemberService
     {
         $this->mailService = $mailService;
     }
-
     public function getAllMembers(): Collection
     {
         return Cache::remember(
@@ -28,7 +28,6 @@ class MemberService
             fn() => User::members()->get()
         );
     }
-
     public function getUsersByRole(string $role): Collection
     {
         $cacheKey = self::CACHE_KEY . "_role_{$role}";
@@ -47,89 +46,140 @@ class MemberService
     }
     public function findMember(User $user): User
     {
-        return $user->loadFullProfile();
+        return $user->load(['assignedTo'])->loadFullProfile();
     }
-
     public function createMember(array $data): User
     {
-        return DB::transaction(function () use ($data) {
-            $member = User::create([
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'email' => $data['email'],
-                'phone_number' => $data['phone_number'] ?? null,
-                'gender' => $data['gender'] ?? null,
-                'avatar' => $data['avatar'] ?? null,
-                'address' => $data['address'] ?? null,
-                'community' => $data['community'] ?? null,
-                'worker' => $data['worker'] ?? null,
-                'status' => $data['status'] ?? 'active',
-                'date_of_birth' => $data['date_of_birth'] ?? null,
-                'country' => $data['country'] ?? null,
-                'city_or_state' => $data['city_or_state'] ?? null,
-                'facebook' => $data['facebook'] ?? null,
-                'instagram' => $data['instagram'] ?? null,
-                'linkedin' => $data['linkedin'] ?? null,
-                'twitter' => $data['twitter'] ?? null,
-                'password' => Hash::make($data['password']),
-            ]);
-
-            $this->clearCache();
-            return $member;
-        });
+        return User::create([
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'email' => $data['email'],
+            'gender' => $data['gender'],
+            'phone_number' => $data['phone_number'],
+            'password' => Hash::make($data['phone_number']),
+            'status' => 'active',
+        ]);
     }
+    public function createMembers(array $membersData): array
+    {
+        $successful = [];
+        $failed = [];
+        $total = count($membersData);
 
+        foreach ($membersData as $index => $memberData) {
+            try {
+                $member = $this->createMember($memberData);
+                $member->assignRole(RoleEnum::MEMBER->value);
+                $successful[] = $member;
+            } catch (\Exception $e) {
+                $failed[] = [
+                    'index' => $index + 1,
+                    'data' => $memberData,
+                    'error' => $this->getUserFriendlyError($e),
+                ];
+            }
+        }
+        $this->clearCache();
+        return [
+            'successful' => $successful,
+            'failed' => $failed,
+            'total' => $total,
+            'successful_count' => count($successful),
+            'failed_count' => count($failed),
+        ];
+    }
     public function updateMember(User $member, array $validatedData): User
     {
-        return DB::transaction(function () use ($member, $validatedData) {
+        DB::beginTransaction();
+        try {
             if (!empty($validatedData['phone_number'])) {
                 $validatedData['password'] = Hash::make($validatedData['phone_number']);
             }
-
-            if (!empty($validatedData['followup_by_id'])) {
-                $assignedUser = User::select('id', 'first_name', 'email')
-                    ->find($validatedData['followup_by_id']);
-
-                if ($assignedUser) {
-                    $recipients = [
-                        [
-                            'name' => $assignedUser->first_name,
-                            'email' => $assignedUser->email
-                        ]
-                    ];
-                    $this->mailService->sendAssignedMemberEmail($recipients);
-                }
-            }
-
-            // Set assigned_at timestamp if followup_by_id is being set
+            $this->handleMemberAssignment($validatedData);
             $validatedData['assigned_at'] = !empty($validatedData['followup_by_id']) ? now() : null;
-
-            // Update the member
             $member->update($validatedData);
-
-            // Clear any cached data
             $this->clearCache();
-
-            // Return the fresh model with the assignedTo relationship loaded
-            return $member->fresh('assignedTo');
-        });
+            DB::commit();
+            return $member->fresh(['assignedTo']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
+    public function deleteMembers(array $ids): array
+    {
+        try {
+            DB::beginTransaction();
+            DB::table('unit_user')->whereIn('user_id', $ids)->delete();
+            $deletedCount = User::whereIn('id', $ids)->delete();
+            DB::commit();
+            $this->clearCache();
+            return [
+                'deleted_count' => $deletedCount,
+                'failed_count' => count($ids) - $deletedCount,
+                'success' => $deletedCount > 0,
+            ];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
     public function deleteMember(User $member): bool
     {
         return DB::transaction(function () use ($member) {
-            $member->units()->detach();
             $deleted = $member->delete();
+            $member->units()->detach();
             $this->clearCache();
             return $deleted;
         });
     }
+    private function handleMemberAssignment(array &$validatedData): void
+    {
+        if (empty($validatedData['followup_by_id'])) {
+            return;
+        }
 
+        $assignedUser = User::select('id', 'first_name', 'email')
+            ->find($validatedData['followup_by_id']);
+
+        if (!$assignedUser) {
+            return;
+        }
+
+        try {
+            $recipients = [
+                [
+                    'name' => $assignedUser->first_name,
+                    'email' => $assignedUser->email
+                ]
+            ];
+
+            $this->mailService->sendAssignedMemberEmail($recipients);
+
+        } catch (\Exception $e) {
+        }
+    }
     private function clearCache(): void
     {
         Cache::forget(self::CACHE_KEY);
         foreach (['admin', 'leader', 'member'] as $role) {
             Cache::forget(self::CACHE_KEY . "_role_{$role}");
         }
+    }
+    private function getUserFriendlyError(\Exception $e): string
+    {
+        $message = $e->getMessage();
+        if (str_contains($message, 'Duplicate entry')) {
+            if (str_contains($message, 'email')) {
+                return 'Email already exists';
+            }
+            if (str_contains($message, 'phone_number')) {
+                return 'Phone number already exists';
+            }
+            return 'Duplicate entry detected';
+        }
+        return 'An error occurred while creating this member';
     }
 }

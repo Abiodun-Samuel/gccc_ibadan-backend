@@ -24,7 +24,6 @@ class UpdateUserRequest extends FormRequest
             'avatar' => ['nullable', 'string'],
             'phone_number' => ['nullable','sometimes', 'string', 'max:20'],
             'gender' => ['nullable', Rule::in(['Male', 'Female', 'Other'])],
-            'worker' => ['nullable', Rule::in(['Yes', 'No'])],
             'status' => ['nullable', Rule::in(Status::values())],
             'located_in_ibadan' => ['nullable','boolean'],
             'membership_interest' => ['nullable', Rule::in(['Yes', 'No', 'Maybe'])],

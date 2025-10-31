@@ -29,7 +29,6 @@ class User extends Authenticatable
         'avatar',
         'phone_number',
         'gender',
-        'worker',
         'status',
         'located_in_ibadan',
         'membership_interest',
@@ -78,7 +77,8 @@ class User extends Authenticatable
         'city_or_state',
         'avatar',
         'address',
-        'date_of_birth'
+        'date_of_birth',
+        'community'
     ];
 
     /*--------------------------------------------------------------
@@ -150,11 +150,7 @@ class User extends Authenticatable
             'units.leader',
             'units.assistantLeader',
             'units.members',
-            'permissions',
             'roles',
-            'ledUnits',
-            'assistedUnits',
-            'memberUnits',
         ]);
     }
     public function loadFullProfile()

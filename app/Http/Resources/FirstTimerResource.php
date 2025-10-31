@@ -56,6 +56,7 @@ class FirstTimerResource extends JsonResource
                 'full_name' => "{$this->assignedTo->first_name} {$this->assignedTo->last_name}",
                 'email' => $this->assignedTo->email,
                 'gender' => $this->assignedTo->gender,
+                'avatar' => $this->assignedTo->avatar,
             ]),
 
             'followupFeedbacks' => $this->whenLoaded('followupFeedbacks'),

@@ -65,6 +65,4 @@ class UsherAttendanceService
     {
         Cache::forget(self::CACHE_KEY);
     }
-
-
 }

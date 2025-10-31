@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Attendance\AdminMarkAttendanceRequest;
-use App\Http\Requests\Attendance\GetAbsenteesRequest;
 use App\Http\Requests\Attendance\MarkAbsenteesRequest;
 use App\Http\Requests\Attendance\MarkAttendanceRequest;
 use App\Http\Resources\AttendanceResource;
@@ -14,15 +12,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AttendanceController extends Controller
 {
-    public $attendanceService;
-    public function __construct(AttendanceService $attendanceService)
-    {
-        $this->attendanceService = $attendanceService;
+    public function __construct(
+        private AttendanceService $attendanceService
+    ) {
     }
 
-    /**
-     * Display a listing of attendance records with pagination
-     */
     public function index(Request $request): JsonResponse
     {
         $filters = $request->only([
@@ -31,6 +25,7 @@ class AttendanceController extends Controller
             'status',
             'mode'
         ]);
+
         $attendance = $this->attendanceService->getAllAttendance($filters);
 
         return $this->successResponse(
@@ -39,9 +34,6 @@ class AttendanceController extends Controller
         );
     }
 
-    /**
-     * Mark attendance for the authenticated user
-     */
     public function markAttendance(MarkAttendanceRequest $request): JsonResponse
     {
         $attendance = $this->attendanceService->markUserAttendance(
@@ -52,7 +44,7 @@ class AttendanceController extends Controller
         return $this->successResponse(
             new AttendanceResource($attendance),
             'Attendance marked successfully',
-            201
+            Response::HTTP_CREATED
         );
     }
 
@@ -64,6 +56,7 @@ class AttendanceController extends Controller
             'status',
             'mode'
         ]);
+
         $history = $this->attendanceService->getUserAttendanceHistory(
             $request->user(),
             $filters
@@ -75,9 +68,6 @@ class AttendanceController extends Controller
         );
     }
 
-    /**
-     * Mark all non-present users as absent for a specific service and date
-     */
     public function markAbsentees(MarkAbsenteesRequest $request): JsonResponse
     {
         $inserted = $this->attendanceService->markAbsentees($request->validated());
@@ -85,34 +75,56 @@ class AttendanceController extends Controller
         return $this->successResponse(
             ['marked_absent_count' => $inserted],
             'All absent users have been marked',
-            201
+            Response::HTTP_CREATED
         );
     }
 
-    public function assignAbsenteesToLeaders(Request $request)
+    public function adminMarkAttendance(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'service_id' => ['required', 'integer', 'exists:services,id'],
-            'attendance_date' => ['required', 'date'],
-            'leader_ids' => ['required', 'array'],
-            'leader_ids.*' => ['exists:users,id'],
+        $validated = $request->validate([
+            'service_id' => 'required|exists:services,id',
+            'attendance_date' => 'required|date',
+            'attendances' => 'required|array|min:1',
+            'attendances.*.user_id' => 'required|exists:users,id',
+            'attendances.*.status' => 'required|in:present,absent',
+            'attendances.*.mode' => 'nullable|in:online,onsite',
         ]);
-        $assignments = $this->attendanceService->assignAbsenteesToLeaders($data);
 
-        return $this->successResponse([], $assignments['assigned_count'] . " Absent members assigned to " . $assignments['leaders_count'] . " leaders successfully", Response::HTTP_CREATED);
+        $this->attendanceService->bulkMarkAttendance($validated);
+
+        return $this->successResponse(
+            [],
+            'Attendance updated successfully for selected users'
+        );
     }
 
-    public function getAdminAttendanceMonthlyStats(Request $request)
+    public function assignAbsenteesToLeaders(Request $request): JsonResponse
     {
-        $mode = $request->get('mode', 'avg'); // avg | total
-        $year = $request->get('year', 2025);        // optional
+        $validated = $request->validate([
+            'service_id' => ['required', 'integer', 'exists:services,id'],
+            'attendance_date' => ['required', 'date'],
+            'leader_ids' => ['required', 'array', 'min:1'],
+            'leader_ids.*' => ['exists:users,id'],
+        ]);
 
-        try {
-            $data = $this->attendanceService->getMonthlyStats($mode, $year);
-            return $this->successResponse($data, '');
-        } catch (\InvalidArgumentException $e) {
-            return $this->successResponse(null, $e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        $result = $this->attendanceService->assignAbsenteesToLeaders($validated);
+
+        return $this->successResponse(
+            $result,
+            "{$result['assigned_count']} absent members assigned to {$result['leaders_count']} leaders successfully",
+            Response::HTTP_CREATED
+        );
+    }
+
+    public function getAdminAttendanceMonthlyStats(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'year' => 'nullable|integer|min:2020|max:2100',
+        ]);
+
+        $data = $this->attendanceService->getMonthlyAverageAttendance($validated['year'] ?? null);
+
+        return $this->successResponse($data, 'Monthly statistics retrieved successfully');
     }
 
     public function getUserAttendanceMonthlyStats(Request $request): JsonResponse
@@ -122,13 +134,15 @@ class AttendanceController extends Controller
             'year' => 'nullable|integer|min:2020|max:2100',
         ]);
 
-        $user = $request->user();
-
         $metrics = $this->attendanceService->getUserAttendanceMetrics(
-            $user,
+            $request->user(),
             $validated['month'] ?? null,
             $validated['year'] ?? null
         );
-        return $this->successResponse($metrics, 'Attendance metrics retrieved successfully');
+
+        return $this->successResponse(
+            $metrics,
+            'Attendance metrics retrieved successfully'
+        );
     }
 }

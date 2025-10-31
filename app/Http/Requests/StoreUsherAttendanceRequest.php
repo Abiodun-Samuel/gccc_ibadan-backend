@@ -25,6 +25,7 @@ class StoreUsherAttendanceRequest extends FormRequest
             'service_day' => ['required', 'string'],
             'service_day_desc' => ['nullable', 'string'],
             'male' => ['required', 'integer', 'min:0'],
+            'total_attendance' => ['required', 'integer', 'min:0'],
             'female' => ['required', 'integer', 'min:0'],
             'children' => ['required', 'integer', 'min:0'],
             'service_date' => ['required', 'date'],

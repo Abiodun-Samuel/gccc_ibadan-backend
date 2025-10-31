@@ -53,6 +53,6 @@ class MediaController extends Controller
                 ]
             );
         }
-        $this->successResponse([], 'Videos imported successfully');
+        $this->successResponse([], 'Videos imported successfully', Response::HTTP_OK);
     }
 }

@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Enums\RoleEnum;
 use App\Models\User;
+use DB;
+use Illuminate\Database\Eloquent\Collection;
 
 class UserRoleService
 {
@@ -16,12 +18,20 @@ class UserRoleService
         return $user->load(['roles']);
     }
 
-    public function updateUserRole(User $user, string $newRole): User
+    public function assignRoleToUsers(array|Collection $users, string $role): Collection
     {
-        $user->syncRoles([]);
-        return $this->assignUserRoles($user, [$newRole]);
-    }
+        $users = $this->normalizeUsers($users);
 
+        return DB::transaction(function () use ($users, $role) {
+            $hierarchicalRoles = $this->resolveHierarchicalRoles([$role]);
+
+            foreach ($users as $user) {
+                $user->syncRoles($hierarchicalRoles);
+            }
+
+            return $users->load(['roles']);
+        });
+    }
 
     private function resolveHierarchicalRoles(array $roles): array
     {
@@ -42,41 +52,6 @@ class UserRoleService
         return [RoleEnum::MEMBER->value];
     }
 
-    public function hasHierarchicalRole(User $user, string $role): bool
-    {
-        return match ($role) {
-            RoleEnum::ADMIN->value => $user->hasRole(RoleEnum::ADMIN->value),
-            RoleEnum::LEADER->value => $user->hasAnyRole([
-                RoleEnum::ADMIN->value,
-                RoleEnum::LEADER->value
-            ]),
-            RoleEnum::MEMBER->value => $user->hasAnyRole([
-                RoleEnum::ADMIN->value,
-                RoleEnum::LEADER->value,
-                RoleEnum::MEMBER->value
-            ]),
-            default => false,
-        };
-    }
-
-    public function getPrimaryRole(User $user): ?string
-    {
-        if ($user->hasRole(RoleEnum::ADMIN->value)) {
-            return RoleEnum::ADMIN->value;
-        }
-
-        if ($user->hasRole(RoleEnum::LEADER->value)) {
-            return RoleEnum::LEADER->value;
-        }
-
-        if ($user->hasRole(RoleEnum::MEMBER->value)) {
-            return RoleEnum::MEMBER->value;
-        }
-
-        return null;
-    }
-
-
     public function removeRole(User $user, string $role): User
     {
 
@@ -93,4 +68,10 @@ class UserRoleService
         return $user->load(['roles']);
     }
 
+    private function normalizeUsers(array|Collection $users): Collection
+    {
+        $users = $users instanceof Collection ? $users : collect($users);
+        $ids = $users->map(fn($user) => $user instanceof User ? $user->id : $user)->toArray();
+        return User::whereIn('id', $ids)->get();
+    }
 }

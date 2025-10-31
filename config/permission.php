@@ -111,7 +111,7 @@ return [
     'register_octane_reset_listener' => false,
 
     /*
-     * Events will fire when a role or permission is assigned/unassigned:
+     * Events will fire when a role or permission is:
      * \Spatie\Permission\Events\RoleAttached
      * \Spatie\Permission\Events\RoleDetached
      * \Spatie\Permission\Events\PermissionAttached

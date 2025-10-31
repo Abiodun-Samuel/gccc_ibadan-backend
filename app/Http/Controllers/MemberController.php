@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreMemberRequest;
-use App\Http\Requests\UpdateMemberRequest;
+use App\Http\Requests\StoreBulkMemberRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use Illuminate\Http\Request;
 use App\Services\MemberService;
+use DB;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
-use Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class MemberController extends Controller
@@ -19,7 +20,36 @@ class MemberController extends Controller
     {
         $this->memberService = $memberService;
     }
+    private function buildSuccessMessage(array $result): string
+    {
+        $total = $result['total'];
+        $successful = $result['successful_count'];
+        $failed = $result['failed_count'];
 
+        if ($failed === 0) {
+            return $successful === 1
+                ? 'Member created successfully'
+                : "{$successful} members created successfully";
+        }
+
+        return "{$successful} of {$total} members created successfully. {$failed} failed.";
+    }
+
+    private function buildBulkDeleteMessage(array $result): string
+    {
+        $deleted = $result['deleted_count'];
+        $failed = $result['failed_count'];
+        $total = $deleted + $failed;
+        if ($failed === 0) {
+            return $deleted === 1
+                ? 'Member deleted successfully'
+                : "{$deleted} members deleted successfully";
+        }
+        if ($deleted === 0) {
+            return "Failed to delete all {$total} members";
+        }
+        return "{$deleted} of {$total} members deleted successfully, {$failed} failed";
+    }
     public function index(): JsonResponse
     {
         try {
@@ -39,13 +69,31 @@ class MemberController extends Controller
         }
     }
 
-    public function store(StoreUserRequest $request): JsonResponse
+    public function store(StoreBulkMemberRequest $request): JsonResponse
     {
+        DB::beginTransaction();
+
         try {
-            $member = $this->memberService->createMember($request->validated());
-            return $this->successResponse(new UserResource($member), 'Member created successfully', Response::HTTP_CREATED);
+            $result = $this->memberService->createMembers($request->validated()['members']);
+            DB::commit();
+            $message = $this->buildSuccessMessage($result);
+
+            return $this->successResponse([
+                'created' => UserResource::collection($result['successful']),
+                'failed' => $result['failed'],
+                'summary' => [
+                    'total' => $result['total'],
+                    'successful' => $result['successful_count'],
+                    'failed' => $result['failed_count']
+                ]
+            ], $message, Response::HTTP_CREATED);
+
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to create member', Response::HTTP_INTERNAL_SERVER_ERROR);
+            DB::rollBack();
+            return $this->errorResponse(
+                'Failed to create members',
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
         }
     }
 
@@ -61,7 +109,7 @@ class MemberController extends Controller
         }
     }
 
-    public function update(UpdateMemberRequest $request, User $member): JsonResponse
+    public function update(UpdateUserRequest $request, User $member): JsonResponse
     {
         try {
             $updatedMember = $this->memberService->updateMember($member, $request->validated());
@@ -71,27 +119,24 @@ class MemberController extends Controller
         }
     }
 
-    public function destroy(User $member): JsonResponse
+    public function destroy(Request $request): JsonResponse
     {
-        try {
-            $member = $this->memberService->findMember($member);
-            $this->memberService->deleteMember($member);
+     try {
+            $ids = $request->validate([
+                'memberIds' => ['required', 'array', 'min:1', 'max:100'],
+                'memberIds.*' => ['required', 'integer', 'exists:users,id'],
+            ]);
 
-            return $this->successResponse(null, 'Member deleted successfully');
-        } catch (ModelNotFoundException $e) {
-            return $this->errorResponse('Member not found', Response::HTTP_NOT_FOUND);
+            $result = $this->memberService->deleteMembers($ids['memberIds']);
+
+            $message = $this->buildBulkDeleteMessage($result);
+
+            return $this->successResponse($result, $message);
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to delete member', Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse(
+                'Failed to delete members: ' . $e->getMessage(),
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
         }
-    }
-
-    public function unassign(User $member)
-    {
-        $member->update([
-            'followup_by_id' => null,
-            'assigned_at' => null,
-        ]);
-
-        return response()->json(['message' => 'User unassigned successfully.']);
     }
 }

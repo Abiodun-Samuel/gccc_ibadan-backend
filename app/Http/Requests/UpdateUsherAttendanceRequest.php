@@ -24,6 +24,7 @@ class UpdateUsherAttendanceRequest extends FormRequest
         return [
             'male' => ['nullable', 'integer', 'min:0'],
             'female' => ['nullable', 'integer', 'min:0'],
+            'total_attendance' => ['required', 'integer', 'min:0'],
             'children' => ['nullable', 'integer', 'min:0'],
             'service_date' => ['nullable', 'date'],
             'service_day' => ['required', 'string'],

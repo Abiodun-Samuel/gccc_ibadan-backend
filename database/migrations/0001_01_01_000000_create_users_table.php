@@ -27,7 +27,6 @@ return new class extends Migration {
             $table->string('avatar')->nullable();
             $table->string('phone_number');
             $table->enum('gender', ['Male', 'Female', 'Other'])->nullable();
-            $table->enum('worker', ['Yes', 'No',])->nullable();
             $table->enum('status', Status::values())->index()->default(Status::ACTIVE->value);
             $table->boolean('located_in_ibadan')->nullable()->default(false);
             $table->enum('membership_interest', ['Yes', 'No', 'Maybe'])->nullable();
@@ -59,9 +58,9 @@ return new class extends Migration {
             $table->unsignedTinyInteger('last_badge_month')->nullable();
             $table->unsignedSmallInteger('last_badge_year')->nullable();
 
-            $table->date('week_ending')->nullable();
+            $table->date('week_ending')->nullable()->index();
             $table->timestamp('assigned_at')->nullable();
-            $table->date('date_of_birth')->nullable();
+            $table->date('date_of_birth')->nullable()->index();
             $table->date('date_of_visit')->nullable()->index();
             $table->timestamp('email_verified_at')->nullable();
 

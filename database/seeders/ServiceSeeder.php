@@ -23,6 +23,14 @@ class ServiceSeeder extends Seeder
                 'service_date' => null,
             ],
             [
+                'name' => 'Thursday Service',
+                'description' => '',
+                'day_of_week' => 'thursday',
+                'start_time' => '17:15:00',
+                'is_recurring' => true,
+                'service_date' => null,
+            ],
+            [
                 'name' => 'Friday Service',
                 'description' => '',
                 'day_of_week' => 'friday',

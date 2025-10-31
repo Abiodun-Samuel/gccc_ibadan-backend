@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     //members
     Route::apiResource('members', MemberController::class);
+    Route::post('members/delete', [MemberController::class, 'destroy']);
     // Attendance
     Route::prefix('attendance')->group(function () {
         Route::post('/mark', [AttendanceController::class, 'markAttendance']);
@@ -93,6 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::prefix('attendance')->group(function () {
                 Route::get('/', [AttendanceController::class, 'index']);
                 Route::post('/mark-absentees', [AttendanceController::class, 'markAbsentees']);
+                Route::post('/mark', [AttendanceController::class, 'adminMarkAttendance']);
                 Route::post('/assign-absentees-to-leaders', [AttendanceController::class, 'assignAbsenteesToLeaders']);
                 Route::get('/monthly-stats', [AttendanceController::class, 'getAdminAttendanceMonthlyStats']);
             });
@@ -145,6 +147,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(['role:' . RoleEnum::ADMIN->value])->prefix('admin')->group(function () {
 
         Route::get('/analytics', [AdminController::class, 'getAdminAnalytics']);
+        Route::post('/assign-role', [AdminController::class, 'assignRoleToUsers']);
         // Usher Attendance
         Route::apiResource('usher-attendance', UsherAttendanceController::class);
     });
