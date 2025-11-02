@@ -27,6 +27,7 @@ class User extends Authenticatable
         'last_name',
         'email',
         'avatar',
+        'secondary_avatar',
         'phone_number',
         'gender',
         'status',
@@ -197,11 +198,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(AbsenteeAssignment::class, 'user_id');
     }
-
-    /** Follow-up feedbacks attached to this user */
-    public function followupFeedbacks(): MorphMany
+    public function followUpFeedbacks()
     {
-        return $this->morphMany(FollowupFeedback::class, 'followupable')->latest();
+        return $this->hasMany(FollowUpFeedback::class, 'user_id')->latest();
+    }
+
+    public function createdFollowUpFeedbacks()
+    {
+        return $this->hasMany(FollowUpFeedback::class, 'created_by');
     }
 
     /*--------------------------------------------------------------

@@ -44,7 +44,7 @@ class AttendanceService
     public function getUserAttendanceHistory(User $user, array $filters): Collection
     {
         $query = $user->attendances()
-            ->with(['service'])
+            ->with(['service', 'user'])
             ->select([
                 'id',
                 'user_id',

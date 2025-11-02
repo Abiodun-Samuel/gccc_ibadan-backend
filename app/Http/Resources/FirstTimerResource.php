@@ -21,6 +21,7 @@ class FirstTimerResource extends JsonResource
             'last_name' => $this->last_name,
             'initials' => generateInitials($this->first_name, $this->last_name),
             'avatar' => $this->avatar,
+            'secondary_avatar' => $this->secondary_avatar,
             'phone_number' => $this->phone_number,
             'email' => $this->email,
             'gender' => $this->gender,

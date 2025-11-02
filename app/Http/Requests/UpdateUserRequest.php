@@ -22,6 +22,7 @@ class UpdateUserRequest extends FormRequest
             'last_name' => ['nullable','sometimes', 'string', 'max:255'],
             'email' => ['nullable','sometimes', 'email', 'max:255'],
             'avatar' => ['nullable', 'string'],
+            'secondary_avatar' => ['nullable','sometimes', 'string'],
             'phone_number' => ['nullable','sometimes', 'string', 'max:20'],
             'gender' => ['nullable', Rule::in(['Male', 'Female', 'Other'])],
             'status' => ['nullable', Rule::in(Status::values())],

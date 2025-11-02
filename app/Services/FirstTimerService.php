@@ -12,6 +12,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class FirstTimerService
 {
@@ -21,13 +22,40 @@ class FirstTimerService
     ) {
     }
 
-    /**
-     * Get all first timers with relationships
-     */
-    public function getAllFirstTimers(): Collection
+    private function applyAttendanceFilters($query, array $filters): void
     {
-        return User::firstTimers()
-            ->with(['followUpStatus', 'assignedTo'])
+        $query->when(
+            !empty($filters['assigned_to_member']),
+            fn($q) => $q->where('followup_by_id', $filters['assigned_to_member'])
+        );
+
+        $query->when(
+            !empty($filters['follow_up_status']),
+            fn($q) => $q->where('follow_up_status_id', $filters['follow_up_status'])
+        );
+
+        $query->when(
+            !empty($filters['date_of_visit']),
+            fn($q) => $q->whereDate('date_of_visit', $filters['date_of_visit'])
+        );
+
+        $query->when(
+            !empty($filters['date_month_of_visit']),
+            fn($q) => $q->whereMonth('date_of_visit', $filters['date_month_of_visit'])
+        );
+
+        $query->when(
+            !empty($filters['week_ending']),
+            fn($q) => $q->whereDate('week_ending', $filters['week_ending'])
+        );
+    }
+
+    public function getAllFirstTimers(array $filters = []): Collection
+    {
+        $query = User::firstTimers()
+            ->with(['followUpStatus', 'assignedTo']);
+        $this->applyAttendanceFilters($query, $filters);
+        return $query
             ->orderBy('date_of_visit', 'desc')
             ->get();
     }
@@ -60,6 +88,9 @@ class FirstTimerService
      */
     public function getFirstTimerById(User $firstTimer): User
     {
+        if (!$firstTimer->hasRole(RoleEnum::FIRST_TIMER->value)) {
+            throw new NotFoundHttpException('The first timer you’re looking for may have been removed or no longer exists.');
+        }
         return $firstTimer->load(['followUpStatus', 'assignedTo']);
     }
 
@@ -77,13 +108,13 @@ class FirstTimerService
     /**
      * Handle avatar upload for first timer
      */
-    public function handleAvatarUpload(User $firstTimer, $avatar, string $folder): string
+    public function handleAvatarUpload(User $firstTimer, $secondary_avatar, string $folder): string
     {
-        if ($firstTimer->avatar) {
-            $this->uploadService->delete($firstTimer->avatar);
+        if ($firstTimer->secondary_avatar) {
+            $this->uploadService->delete($firstTimer->secondary_avatar);
         }
 
-        return $this->uploadService->upload($avatar, $folder);
+        return $this->uploadService->upload($secondary_avatar, $folder);
     }
 
     /**

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Attendance;
+use App\Observers\AttendanceObserver;
 use App\Services\ApiExceptionHandler;
 use App\Services\AttendanceService;
 use Dedoc\Scramble\Scramble;
@@ -16,9 +18,6 @@ use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         $helpersPath = app_path('helpers.php');
@@ -30,9 +29,6 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ApiExceptionHandler::class);
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         Scramble::configure()
@@ -44,7 +40,6 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
         Model::shouldBeStrict(!$this->app->isProduction());
 
-        // Log slow queries in development
         if ($this->app->environment('local')) {
             DB::listen(function ($query) {
                 if ($query->time > 1000) {
@@ -56,49 +51,38 @@ class AppServiceProvider extends ServiceProvider
                 }
             });
         }
+
+        Attendance::observe(AttendanceObserver::class);
     }
 
     protected function configureRateLimiting(): void
     {
-        // Default API rate limiting
         RateLimiter::for('api', fn(Request $request) => Limit::perMinute(60)->by($this->resolveRateLimitKey($request)));
 
-        // Stricter rate limiting for authentication routes
         RateLimiter::for('auth', fn(Request $request) => Limit::perMinute(5)->by($this->resolveRateLimitKey($request)));
 
-        // Rate limiting for form submissions
         RateLimiter::for('forms', fn(Request $request) => Limit::perMinute(10)->by($this->resolveRateLimitKey($request)));
 
-        // Rate limiting for search/listing endpoints
         RateLimiter::for('search', fn(Request $request) => Limit::perMinute(30)->by($this->resolveRateLimitKey($request)));
 
-        // Global rate limiting with higher limits for authenticated users
         RateLimiter::for('global', function (Request $request) {
             if ($request->user()) {
-                // Higher limits for authenticated users
                 return Limit::perMinute(120)->by($request->user()->id);
             }
 
-            // Lower limits for guests
             return Limit::perMinute(30)->by($request->ip());
         });
 
-        // File upload rate limiting with multiple limits
         RateLimiter::for('uploads', fn(Request $request) => [
             Limit::perMinute(5)->by($this->resolveRateLimitKey($request)),
             Limit::perHour(50)->by($this->resolveRateLimitKey($request)),
         ]);
 
-        // Admin routes with higher limits
         RateLimiter::for('admin', fn(Request $request) => Limit::perMinute(120)->by($this->resolveRateLimitKey($request)));
     }
 
-    /**
-     * Resolve the rate limiting key for the request.
-     */
     private function resolveRateLimitKey(Request $request): string
     {
-        // Use user ID if authenticated, otherwise use IP
         return $request->user()?->id ?? $request->ip();
     }
 }

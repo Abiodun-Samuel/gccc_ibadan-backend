@@ -22,6 +22,7 @@ class StoreUserRequest extends FormRequest
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'avatar' => ['nullable', 'string'],
+            'secondary_avatar' => ['sometimes','nullable', 'string'],
             'phone_number' => ['required', 'string'],
             'gender' => ['nullable', Rule::in(['Male', 'Female', 'Other'])],
             'status' => ['nullable', Rule::in(Status::values())],

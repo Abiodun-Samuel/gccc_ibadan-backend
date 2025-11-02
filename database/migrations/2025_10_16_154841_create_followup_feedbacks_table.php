@@ -12,13 +12,10 @@ return new class extends Migration {
     {
         Schema::create('followup_feedbacks', function (Blueprint $table) {
             $table->id();
-            // Polymorphic relationship - can be attached to FirstTimer or User
-            $table->morphs('followupable'); // Creates followupable_type and followupable_id
 
-            // User who created the feedback (the follower-upper)
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete(); // Person being followed up
+            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete(); // The staff who followed up
 
-            // Feedback details
             $table->enum('type', [
                 'Pre-Service',
                 'Post-Service',
@@ -28,12 +25,9 @@ return new class extends Migration {
                 'Others'
             ])->nullable();
             $table->longText('note');
-            $table->date('service_date')->nullable();
+            $table->date('service_date')->index()->nullable();
 
             $table->timestamps();
-
-            // Indexes for performance
-            $table->index('service_date');
             $table->index('created_at');
         });
     }

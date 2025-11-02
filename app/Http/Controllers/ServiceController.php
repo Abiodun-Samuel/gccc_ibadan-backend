@@ -10,123 +10,124 @@ use Illuminate\Http\Request;
 
 class ServiceController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $services = Service::get();
         return ServiceResource::collection($services);
     }
-
     public function today(Request $request)
     {
         $now = Carbon::now('Africa/Lagos');
         $today = strtolower($now->format('l'));
 
-        // 1. Check recurring service
-        $service = Service::where('is_recurring', true)
-            ->where('day_of_week', $today)
-            ->first();
-
-        // 2. If no recurring service, check custom one-time service
-        if (!$service) {
-            $service = Service::where('is_recurring', false)
-                ->whereDate('service_date', $now->toDateString())
-                ->first();
-        }
+        $service = $this->findTodaysService($today, $now);
 
         if (!$service) {
             return $this->errorResponse('No service scheduled for today.', 404);
         }
 
-        $user = $request?->user();
-        $attendance = Attendance::where('user_id', $user?->id)
-            ->where('service_id', $service?->id)
-            ->whereDate('attendance_date', $now->toDateString())
-            ->first();
+        $user = $request->user();
+        $serviceDateTime = $this->getServiceDateTime($service, $now);
+        $serviceStatus = $this->determineServiceStatus($serviceDateTime, $now);
+
+        $attendance = $this->getUserAttendance($user, $service->id, $now);
 
         $response = [
             'service' => new ServiceResource($service),
-            'can_mark' => !$attendance,
+            'service_status' => $serviceStatus['status'],
+            'can_mark' => $this->canMarkAttendance($serviceStatus['status'], $attendance),
         ];
 
-        if ($attendance) {
-            $response['status'] = $attendance->status;
-            $response['mode'] = $attendance->mode;
-            $response['marked_at'] = $attendance->created_at->toDateTimeString();
+        if ($serviceStatus['status'] === 'upcoming') {
+            $response['seconds_until_start'] = $serviceStatus['seconds_until_start'];
         }
 
-        return $this->successResponse($response, 'Service available', 200);
+        if ($attendance) {
+            $response['attendance'] = [
+                'status' => $attendance->status,
+                'mode' => $attendance->mode,
+                'marked_at' => $attendance->created_at->toDateTimeString(),
+            ];
+        }
+
+        return $this->successResponse($response, 'Service retrieved successfully', 200);
     }
 
-    // public function today(Request $request)
-    // {
-    //     $now = Carbon::now('Africa/Lagos');
-    //     $today = strtolower($now->format('l'));
-
-    //     // 1. Check recurring service
-    //     $service = Service::where('is_recurring', true)
-    //         ->where('day_of_week', $today)
-    //         ->first();
-
-    //     // 2. If no recurring service, check custom one-time service
-    //     if (!$service) {
-    //         $service = Service::where('is_recurring', false)
-    //             ->whereDate('service_date', $now->toDateString())
-    //             ->first();
-    //     }
-
-    //     if (!$service) {
-    //         return $this->errorResponse('No service scheduled for today.', 404);
-    //     }
-
-    //     // Get attendance window from query params (default: 2 hours before/after)
-    //     $before = (int) $request->query('before', 2); // hours before service
-    //     $after = (int) $request->query('after', 2);  // hours after service
-
-    //     $serviceStart = Carbon::parse($service->start_time, 'Africa/Lagos')
-    //         ->setDate($now->year, $now->month, $now->day);
-
-    //     $windowStart = $serviceStart->copy()->subHours($before);
-    //     $windowEnd = $serviceStart->copy()->addHours($after);
-
-    //     if (!$now->between($windowStart, $windowEnd)) {
-    //         return $this->errorResponse('Attendance not allowed at this time.', 403);
-    //     }
-
-    //     return $this->successResponse(new ServiceResource($service), 'Service available', 200);
-    // }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    private function findTodaysService(string $dayOfWeek, Carbon $now): ?Service
     {
-        //
+        return Service::where(function ($query) use ($dayOfWeek, $now) {
+            $query->where(function ($q) use ($dayOfWeek) {
+                $q->where('is_recurring', true)
+                    ->where('day_of_week', $dayOfWeek);
+            })->orWhere(function ($q) use ($now) {
+                $q->where('is_recurring', false)
+                    ->whereDate('service_date', $now->toDateString());
+            });
+        })->first();
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+
+    private function getServiceDateTime(Service $service, Carbon $now): Carbon
     {
-        //
+        if ($service->is_recurring) {
+            $dateString = $now->format('Y-m-d');
+            $timeString = $service->start_time;
+
+            if (strlen($timeString) <= 8) {
+                return Carbon::parse("{$dateString} {$timeString}", 'Africa/Lagos');
+            } else {
+                $time = Carbon::parse($timeString)->format('H:i:s');
+                return Carbon::parse("{$dateString} {$time}", 'Africa/Lagos');
+            }
+        }
+
+        $dateString = Carbon::parse($service->service_date)->format('Y-m-d');
+        $timeString = $service->start_time;
+
+        if (strlen($timeString) <= 8) {
+            return Carbon::parse("{$dateString} {$timeString}", 'Africa/Lagos');
+        } else {
+            $time = Carbon::parse($timeString)->format('H:i:s');
+            return Carbon::parse("{$dateString} {$time}", 'Africa/Lagos');
+        }
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    private function determineServiceStatus(Carbon $serviceDateTime, Carbon $now): array
     {
-        //
+        $diffInSeconds = $now->diffInSeconds($serviceDateTime, false);
+        $diffInHours = $now->diffInHours($serviceDateTime, false);
+
+        if ($diffInHours <= -6) {
+            return ['status' => 'ended'];
+        }
+
+        if ($diffInSeconds <= 0 && $diffInHours > -6) {
+            return ['status' => 'ongoing'];
+        }
+        $secondsRemaining = (int) abs($diffInSeconds);
+        return [
+            'status' => 'upcoming',
+            'seconds_until_start' => $secondsRemaining,
+        ];
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    private function getUserAttendance($user, int $serviceId, Carbon $now): ?Attendance
     {
-        //
+        if (!$user) {
+            return null;
+        }
+
+        return $user->attendances()
+            ->where('service_id', $serviceId)
+            ->whereDate('attendance_date', $now->toDateString())
+            ->first();
+    }
+
+    private function canMarkAttendance(string $serviceStatus, ?Attendance $attendance): bool
+    {
+        if ($attendance) {
+            return false;
+        }
+        return $serviceStatus === 'ongoing';
     }
 }

@@ -5,15 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class FollowupFeedback extends Model
 {
     protected $table = 'followup_feedbacks';
     protected $fillable = [
-        'followupable_type',
-        'followupable_id',
         'user_id',
+        'created_by',
         'note',
         'type',
         'service_date'
@@ -24,25 +22,13 @@ class FollowupFeedback extends Model
             'service_date' => 'date',
         ];
     }
-
-    public function followupable(): MorphTo
-    {
-        return $this->morphTo();
-    }
-    public function createdBy(): BelongsTo
+    public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
-    public function isForFirstTimer(): bool
+    public function createdBy()
     {
-        return $this->followupable_type === User::class;
+        return $this->belongsTo(User::class, 'created_by');
     }
-    public function scopeForFirstTimers(Builder $query): Builder
-    {
-        return $query->where('followupable_type', User::class);
-    }
-    public function scopeForMembers(Builder $query): Builder
-    {
-        return $query->where('followupable_type', User::class);
-    }
+
 }

@@ -19,6 +19,7 @@ class Service extends Model
     {
         return [
             'service_date' => 'date',
+            'start_time'=>'datetime:H:i'
         ];
     }
     public function attendances(): HasMany

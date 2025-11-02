@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,22 +9,21 @@ class StoreFollowupFeedbackRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // Adjust based on your authorization logic
+        return auth()->check();
     }
 
     public function rules(): array
     {
         return [
-            'followupable_type' => ['required', 'string', Rule::in([User::class, User::class])],
-            'followupable_id' => [
+            'user_id' => [
                 'required',
                 'integer',
-                function ($attribute, $value, $fail) {
-                    $type = $this->input('followupable_type');
-                    if ($type && !$type::find($value)) {
-                        $fail('The selected ' . class_basename($type) . ' does not exist.');
-                    }
-                },
+                Rule::exists('users', 'id'),
+            ],
+            'created_by' => [
+                'required',
+                'integer',
+                Rule::exists('users', 'id'),
             ],
             'type' => [
                 'required',
@@ -35,8 +33,8 @@ class StoreFollowupFeedbackRequest extends FormRequest
                     'Admin',
                     'Pastor',
                     'Unit-Leader',
-                    'Others'
-                ])
+                    'Others',
+                ]),
             ],
             'note' => ['required', 'string', 'min:10'],
             'service_date' => ['nullable', 'date'],
@@ -46,34 +44,10 @@ class StoreFollowupFeedbackRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'followupable_type.required' => 'Please specify whether this is for a first timer or member.',
-            'followupable_id.required' => 'Please select who this feedback is for.',
+            'user_id.required' => 'Please select who this feedback is for.',
+            'user_id.exists' => 'The selected user does not exist.',
             'note.required' => 'Please provide feedback notes.',
             'note.min' => 'Feedback notes must be at least 10 characters.',
         ];
-    }
-
-    /**
-     * Prepare data for validation
-     */
-    protected function prepareForValidation(): void
-    {
-        if ($this->has('subject_type')) {
-            $typeMap = [
-                'first-timers' => User::class,
-                'members' => User::class,
-                'user' => User::class,
-            ];
-
-            $this->merge([
-                'followupable_type' => $typeMap[strtolower($this->subject_type)] ?? $this->followupable_type,
-            ]);
-        }
-
-        if ($this->has('subject_id') && !$this->has('followupable_id')) {
-            $this->merge([
-                'followupable_id' => $this->subject_id,
-            ]);
-        }
     }
 }

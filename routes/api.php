@@ -29,6 +29,7 @@ Route::middleware('guest')->group(function () {
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
+Route::get('/test2', [TestController::class, 'index2']);
     // Users (for leaders, admin and members)
     Route::put('/update-profile', [UserController::class, 'update']);
     Route::get('/leaders/absentees', [UserController::class, 'getAssignedAbsentees']);

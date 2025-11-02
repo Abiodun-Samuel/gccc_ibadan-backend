@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RoleEnum;
 use App\Services\MailService;
+use DB;
+use Illuminate\Http\Request;
+
 
 class TestController extends Controller
 {
@@ -11,6 +15,33 @@ class TestController extends Controller
     public function __construct(MailService $mailService)
     {
         $this->mailService = $mailService;
+    }
+
+    public function index2(Request $request){
+        $user=$request->user();
+        if ($user->hasRole(RoleEnum::FIRST_TIMER->value) && !$user->hasRole(RoleEnum::MEMBER->value)) {
+            return;
+        }
+        $sundayCount = $user->attendances()
+            ->present()
+            ->whereHas('service', fn($q) =>
+                $q->where('day_of_week', 'saturday')
+            )
+            ->count();
+
+        if ($sundayCount >= 4) {
+            try {
+                DB::beginTransaction();
+                $user->assignRole(RoleEnum::ADMIN->value);
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return $e->getMessage();
+            }
+        }
+
+            return $sundayCount;
+
     }
 
     // public function index()

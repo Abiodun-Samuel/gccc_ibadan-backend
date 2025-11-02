@@ -17,12 +17,10 @@ class FollowupFeedbackResource extends JsonResource
         return [
             'id' => $this->id,
 
-            // Subject information (who the feedback is about)
-            'subject' => $this->whenLoaded('followupable', fn() => $this->formatSubject()),
+            // Subject information (the user this feedback is about)
+            'subject' => $this->whenLoaded('user', fn() => $this->formatSubject()),
 
-            // Metadata about the subject
-            'subject_type' => $this->followupable_type ? class_basename($this->followupable_type) : null,
-            'subject_id' => $this->followupable_id,
+            'user_id' => $this->user_id,
 
             // Creator information (who wrote the feedback)
             'created_by' => $this->whenLoaded('createdBy', fn() => [
@@ -49,35 +47,28 @@ class FollowupFeedbackResource extends JsonResource
         ];
     }
 
+    /**
+     * Format the subject (user) data
+     */
     private function formatSubject(): ?array
     {
-        if (!$this->followupable) {
+        if (!$this->user) {
             return null;
         }
 
-        $subject = $this->followupable;
+        $user = $this->user;
 
-        $baseData = [
-            'id' => $subject->id,
-            'full_name' => "{$subject->first_name} {$subject->last_name}",
-            'initials' => generateInitials($subject->first_name, $subject->last_name),
-            'email' => $subject->email,
-            'phone' => $subject->phone_number,
-            'gender' => $subject->gender,
-            'avatar' => $subject->avatar ?? null,
+        return [
+            'id' => $user->id,
+            'full_name' => "{$user->first_name} {$user->last_name}",
+            'initials' => generateInitials($user->first_name, $user->last_name),
+            'email' => $user->email,
+            'phone' => $user->phone_number,
+            'gender' => $user->gender,
+            'avatar' => $user->avatar ?? null,
+            'type' => 'member', // since FirstTimer no longer exists
+            'role' => $user->role ?? null,
+            'community' => $user->community ?? null,
         ];
-
-        if ($this->isForFirstTimer()) {
-            $baseData['type'] = 'first_timer';
-            $baseData['date_of_visit'] = $subject->date_of_visit?->format('Y-m-d');
-            $baseData['status'] = $subject->status;
-            $baseData['follow_up_status'] = $subject->followUpStatus?->name ?? null;
-        } else {
-            $baseData['type'] = 'member';
-            $baseData['role'] = $subject->role;
-            $baseData['community'] = $subject->community;
-        }
-
-        return $baseData;
     }
 }

@@ -31,7 +31,6 @@ class AbsenteeResource extends JsonResource
                 'initials' => generateInitials($this->leader->first_name, $this->leader->last_name),
             ]),
 
-
             'attendance' => $this->whenLoaded('attendance', fn() => [
                 'id' => $this->attendance->id,
                 'service_id' => $this->attendance->service_id,

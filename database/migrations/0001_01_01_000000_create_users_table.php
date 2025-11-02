@@ -25,6 +25,7 @@ return new class extends Migration {
             $table->string('last_name')->index();
             $table->string('email')->unique();
             $table->string('avatar')->nullable();
+            $table->string('secondary_avatar')->nullable();
             $table->string('phone_number');
             $table->enum('gender', ['Male', 'Female', 'Other'])->nullable();
             $table->enum('status', Status::values())->index()->default(Status::ACTIVE->value);

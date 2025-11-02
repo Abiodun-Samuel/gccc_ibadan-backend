@@ -50,10 +50,15 @@ class MemberController extends Controller
         }
         return "{$deleted} of {$total} members deleted successfully, {$failed} failed";
     }
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         try {
-            $members = $this->memberService->getAllMembers();
+            $filters = $request->only([
+                'date_of_birth',
+                'birth_month',
+                'community'
+            ]);
+            $members = $this->memberService->getAllMembers($filters);
             return $this->successResponse(UserResource::collection($members), 'Members retrieved successfully');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -91,7 +96,7 @@ class MemberController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->errorResponse(
-                'Failed to create members',
+                'Failed to create members:'. $e->getMessage(),
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
@@ -102,10 +107,8 @@ class MemberController extends Controller
         try {
             $member = $this->memberService->findMember($member);
             return $this->successResponse(new UserResource($member), 'Member retrieved successfully');
-        } catch (ModelNotFoundException $e) {
-            return $this->errorResponse('Member not found', Response::HTTP_NOT_FOUND);
-        } catch (\Exception $e) {
-            return $this->errorResponse('Member not found', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }  catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
