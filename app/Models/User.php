@@ -215,7 +215,7 @@ class User extends Authenticatable
     /** Attendance records for this user */
     public function attendances(): HasMany
     {
-        return $this->hasMany(Attendance::class)->latest('attendance_date');
+        return $this->hasMany(Attendance::class);
     }
 
     /** Units where this user belongs */
