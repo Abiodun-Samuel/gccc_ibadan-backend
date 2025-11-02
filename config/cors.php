@@ -18,7 +18,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:5173'), 'http://localhost:5173', 'http://localhost:4173/', 'https://gccc-ib-frontend-app.vercel.app'],
+    'allowed_origins' => [env('FRONTEND_URL'), 'http://localhost:5173', 'http://localhost:4173/', 'https://gccc-ib-frontend-app.vercel.app', 'https://gcccibadan.org', 'https://www.gcccibadan.org/'],
 
     'allowed_origins_patterns' => [],
 
