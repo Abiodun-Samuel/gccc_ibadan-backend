@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Enums\RoleEnum;
 use App\Models\Attendance;
+use App\Models\FollowUpStatus;
 use DB;
 
 class AttendanceObserver

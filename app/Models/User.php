@@ -209,7 +209,7 @@ class User extends Authenticatable
     }
 
     /*--------------------------------------------------------------
-    | Relationships → Attendance & Units
+    | Relationships → Attendance & Units 
     --------------------------------------------------------------*/
 
     /** Attendance records for this user */

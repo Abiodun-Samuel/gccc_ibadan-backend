@@ -60,25 +60,6 @@ class UserSeeder extends Seeder
                 'created_at' => '31-08-25 1:02',
                 'updated_at' => '31-08-25 1:02',
             ],
-            [
-                'id' => '2',
-                'first_name' => 'Samuel',
-                'last_name' => 'Abiodun',
-                'email' => 'abiodundigitalhub@gmail.com',
-                'phone_number' => '08164650987',
-                'gender' => 'Male',
-                'address' => null,
-                'community' => null,
-
-                'status' => null,
-                'email_verified_at' => null,
-                'password' => '',
-                'remember_token' => null,
-                'date_of_birth' => null,
-                'date_of_visit' => null,
-                'created_at' => '31-08-25 1:02',
-                'updated_at' => '31-08-25 1:02',
-            ],
     [
         'id' => 3,
         'first_name' => "Oluwatobi",
@@ -1448,25 +1429,6 @@ class UserSeeder extends Seeder
         'updated_at' => "2025-08-31 01:02:35",
     ],
     [
-        'id' => 83,
-        'first_name' => "Inioluwa",
-        'last_name' => "Olatunji",
-        'email' => "olatunjiinioluwa2308@gamil.com",
-        'phone_number' => "08037316709",
-        'gender' => "Female",
-        'address' => "",
-        'community' => "",
-
-
-        'status' => "",
-        'email_verified_at' => null,
-        'remember_token' => null,
-        'date_of_birth' => "",
-        'date_of_visit' => null,
-        'created_at' => "2025-08-31 01:02:36",
-        'updated_at' => "2025-08-31 01:02:36",
-    ],
-    [
         'id' => 84,
         'first_name' => "Favour",
         'last_name' => "Olujimi",
@@ -1696,8 +1658,8 @@ class UserSeeder extends Seeder
     ],
     [
         'id' => 98,
-        'first_name' => "Abiodun",
-        'last_name' => "Samuel Oluyemi",
+        'first_name' => "Samuel",
+        'last_name' => "Abiodun",
         'email' => "abiodunsamyemi@gmail.com",
         'phone_number' => "08164650987",
         'gender' => "Male",
@@ -2540,18 +2502,14 @@ class UserSeeder extends Seeder
             $userData['date_of_visit'] = null;
             $userData['date_of_birth'] = null;
 
-            $user = User::create($userData); //
-            if ($userData['email'] == 'admin@gcccibadan.org'  || $userData['email'] == 'Opeyemiadebowale1759@gmail.com') {
+            $user = User::create($userData);
+            if ($userData['email'] == 'admin@gcccibadan.org'  || $userData['email'] == 'Opeyemiadebowale1759@gmail.com' || $userData['email'] == 'abiodunsamyemi@gmail.com') {
                 $this->service->assignUserRoles($user, [
                     RoleEnum::ADMIN->value,
                     RoleEnum::LEADER->value,
                     RoleEnum::MEMBER->value,
                 ]);
-            } else if($userData['email'] == 'abiodunsamyemi@gmail.com'){
-                $this->service->assignUserRoles($user, [
-                    RoleEnum::LEADER->value,
-                ]);
-            }else{
+            } else{
                  $this->service->assignUserRoles($user, [
                     RoleEnum::MEMBER->value,
                 ]);

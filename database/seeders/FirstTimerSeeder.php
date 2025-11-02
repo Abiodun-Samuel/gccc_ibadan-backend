@@ -8941,8 +8941,7 @@ Preaching and worship essentially ',
         'password' => bcrypt($value['phone_number'] ?? 'password'),
     ]);
 
-    // Assign role "firsttimer"
-    $user->assignRole('firsttimer');
+    $user->assignRole(RoleEnum::FIRST_TIMER->value);
 }
 
         $this->command->info('✅ First timers seeded successfully.');
