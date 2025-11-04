@@ -2518,6 +2518,7 @@ class UserSeeder extends Seeder
         $user = User::create([
             'first_name'=> 'Admin',
             'last_name'=> 'admin',
+            'email'=> 'admin@gcccibadan.org',
             'phone_number'=> '08164650987',
             'gender'=> 'Male',
             'password' => Hash::make('password')
