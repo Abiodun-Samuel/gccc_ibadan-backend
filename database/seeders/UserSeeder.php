@@ -2520,7 +2520,7 @@ class UserSeeder extends Seeder
             'last_name'=> 'admin',
             'phone_number'=> '08164650987',
             'gender'=> 'Male',
-            'password' => Hash::make('password');
+            'password' => Hash::make('password')
         ]);
          $this->service->assignUserRoles($user, [
                     RoleEnum::ADMIN->value,
