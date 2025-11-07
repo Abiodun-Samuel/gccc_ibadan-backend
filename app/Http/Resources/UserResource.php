@@ -23,12 +23,14 @@ class UserResource extends JsonResource
             'community' => $this->community,
             'worker' => $this->getWorkerStatus(),
             'status' => $this->status,
+
             'date_of_birth' => $this->date_of_birth?->format('Y-m-d'),
             'country' => $this->country,
             'city_or_state' => $this->city_or_state,
-            'attendance_badge' => $this->attendance_badge,
-            'last_badge_month' => $this->last_badge_month,
-            'last_badge_year' => $this->last_badge_year,
+
+            'attendance_badges' => $this->attendance_badges ?? [],
+            'total_badges' => $this->attendance_badges?->count() ?? 0,
+            'latest_badge' => $this->attendance_badges?->sortByDesc('awarded_at')->first(),
 
             'units' => UnitResource::collection($this->whenLoaded('units')),
 

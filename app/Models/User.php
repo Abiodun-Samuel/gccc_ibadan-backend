@@ -3,11 +3,9 @@
 namespace App\Models;
 
 use App\Enums\RoleEnum;
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -54,15 +52,13 @@ class User extends Authenticatable
         'occupation',
         'visitation_report',
         'pastorate_call',
-        'attendance_badge',
-        'last_badge_month',
-        'last_badge_year',
         'week_ending',
         'assigned_at',
         'date_of_birth',
         'date_of_visit',
         'email_verified_at',
         'password',
+        'attendance_badges',
     ];
 
     protected array $completionFields = [
@@ -103,12 +99,10 @@ class User extends Authenticatable
             'date_of_birth' => 'date',
             'date_of_visit' => 'date',
             'week_ending' => 'date',
-            'attendance_badge' => 'integer',
-            'last_badge_month' => 'integer',
-            'last_badge_year' => 'integer',
             'located_in_ibadan' => 'boolean',
             'whatsapp_interest' => 'boolean',
             'is_student' => 'boolean',
+            'attendance_badges' => AsCollection::class,
         ];
     }
     public function isProfileCompleted(): bool

@@ -51,9 +51,6 @@ class StoreUserRequest extends FormRequest
             'visitation_report' => ['nullable', 'string'],
             'pastorate_call' => ['nullable', 'string'],
 
-            'attendance_badge' => ['nullable', 'integer', 'min:0'],
-            'last_badge_month' => ['nullable', 'integer', 'between:1,12'],
-            'last_badge_year' => ['nullable', 'integer', 'min:2000'],
             'week_ending' => ['nullable', 'date'],
             'assigned_at' => ['nullable', 'date'],
             'date_of_birth' => ['nullable', 'date'],

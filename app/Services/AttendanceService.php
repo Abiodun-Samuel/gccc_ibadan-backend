@@ -391,57 +391,38 @@ class AttendanceService
         $month ??= now()->month;
         $year ??= now()->year;
 
-            $startDate = Carbon::create($year, $month, 1)->startOfDay();
-            $endDate = $startDate->copy()->endOfMonth()->endOfDay();
+        $startDate = Carbon::create($year, $month, 1)->startOfDay();
+        $endDate = $startDate->copy()->endOfMonth()->endOfDay();
 
-            $attendanceStats = $user->attendances()
-                ->whereBetween('attendance_date', [$startDate, $endDate])
-                ->selectRaw('
+        $attendanceStats = $user->attendances()
+            ->whereBetween('attendance_date', [$startDate, $endDate])
+            ->selectRaw('
                     COUNT(CASE WHEN status = "present" THEN 1 END) as total_present,
                     COUNT(CASE WHEN status = "absent" THEN 1 END) as total_absent,
                     COUNT(*) as total_recorded
                 ')
-                ->first();
+            ->first();
 
-            $totalServices = $this->calculateTotalServicesForMonth($startDate, $endDate);
+        $totalServices = $this->calculateTotalServicesForMonth($startDate, $endDate);
 
-            $presentPercentage = $totalServices > 0
-                ? round(($attendanceStats->total_present / $totalServices) * 100, 2)
-                : 0;
+        $presentPercentage = $totalServices > 0
+            ? round(($attendanceStats->total_present / $totalServices) * 100, 2)
+            : 0;
 
-            $absentPercentage = $totalServices > 0
-                ? round(($attendanceStats->total_absent / $totalServices) * 100, 2)
-                : 0;
+        $absentPercentage = $totalServices > 0
+            ? round(($attendanceStats->total_absent / $totalServices) * 100, 2)
+            : 0;
 
-            if ($presentPercentage == 100 && $totalServices > 0) {
-                $this->awardAttendanceBadge($user, $month, $year);
-            }
-
-            return [
-                'month' => $month,
-                'year' => $year,
-                'total_present' => $attendanceStats->total_present ?? 0,
-                'total_absent' => $attendanceStats->total_absent ?? 0,
-                'total_services' => $totalServices,
-                'present_percentage' => $presentPercentage,
-                'absent_percentage' => $absentPercentage,
-                'attendance_rate' => $presentPercentage,
-            ];
-        // });
-    }
-
-    // Used by: getUserAttendanceMetrics
-    private function awardAttendanceBadge(User $user, int $month, int $year): bool
-    {
-        return User::where('id', $user->id)
-            ->where(fn($q) => $q->where('last_badge_month', '!=', $month)
-                ->orWhere('last_badge_year', '!=', $year)
-                ->orWhereNull('last_badge_month'))
-            ->update([
-                'attendance_badge' => DB::raw('attendance_badge + 1'),
-                'last_badge_month' => $month,
-                'last_badge_year' => $year,
-            ]) > 0;
+        return [
+            'month' => $month,
+            'year' => $year,
+            'total_present' => $attendanceStats->total_present ?? 0,
+            'total_absent' => $attendanceStats->total_absent ?? 0,
+            'total_services' => $totalServices,
+            'present_percentage' => $presentPercentage,
+            'absent_percentage' => $absentPercentage,
+            'attendance_rate' => $presentPercentage,
+        ];
     }
 
     // Used by: getUserAttendanceMetrics
@@ -483,5 +464,136 @@ class AttendanceService
         ksort($data);
         $hash = md5(json_encode($data));
         return "attendance_service:{$prefix}:{$hash}";
+    }
+
+    public function awardMonthlyBadges(?int $year = null, ?int $month = null): array
+    {
+        $year ??= now()->subMonth()->year;
+        $month ??= now()->subMonth()->month;
+
+        $startDate = Carbon::create($year, $month, 1)->startOfDay();
+        $endDate = $startDate->copy()->endOfMonth()->endOfDay();
+
+        $totalServiceDays = $this->calculateTotalServicesForMonth($startDate, $endDate);
+
+        if ($totalServiceDays === 0) {
+            return [
+                'success' => false,
+                'message' => 'No service days found',
+            ];
+        }
+
+        // Get custom service dates for this month (non-standard days)
+        $customServiceDates = Service::whereBetween('service_date', [$startDate, $endDate])
+            ->whereNotIn(DB::raw('DAYOFWEEK(service_date)'), [1, 3, 6])
+            ->pluck('service_date')
+            ->map(fn($date) => Carbon::parse($date)->format('Y-m-d'))
+            ->toArray();
+
+        // Get users with perfect attendance (standard + custom service days)
+        $eligibleUserIds = $this->getEligibleUsers($year, $month, $totalServiceDays, $customServiceDates);
+
+        foreach ($eligibleUserIds as $userId) {
+            $user = User::find($userId);
+            $this->awardBadge($user, $year, $month);
+        }
+
+        $result = [
+            'success' => true,
+            'message' => count($eligibleUserIds) > 0
+                ? count($eligibleUserIds) . ' Badge(s) awarded successfully'
+                : 'No users qualified for badges',
+        ];
+
+        return $result;
+    }
+
+    public function awardBadge(User $user, int $year, int $month): bool
+    {
+        $badges = $user->attendance_badges ?? collect([]);
+        $exists = $badges->contains(fn($badge) => $badge['year'] === $year && $badge['month'] === $month);
+
+        if ($exists) {
+            return false;
+        }
+        $badges->push([
+            'year' => $year,
+            'month' => $month,
+            'month_name' => Carbon::create($year, $month)->format('F'),
+            'awarded_at' => now(),
+        ]);
+
+        $user->attendance_badges = $badges;
+        $user->save();
+        return true;
+    }
+
+    protected function getEligibleUsers(int $year, int $month, int $totalServiceDays, array $customServiceDates): array
+    {
+        $query = DB::table('attendances')
+            ->select('user_id')
+            ->whereYear('attendance_date', $year)
+            ->whereMonth('attendance_date', $month)
+            ->where('status', 'present');
+
+        // If there are custom service dates, include them in the criteria
+        if (!empty($customServiceDates)) {
+            $query->where(function ($q) use ($customServiceDates) {
+                // Standard service days (Tuesday, Friday, Sunday)
+                $q->whereRaw('DAYOFWEEK(attendance_date) IN (1, 3, 6)')
+                    // OR custom service dates
+                    ->orWhereIn(DB::raw('DATE(attendance_date)'), $customServiceDates);
+            });
+        } else {
+            // Only standard service days
+            $query->whereRaw('DAYOFWEEK(attendance_date) IN (1, 3, 6)');
+        }
+
+        return $query->groupBy('user_id')
+            ->havingRaw('COUNT(DISTINCT attendance_date) >= ?', [$totalServiceDays])
+            ->pluck('user_id')
+            ->toArray();
+    }
+
+    public function getTopAttendees(int $month, int $year): array
+    {
+        $startOfMonth = Carbon::create($year, $month, 1)->startOfDay();
+        $endOfMonth = Carbon::create($year, $month, 1)->endOfMonth();
+
+        $totalServices = $this->calculateTotalServicesForMonth($startOfMonth, $endOfMonth);
+
+        if ($totalServices === 0) {
+            return [];
+        }
+
+        $members = User::members()
+            ->withCount([
+                'attendances as present_count' => function ($query) use ($startOfMonth, $endOfMonth) {
+                    $query->whereBetween('attendance_date', [$startOfMonth, $endOfMonth])
+                        ->where('status', 'present');
+                }
+            ])
+            ->having('present_count', '>', 0)
+            ->orderByDesc('present_count')
+            ->inRandomOrder() // Handles ties randomly
+            ->limit(4)
+            ->get()
+            ->map(function ($member, $index) use ($totalServices) {
+                $attendancePercentage = round(($member->present_count / $totalServices) * 100);
+
+                return [
+                    'id' => $member->id,
+                    'full_name' => trim("{$member->first_name} {$member->last_name}"),
+                    'avatar' => $member->avatar,
+                    'initials' => strtoupper(substr($member->first_name, 0, 1) . substr($member->last_name, 0, 1)),
+                    'attendance_percentage' => (int) $attendancePercentage,
+                    'total_services' => $totalServices,
+                    'present' => (int) $member->present_count,
+                    'position' => $index + 1,
+                ];
+            })
+            ->toArray();
+
+        return $members;
     }
 }

@@ -140,6 +140,32 @@ class AttendanceController extends Controller
             $validated['year'] ?? null
         );
 
+         $topAttendees = $this->attendanceService->getTopAttendees(
+            $validated['month'] ?? null,
+            $validated['year'] ?? null,
+        );
+
+        return $this->successResponse(
+            [
+                'metrics'=> $metrics,
+                'topAttendees' => $topAttendees
+        ],
+            'Attendance metrics retrieved successfully'
+        );
+    }
+
+    public function awardMonthlyBadges(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'month' => 'nullable|integer|min:1|max:12',
+            'year' => 'nullable|integer|min:2020|max:2100',
+        ]);
+
+        $metrics = $this->attendanceService->awardMonthlyBadges(
+            $validated['year'] ?? null,
+            $validated['month'] ?? null,
+        );
+
         return $this->successResponse(
             $metrics,
             'Attendance metrics retrieved successfully'

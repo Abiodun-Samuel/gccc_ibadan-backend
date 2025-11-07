@@ -69,7 +69,6 @@ Route::get('/test2', [TestController::class, 'index2']);
     Route::get('/media', [MediaController::class, 'index']);
 
 
-
     // leaders-only routes
     Route::prefix('leaders')
         ->middleware(['role:' . RoleEnum::ADMIN->value . '|' . RoleEnum::LEADER->value])
@@ -95,6 +94,7 @@ Route::get('/test2', [TestController::class, 'index2']);
             Route::prefix('attendance')->group(function () {
                 Route::get('/', [AttendanceController::class, 'index']);
                 Route::post('/mark-absentees', [AttendanceController::class, 'markAbsentees']);
+                Route::post('/badges/award', [AttendanceController::class, 'awardMonthlyBadges']);
                 Route::post('/mark', [AttendanceController::class, 'adminMarkAttendance']);
                 Route::post('/assign-absentees-to-leaders', [AttendanceController::class, 'assignAbsenteesToLeaders']);
                 Route::get('/monthly-stats', [AttendanceController::class, 'getAdminAttendanceMonthlyStats']);
@@ -136,14 +136,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/today-service', [ServiceController::class, 'today']);
     });
 
-
-
-
-    // Member dashboard analytics
-    Route::get('member/analytics', [MemberController::class, 'getAnalytics']);
-
     // -----------------------------------------
-    // Admin-only routes
+    // Admin-only
     // -----------------------------------------
     Route::middleware(['role:' . RoleEnum::ADMIN->value])->prefix('admin')->group(function () {
 
