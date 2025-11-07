@@ -575,8 +575,8 @@ class AttendanceService
             ])
             ->having('present_count', '>', 0)
             ->orderByDesc('present_count')
-            ->inRandomOrder() // Handles ties randomly
-            ->limit(4)
+            ->inRandomOrder()
+            ->limit(3)
             ->get()
             ->map(function ($member, $index) use ($totalServices) {
                 $attendancePercentage = round(($member->present_count / $totalServices) * 100);
