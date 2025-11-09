@@ -62,7 +62,7 @@ class User extends Authenticatable
     ];
 
     protected array $completionFields = [
-       'first_name',
+        'first_name',
         'last_name',
         'phone_number',
         'email',
@@ -194,12 +194,12 @@ class User extends Authenticatable
     }
     public function followUpFeedbacks()
     {
-        return $this->hasMany(FollowUpFeedback::class, 'user_id')->latest();
+        return $this->hasMany(FollowupFeedback::class, 'user_id')->latest();
     }
 
     public function createdFollowUpFeedbacks()
     {
-        return $this->hasMany(FollowUpFeedback::class, 'created_by');
+        return $this->hasMany(FollowupFeedback::class, 'created_by');
     }
 
     /*--------------------------------------------------------------
