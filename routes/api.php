@@ -16,6 +16,7 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\TestController;
 use App\Enums\RoleEnum;
+use App\Http\Controllers\ClientErrorLogController;
 
 // Refactor controllers
 /////////////////////////////////////////////////////////////////////////
@@ -24,12 +25,13 @@ Route::middleware('guest')->group(function () {
     Route::post('first-timers', [FirstTimerController::class, 'store']);
     Route::post('forms', [FormController::class, 'store']);
     Route::get('/services', [ServiceController::class, 'index']);
+    Route::post('/client-errors', [ClientErrorLogController::class, 'store']);
 });
 
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
-Route::get('/test2', [TestController::class, 'index2']);
+    Route::get('/test2', [TestController::class, 'index2']);
     // Users (for leaders, admin and members)
     Route::put('/update-profile', [UserController::class, 'update']);
     Route::get('/leaders/absentees', [UserController::class, 'getAssignedAbsentees']);
