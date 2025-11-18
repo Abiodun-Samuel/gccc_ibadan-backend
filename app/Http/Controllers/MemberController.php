@@ -8,9 +8,8 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\MemberService;
-use DB;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class MemberController extends Controller
@@ -92,11 +91,10 @@ class MemberController extends Controller
                     'failed' => $result['failed_count']
                 ]
             ], $message, Response::HTTP_CREATED);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->errorResponse(
-                'Failed to create members:'. $e->getMessage(),
+                'Failed to create members:' . $e->getMessage(),
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
@@ -107,7 +105,7 @@ class MemberController extends Controller
         try {
             $member = $this->memberService->findMember($member);
             return $this->successResponse(new UserResource($member), 'Member retrieved successfully');
-        }  catch (\Exception $e) {
+        } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -124,7 +122,7 @@ class MemberController extends Controller
 
     public function destroy(Request $request): JsonResponse
     {
-     try {
+        try {
             $ids = $request->validate([
                 'memberIds' => ['required', 'array', 'min:1', 'max:100'],
                 'memberIds.*' => ['required', 'integer', 'exists:users,id'],

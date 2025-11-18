@@ -120,7 +120,7 @@ class ApiExceptionHandler
         return ApiErrorResponse::create(
             message: 'Authentication required. Please provide valid credentials.',
             code: Response::HTTP_UNAUTHORIZED,
-            errors: ['guards' => $e->guards()]
+            errors: []
         );
     }
 

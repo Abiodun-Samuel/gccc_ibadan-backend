@@ -17,31 +17,30 @@ class TestController extends Controller
         $this->mailService = $mailService;
     }
 
-    public function index2(Request $request){
-        $user=$request->user();
+    public function index2(Request $request)
+    {
+        $user = $request->user();
         if ($user->hasRole(RoleEnum::FIRST_TIMER->value) && !$user->hasRole(RoleEnum::MEMBER->value)) {
             return;
         }
         $sundayCount = $user->attendances()
             ->present()
-            ->whereHas('service', fn($q) =>
+            ->whereHas(
+                'service',
+                fn($q) =>
                 $q->where('day_of_week', 'saturday')
             )
             ->count();
 
         if ($sundayCount >= 4) {
             try {
-                DB::beginTransaction();
                 $user->assignRole(RoleEnum::ADMIN->value);
-                DB::commit();
             } catch (\Exception $e) {
-                DB::rollBack();
                 return $e->getMessage();
             }
         }
 
-            return $sundayCount;
-
+        return $sundayCount;
     }
 
     // public function index()

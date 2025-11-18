@@ -174,7 +174,10 @@ class User extends Authenticatable
     /*--------------------------------------------------------------
     | Relationships → Follow-up / Absentee Tracking
     --------------------------------------------------------------*/
-
+    public function eventRegistrations()
+    {
+        return $this->hasMany(EventRegistration::class);
+    }
     /** The follow-up status for this user */
     public function followUpStatus()
     {
