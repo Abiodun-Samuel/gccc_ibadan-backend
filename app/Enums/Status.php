@@ -10,27 +10,28 @@ enum Status: string
     case SUSPENDED = 'suspended';         // Temporarily blocked
     case DEACTIVATED = 'deactivated';     // Fully closed
     case BANNED = 'banned';               // Permanently blocked
-
-    // --- Student-specific academic states ---
+    case COMPLETED = 'completed';               // Permanently blocked
+    case FAILED = 'failed';               // Permanently blocked
+        // --- Student-specific academic states ---
     case ENROLLED = 'enrolled';           // Currently studying
     case GRADUATED = 'graduated';         // Completed school
     case EXPELLED = 'expelled';           // Expelled
     case DROPPED_OUT = 'dropped_out';     // Voluntarily left
 
-    // --- School lifecycle ---
+        // --- School lifecycle ---
     case APPROVED = 'approved';           // Verified and operational
     case REJECTED = 'rejected';           // Rejected by system/admin
     case UNDER_REVIEW = 'under_review';   // Awaiting admin approval
     case ARCHIVED = 'archived';           // Old/no longer accessible
 
-    // --- Subscription lifecycle ---
+        // --- Subscription lifecycle ---
     case TRIAL = 'trial';                 // Trial period active
     case ACTIVE_SUBSCRIPTION = 'active_subscription';  // Paid and active
     case EXPIRED = 'expired';             // Subscription expired
     case CANCELLED = 'cancelled';         // Canceled by user or system
     case BLOCKED = 'blocked';             // Disabled due to policy
 
-    // --- Plan status ---
+        // --- Plan status ---
     case ENABLED = 'enabled';             // Plan is publicly selectable
     case DISABLED = 'disabled';           // Plan hidden or restricted
     case DRAFT = 'draft';                 // Plan is still being configured.

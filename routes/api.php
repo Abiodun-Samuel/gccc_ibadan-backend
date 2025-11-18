@@ -18,6 +18,7 @@ use App\Http\Controllers\TestController;
 use App\Enums\RoleEnum;
 use App\Http\Controllers\ClientErrorLogController;
 use App\Http\Controllers\EventRegistrationController;
+use App\Http\Controllers\EventTransactionController;
 
 // Refactor controllers
 /////////////////////////////////////////////////////////////////////////
@@ -34,6 +35,10 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     // Route::get('/test2', [TestController::class, 'index2']);
     Route::apiResource('event-registrations', EventRegistrationController::class);
+    Route::get('registrations/{registration}/transactions', [EventTransactionController::class, 'index']);
+    Route::post('registrations/{registration}/transactions', [EventTransactionController::class, 'store']);
+    Route::patch('transactions/{transaction}', [EventTransactionController::class, 'update']);
+
     // Users (for leaders, admin and members)
     Route::put('/update-profile', [UserController::class, 'update']);
     Route::get('/leaders/absentees', [UserController::class, 'getAssignedAbsentees']);
