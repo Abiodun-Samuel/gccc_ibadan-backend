@@ -35,6 +35,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     // Route::get('/test2', [TestController::class, 'index2']);
     Route::apiResource('event-registrations', EventRegistrationController::class);
+    Route::get('admin/event-registrations', [EventRegistrationController::class, 'adminIndex']);
     Route::get('registrations/{registration}/transactions', [EventTransactionController::class, 'index']);
     Route::post('registrations/{registration}/transactions', [EventTransactionController::class, 'store']);
     Route::patch('transactions/{transaction}', [EventTransactionController::class, 'update']);

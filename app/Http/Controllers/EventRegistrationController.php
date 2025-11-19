@@ -10,7 +10,19 @@ class EventRegistrationController extends Controller
 {
     public function index(Request $request)
     {
-        $registrations = EventRegistration::with(['user:id,avatar,first_name,last_name,gender,phone_number,email,address,community'])
+        $user = $request->user();
+        $registrations = $user->eventRegistrations()->with([
+            'transactions',
+            'user:id,first_name,last_name,avatar,gender,phone_number,email,address,community'
+        ])
+            ->latest()
+            ->get();
+        return $this->successResponse($registrations, 'Registration fetched successfully.',);
+    }
+
+    public function adminIndex()
+    {
+        $registrations = EventRegistration::with(['transactions', 'user:id,avatar,first_name,last_name,gender,phone_number,email,address,community'])
             ->latest()
             ->get();
         return $this->successResponse($registrations, 'Registration fetched successfully.',);
