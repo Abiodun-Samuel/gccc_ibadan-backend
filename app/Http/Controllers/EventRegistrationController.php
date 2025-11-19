@@ -19,7 +19,7 @@ class EventRegistrationController extends Controller
             'user:id,first_name,last_name,avatar,gender,phone_number,email,address,community'
         ])
             ->latest()
-            ->get();
+            ->first();
         return $this->successResponse($registrations, 'Registration fetched successfully.',);
     }
 
