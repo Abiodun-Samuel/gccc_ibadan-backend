@@ -10,8 +10,11 @@ class EventRegistrationController extends Controller
 {
     public function index(Request $request)
     {
+        $validated = $request->validate([
+            'event' => ['required', 'string']
+        ]);
         $user = $request->user();
-        $registrations = $user->eventRegistrations()->with([
+        $registrations = $user->eventRegistrations()->where('event', $validated['event'])->with([
             'transactions',
             'user:id,first_name,last_name,avatar,gender,phone_number,email,address,community'
         ])
