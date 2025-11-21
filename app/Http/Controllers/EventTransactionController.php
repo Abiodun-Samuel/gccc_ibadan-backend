@@ -18,22 +18,26 @@ class EventTransactionController extends Controller
 
     public function store(Request $request, EventRegistration $registration)
     {
-        $request->validate([
+        $validated = $request->validate([
             'amount' => 'required|numeric',
             'payment_method' => 'nullable|string',
             'note' => 'nullable|string',
             'transaction_reference' => 'nullable|string',
         ]);
 
-        $transaction = EventTransaction::create([
-            'event_registration_id' => $registration->id,
-            'transaction_reference' => $request->transaction_reference,
-            'amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'status' => 'pending',
-            'note' => $request->note,
-        ]);
-        return $this->successResponse($transaction, 'Transaction created successfully');
+        $transaction = EventTransaction::updateOrCreate(
+            [
+                'event_registration_id' => $registration->id,
+                'transaction_reference' => $validated['transaction_reference'],
+            ],
+            [
+                'amount' => $validated['amount'],
+                'payment_method' => $validated['payment_method'] ?? null,
+                'status' => 'completed',
+                'note' => $validated['note'] ?? null,
+            ]
+        );
+        return $this->successResponse($transaction, 'Transaction saved successfully');
     }
 
     public function update(Request $request, EventTransaction $transaction)

@@ -25,6 +25,7 @@ enum Status: string
     case ARCHIVED = 'archived';           // Old/no longer accessible
 
         // --- Subscription lifecycle ---
+    case Paid = 'paid';                 // Trial period active
     case TRIAL = 'trial';                 // Trial period active
     case ACTIVE_SUBSCRIPTION = 'active_subscription';  // Paid and active
     case EXPIRED = 'expired';             // Subscription expired

@@ -45,6 +45,6 @@ class EventRegistration extends Model
     }
     public function transactions()
     {
-        return $this->hasMany(EventTransaction::class, 'event_registration_id');
+        return $this->hasOne(EventTransaction::class, 'event_registration_id');
     }
 }
