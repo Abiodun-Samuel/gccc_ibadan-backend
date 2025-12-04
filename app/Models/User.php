@@ -133,29 +133,27 @@ class User extends Authenticatable
     }
     public function scopeMembers($query)
     {
-        return $query->role(RoleEnum::MEMBER->value);
+        return $query->role(RoleEnum::MEMBER->value)->whereNot('status', 'disabled');
     }
     public function scopeFirstTimers($query)
     {
         return $query->role(RoleEnum::FIRST_TIMER->value);
     }
+    public function scopeActivelyFollowedFirstTimers($query)
+    {
+        return $query->firstTimers()->whereNotIn('status', ['disabled', 'deactivated'])
+            ->whereNotIn('follow_up_status_id', [
+                FollowUpStatus::OPT_OUT_ID,
+                FollowUpStatus::INTEGRATED_ID,
+            ]);
+    }
     public function scopeWithFullProfile($query)
     {
-        return $query->with([
-            'units.leader',
-            'units.assistantLeader',
-            'units.members',
-            'roles',
-        ]);
+        return $query->with(['units.leader', 'units.assistantLeader', 'units.members', 'roles']);
     }
     public function loadFullProfile()
     {
-        return $this->load([
-            'units.leader',
-            'units.assistantLeader',
-            'units.members',
-            'roles',
-        ]);
+        return $this->load(['units.leader', 'units.assistantLeader', 'units.members', 'roles']);
     }
 
     /*--------------------------------------------------------------

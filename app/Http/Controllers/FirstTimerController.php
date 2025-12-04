@@ -7,21 +7,15 @@ use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\FirstTimerResource;
 use App\Models\User;
 use App\Services\FirstTimerService;
-use App\Services\MailService;
-use App\Services\UploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
 
 class FirstTimerController extends Controller
 {
     public function __construct(
         private readonly FirstTimerService $firstTimerService,
-        private readonly MailService $mailService,
-        private readonly UploadService $uploadService
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -44,8 +38,8 @@ class FirstTimerController extends Controller
 
     public function store(StoreUserRequest $request): JsonResponse
     {
-        $firstTimer = $this->firstTimerService->createFirstTimer($request->validated());
 
+        $firstTimer = $this->firstTimerService->createFirstTimer($request->validated());
         return $this->successResponse(
             new FirstTimerResource($firstTimer),
             'First timer created successfully',
@@ -82,7 +76,7 @@ class FirstTimerController extends Controller
                         $validated['secondary_avatar'],
                         $request->folder ?? 'first-timers'
                     );
-                } catch (Exception $e) {
+                } catch (\Exception $e) {
                     return $this->errorResponse(
                         $e->getMessage(),
                         Response::HTTP_UNPROCESSABLE_ENTITY
@@ -104,7 +98,7 @@ class FirstTimerController extends Controller
             );
         } catch (\Exception $e) {
             return $this->errorResponse(
-               $e->getMessage(),
+                $e->getMessage(),
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }

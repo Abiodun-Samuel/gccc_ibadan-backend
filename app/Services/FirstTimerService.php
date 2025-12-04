@@ -19,8 +19,7 @@ class FirstTimerService
     public function __construct(
         private readonly UploadService $uploadService,
         private readonly MailService $mailService
-    ) {
-    }
+    ) {}
 
     private function applyAttendanceFilters($query, array $filters): void
     {
@@ -63,15 +62,16 @@ class FirstTimerService
     /**
      * Create a new first timer
      */
-    public function createFirstTimer(array $data): User
+    public function createFirstTimer($data): User
     {
+
         return DB::transaction(function () use ($data) {
-            $followupMember = $this->findLeastLoadedFollowupMember($data['gender'] ?? null);
+            $followupMember = $this->findLeastLoadedFollowupMember($data['gender']);
 
             $firstTimer = User::create(array_merge($data, [
                 'followup_by_id' => $followupMember?->id,
                 'follow_up_status_id' => FollowUpStatus::NOT_CONTACTED_ID,
-                'assigned_at' => $followupMember != null ? now(): null,
+                'assigned_at' => $followupMember != null ? now() : null,
                 'week_ending' => getNextSunday()?->toDateString(),
                 'password' => Hash::make($data['phone_number'])
             ]));
@@ -177,7 +177,6 @@ class FirstTimerService
     public function findLeastLoadedFollowupMember(?string $gender = null): ?User
     {
         $followupUnitId = Unit::where('name', UnitEnum::FOLLOW_UP->value)->value('id');
-
         if (!$followupUnitId) {
             return null;
         }
@@ -185,11 +184,9 @@ class FirstTimerService
         return User::query()
             ->whereHas('units', fn($q) => $q->where('units.id', $followupUnitId))
             ->when($gender, fn($q) => $q->where('gender', $gender))
-            ->withCount([
-                'assignedUsers as assigned_first_timers_count' => fn($q) => $q->firstTimers()
-            ])
-            ->orderBy('assigned_first_timers_count')
-            ->orderBy('id')
+            ->withCount(['assignedUsers as assigned_first_timers_count' => fn($q) => $q->activelyFollowedFirstTimers()])
+            ->orderBy('assigned_first_timers_count', 'asc')
+            ->orderBy('id', 'asc')
             ->first();
     }
 
