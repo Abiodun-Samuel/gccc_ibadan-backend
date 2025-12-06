@@ -149,11 +149,11 @@ class User extends Authenticatable
     }
     public function scopeWithFullProfile($query)
     {
-        return $query->with(['units.leader', 'units.assistantLeader', 'units.members', 'roles']);
+        return $query->with(['units.leader', 'units.assistantLeader', 'units.assistantLeader2', 'units.members', 'roles']);
     }
     public function loadFullProfile()
     {
-        return $this->load(['units.leader', 'units.assistantLeader', 'units.members', 'roles']);
+        return $this->load(['units.leader', 'units.assistantLeader', 'units.assistantLeader2', 'units.members', 'roles']);
     }
 
     /*--------------------------------------------------------------

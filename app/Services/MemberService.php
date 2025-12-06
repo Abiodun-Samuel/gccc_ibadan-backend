@@ -40,8 +40,8 @@ class MemberService
             fn($q) => $q->whereIn(
                 'date_of_birth',
                 is_array($filters['date_of_birth'])
-                ? $filters['date_of_birth']
-                : [$filters['date_of_birth']]
+                    ? $filters['date_of_birth']
+                    : [$filters['date_of_birth']]
             )
         );
 

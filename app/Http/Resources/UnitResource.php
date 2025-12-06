@@ -16,7 +16,7 @@ class UnitResource extends JsonResource
     {
         $user = $request->user();
         $isLeader = $this->leader_id === $user?->id;
-        $isAssistantLeader = $this->assistant_leader_id === $user?->id;
+        $isAssistantLeader = $this->assistant_leader_id === $user?->id || $this->assistant_leader_id_2 === $user?->id;
 
         return [
             'id' => $this->id,
@@ -24,6 +24,7 @@ class UnitResource extends JsonResource
 
             'leader_id' => $this->leader_id,
             'assistant_leader_id' => $this->assistant_leader_id,
+            'assistant_leader_id_2' => $this->assistant_leader_id_2,
 
             'leader' => $this->whenLoaded('leader', fn() => [
                 'id' => $this->leader?->id,
@@ -35,7 +36,7 @@ class UnitResource extends JsonResource
                 'avatar' => $this->leader?->avatar,
             ]),
 
-            'assistantLeader' => $this->whenLoaded('assistantLeader', fn()=>  [
+            'assistantLeader' => $this->whenLoaded('assistantLeader', fn() =>  [
                 'id' => $this->assistantLeader?->id,
                 'full_name' => "{$this->assistantLeader?->first_name} {$this->assistantLeader?->last_name}",
                 'initials' => generateInitials($this->assistantLeader?->first_name, $this->assistantLeader?->last_name),
@@ -45,13 +46,23 @@ class UnitResource extends JsonResource
                 'avatar' => $this->assistantLeader?->avatar,
             ]),
 
+            'assistantLeader2' => $this->whenLoaded('assistantLeader2', fn() =>  [
+                'id' => $this->assistantLeader2?->id,
+                'full_name' => "{$this->assistantLeader2?->first_name} {$this->assistantLeader2?->last_name}",
+                'initials' => generateInitials($this->assistantLeader2?->first_name, $this->assistantLeader2?->last_name),
+                'email' => $this->assistantLeader2?->email,
+                'phone' => $this->assistantLeader2?->phone_number,
+                'gender' => $this->assistantLeader2?->gender,
+                'avatar' => $this->assistantLeader2?->avatar,
+            ]),
+
             'members' => $this->whenLoaded('members'),
             'members_count' => $this->members_count ?? 0,
 
             'isLeader' => $isLeader,
             'isAssistantLeader' => $isAssistantLeader,
             'isMember' =>
-                $isLeader ||
+            $isLeader ||
                 $isAssistantLeader ||
                 $this->members->contains($user?->id),
 

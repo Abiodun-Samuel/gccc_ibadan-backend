@@ -26,6 +26,7 @@ class UpdateUnitRequest extends FormRequest
             'member_ids' => ['sometimes', 'array'],
             'member_ids.*' => ['exists:users,id'],
             'assistant_leader_id' => ['sometimes', 'nullable', 'exists:users,id'],
+            'assistant_leader_id_2' => ['sometimes', 'nullable', 'exists:users,id'],
             'leader_id' => ['sometimes', 'nullable', 'exists:users,id'],
         ];
     }
@@ -35,7 +36,8 @@ class UpdateUnitRequest extends FormRequest
             'name.string' => 'The unit name must be a valid string.',
             'member_ids.array' => 'Member IDs must be provided as an array.',
             'member_ids.*.exists' => 'One or more member IDs are invalid.',
-            'assistant_id.exists' => 'The selected assistant does not exist.',
+            'assistant_leader_id.exists' => 'The selected assistant does not exist.',
+            'assistant_leader_id_2.exists' => 'The selected assistant does not exist.',
             'leader_id.exists' => 'The selected leader does not exist.',
         ];
     }

@@ -17,7 +17,7 @@ class UnitController extends Controller
     }
     public function index()
     {
-        $units = Unit::with(['leader', 'assistantLeader', 'members'])->withCount('members')->latest()->get();
+        $units = Unit::with(['leader', 'assistantLeader', 'assistantLeader2', 'members'])->withCount('members')->latest()->get();
         return $this->successResponse(UnitResource::collection($units), Response::HTTP_OK);
     }
 

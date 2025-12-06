@@ -5,10 +5,10 @@ namespace App\Services;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Carbon\Carbon;
-use DB;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use RuntimeException;
-use Str;
 
 class AuthService
 {
