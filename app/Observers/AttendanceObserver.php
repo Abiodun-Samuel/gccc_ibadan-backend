@@ -5,7 +5,7 @@ namespace App\Observers;
 use App\Enums\RoleEnum;
 use App\Models\Attendance;
 use App\Models\FollowUpStatus;
-use DB;
+use Illuminate\Support\Facades\DB;
 
 class AttendanceObserver
 {
@@ -24,7 +24,9 @@ class AttendanceObserver
     {
         $sundayCount = $user->attendances()
             ->present()
-            ->whereHas('service', fn($q) =>
+            ->whereHas(
+                'service',
+                fn($q) =>
                 $q->where('day_of_week', 'sunday')
             )
             ->count();

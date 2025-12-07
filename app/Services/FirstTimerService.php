@@ -76,6 +76,16 @@ class FirstTimerService
                 'password' => Hash::make($data['phone_number'])
             ]));
 
+            $recipients = [['name' => $followupMember?->first_name, 'email' => $followupMember?->email]];
+
+            $data = [
+                "first_timer_name" => $firstTimer->first_name ?? '',
+                "first_timer_email" => $firstTimer?->email ?? '',
+                "first_timer_phone" => $firstTimer?->phone_number ?? ''
+            ];
+
+            $this->mailService->sendFirstTimerAssignedEmail($recipients, [], [], $data);
+
             $firstTimer->assignRole(RoleEnum::FIRST_TIMER->value);
             $firstTimer->load(['followUpStatus', 'assignedTo']);
 

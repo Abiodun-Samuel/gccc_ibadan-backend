@@ -95,6 +95,8 @@ class MailService
 
         return $this->sendEmail($data);
     }
+
+
     public function sendAssignedMemberEmail(
         array $recipients = [],
         array $ccRecipients = [],
@@ -112,6 +114,44 @@ class MailService
             "to" => $this->buildRecipientsArray($recipients),
             "merge_info" => [
                 "name" => $firstRecipient['name'] ?? '',
+            ]
+        ];
+
+        if (!empty($ccRecipients)) {
+            $data['cc'] = $this->buildRecipientsArray($ccRecipients);
+        }
+
+        if (!empty($bccRecipients)) {
+            $data['bcc'] = $this->buildRecipientsArray($bccRecipients);
+        }
+
+        return $this->sendEmail($data);
+    }
+
+    public function sendFirstTimerAssignedEmail(
+        array $recipients = [],
+        array $ccRecipients = [],
+        array $bccRecipients = [],
+        array $data = []
+    ): array {
+
+        $firstRecipient = $recipients[0];
+        $first_timer_name = $data['first_timer_name'];
+        $first_timer_email = $data['first_timer_email'];
+        $first_timer_phone = $data['first_timer_phone'];
+
+        $data = [
+            "mail_template_key" => env('firstTimerAssignedTemplateId'),
+            "from" => [
+                "address" => "admin@gcccibadan.org",
+                "name" => "Admin from GCCC IBADAN"
+            ],
+            "to" => $this->buildRecipientsArray($recipients),
+            "merge_info" => [
+                "name" => $firstRecipient['name'] ?? '',
+                "first_timer_name" => $first_timer_name ?? '',
+                "first_timer_email" => $first_timer_email ?? '',
+                "first_timer_phone" => $first_timer_phone ?? '',
             ]
         ];
 

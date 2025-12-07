@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ServiceResource;
 use App\Models\Attendance;
 use App\Models\Service;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -34,6 +35,7 @@ class ServiceController extends Controller
 
         $response = [
             'service' => new ServiceResource($service),
+            'birthday_list' => User::birthdayThisWeek()->get(),
             'service_status' => $serviceStatus['status'],
             'can_mark' => $this->canMarkAttendance($serviceStatus['status'], $attendance),
         ];

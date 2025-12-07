@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Enums\RoleEnum;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -155,6 +157,53 @@ class User extends Authenticatable
     {
         return $this->load(['units.leader', 'units.assistantLeader', 'units.assistantLeader2', 'units.members', 'roles']);
     }
+
+    public function scopeBirthdayThisWeek(Builder $query): Builder
+    {
+        $startOfWeek = Carbon::now()->startOfWeek();
+        $endOfWeek = Carbon::now()->endOfWeek();
+
+        return $query->select([
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'avatar',
+            'phone_number',
+            'date_of_birth'
+        ])
+            ->whereNotNull('date_of_birth')
+            ->where(function ($q) use ($startOfWeek, $endOfWeek) {
+                // Handle birthdays in the same year
+                $q->whereRaw(
+                    "DATE_FORMAT(date_of_birth, '%m-%d') BETWEEN ? AND ?",
+                    [
+                        $startOfWeek->format('m-d'),
+                        $endOfWeek->format('m-d')
+                    ]
+                );
+
+                // Handle year-end edge case (e.g., Dec 30 - Jan 5)
+                if ($startOfWeek->month > $endOfWeek->month) {
+                    $q->orWhereRaw(
+                        "DATE_FORMAT(date_of_birth, '%m-%d') >= ?",
+                        [$startOfWeek->format('m-d')]
+                    )->orWhereRaw(
+                        "DATE_FORMAT(date_of_birth, '%m-%d') <= ?",
+                        [$endOfWeek->format('m-d')]
+                    );
+                }
+            })
+            ->orderByRaw("DATE_FORMAT(date_of_birth, '%m-%d')");
+    }
+    // public static function getCachedBirthdaysThisWeek()
+    // {
+    //     // $cacheKey = 'birthdays_week_' . Carbon::now()->startOfWeek()->format('Y-m-d');
+    //     // $expiresAt = Carbon::now()->endOfWeek();
+    //     return self::birthdayThisWeek()->get();
+    //     // return Cache::remember($cacheKey, $expiresAt, function () {
+    //     // });
+    // }
 
     /*--------------------------------------------------------------
     | Relationships → Hierarchical / User-based
