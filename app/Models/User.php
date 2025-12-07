@@ -160,8 +160,8 @@ class User extends Authenticatable
 
     public function scopeBirthdayThisWeek(Builder $query): Builder
     {
-        $startOfWeek = Carbon::now()->startOfWeek();
-        $endOfWeek = Carbon::now()->endOfWeek();
+        $today = Carbon::now();
+        $nextSevenDays = Carbon::now()->addDays(7);
 
         return $query->select([
             'id',
@@ -173,38 +173,29 @@ class User extends Authenticatable
             'date_of_birth'
         ])
             ->whereNotNull('date_of_birth')
-            ->where(function ($q) use ($startOfWeek, $endOfWeek) {
-                // Handle birthdays in the same year
+            ->where(function ($q) use ($today, $nextSevenDays) {
+                // Handle birthdays within the same month
                 $q->whereRaw(
                     "DATE_FORMAT(date_of_birth, '%m-%d') BETWEEN ? AND ?",
                     [
-                        $startOfWeek->format('m-d'),
-                        $endOfWeek->format('m-d')
+                        $today->format('m-d'),
+                        $nextSevenDays->format('m-d')
                     ]
                 );
 
-                // Handle year-end edge case (e.g., Dec 30 - Jan 5)
-                if ($startOfWeek->month > $endOfWeek->month) {
+                // Handle month-end edge case (e.g., Dec 28 - Jan 4)
+                if ($today->month !== $nextSevenDays->month) {
                     $q->orWhereRaw(
                         "DATE_FORMAT(date_of_birth, '%m-%d') >= ?",
-                        [$startOfWeek->format('m-d')]
+                        [$today->format('m-d')]
                     )->orWhereRaw(
                         "DATE_FORMAT(date_of_birth, '%m-%d') <= ?",
-                        [$endOfWeek->format('m-d')]
+                        [$nextSevenDays->format('m-d')]
                     );
                 }
             })
             ->orderByRaw("DATE_FORMAT(date_of_birth, '%m-%d')");
     }
-    // public static function getCachedBirthdaysThisWeek()
-    // {
-    //     // $cacheKey = 'birthdays_week_' . Carbon::now()->startOfWeek()->format('Y-m-d');
-    //     // $expiresAt = Carbon::now()->endOfWeek();
-    //     return self::birthdayThisWeek()->get();
-    //     // return Cache::remember($cacheKey, $expiresAt, function () {
-    //     // });
-    // }
-
     /*--------------------------------------------------------------
     | Relationships → Hierarchical / User-based
     --------------------------------------------------------------*/

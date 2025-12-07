@@ -35,7 +35,7 @@ class ServiceController extends Controller
 
         $response = [
             'service' => new ServiceResource($service),
-            'birthday_list' => User::birthdayThisWeek()->get(),
+            'birthday_list' => User::birthdayThisWeek()->get(), // User::members()->birthdayThisWeek()->get(),
             'service_status' => $serviceStatus['status'],
             'can_mark' => $this->canMarkAttendance($serviceStatus['status'], $attendance),
         ];
