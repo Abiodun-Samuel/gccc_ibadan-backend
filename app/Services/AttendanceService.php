@@ -166,7 +166,6 @@ class AttendanceService
         return DB::table('attendances')->insertUsing(
             ['user_id', 'service_id', 'attendance_date', 'status', 'mode', 'created_at', 'updated_at'],
             User::members()->whereNotIn('id', $markedUserIds)
-                ->members()
                 ->select([
                     'id as user_id',
                     DB::raw("{$serviceId} as service_id"),
@@ -233,33 +232,22 @@ class AttendanceService
     // Used by: assignAbsenteesToLeaders
     private function validateAssignmentData(array $data): void
     {
-        if (empty($data['leader_ids']) || !is_array($data['leader_ids'])) {
-            throw new AttendanceException('Leader IDs must be a non-empty array');
-        }
+        if (empty($data['leader_ids']) || !is_array($data['leader_ids'])) throw new AttendanceException('Leader IDs must be a non-empty array');
 
-        if (empty($data['service_id'])) {
-            throw new AttendanceException('Service ID is required');
-        }
+        if (empty($data['service_id'])) throw new AttendanceException('Service ID is required');
 
-        if (empty($data['attendance_date'])) {
-            throw new AttendanceException('Attendance date is required');
-        }
+        if (empty($data['attendance_date'])) throw new AttendanceException('Attendance date is required');
     }
 
     // Used by: assignAbsenteesToLeaders
     private function validateAndGetLeaders(array $leaderIds): Collection
     {
-        $leaders = User::whereIn('id', $leaderIds)
-            ->select('id', 'first_name', 'last_name', 'email')
-            ->get();
+        $leaders = User::whereIn('id', $leaderIds)->select('id', 'first_name', 'last_name', 'email')->get();
 
         if ($leaders->count() !== count($leaderIds)) {
             $foundIds = $leaders->pluck('id')->toArray();
             $missingIds = array_diff($leaderIds, $foundIds);
-
-            throw new AttendanceException(
-                'Invalid leader IDs: ' . implode(', ', $missingIds)
-            );
+            throw new AttendanceException('Invalid leader IDs: ' . implode(', ', $missingIds));
         }
 
         return $leaders;
