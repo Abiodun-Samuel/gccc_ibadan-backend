@@ -165,7 +165,7 @@ class AttendanceService
 
         return DB::table('attendances')->insertUsing(
             ['user_id', 'service_id', 'attendance_date', 'status', 'mode', 'created_at', 'updated_at'],
-            User::whereNotIn('id', $markedUserIds)
+            User::members()->whereNotIn('id', $markedUserIds)
                 ->members()
                 ->select([
                     'id as user_id',

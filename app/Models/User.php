@@ -135,7 +135,7 @@ class User extends Authenticatable
     }
     public function scopeMembers($query)
     {
-        return $query->role(RoleEnum::MEMBER->value)->whereNot('status', 'disabled');
+        return $query->role(RoleEnum::MEMBER->value)->whereNotIn('status', ['disabled', 'deactivated']);
     }
     public function scopeFirstTimers($query)
     {
