@@ -90,10 +90,10 @@ class PicnicRegistrationController extends Controller
         // Get all registrations with users
         $registrations = PicnicRegistration::with('user:id,first_name,last_name,email,phone_number')
             ->forYear($year)
-            ->orderBy('registered_at', 'desc')
+            ->orderBy('registered_at', 'asc')
             ->get();
 
-        // Build game groups with coordinator assignment (first person alphabetically)
+        // Build game groups with ONE coordinator per user rule
         $gameGroups = $this->buildGameGroups($registrations);
 
         // Calculate basic statistics
@@ -109,25 +109,14 @@ class PicnicRegistrationController extends Controller
             'year' => $year,
             'statistics' => $statistics,
             'game_groups' => $gameGroups,
-            'registrations' => $registrations->map(function ($reg) {
-                return [
-                    'id' => $reg->id,
-                    'user' => [
-                        'id' => $reg->user->id,
-                        'name' => $reg->user->first_name . ' ' . $reg->user->last_name,
-                        'email' => $reg->user->email,
-                        'phone_number' => $reg->user->phone_number,
-                    ],
-                    'games' => $reg->games,
-                    'support_amount' => $reg->support_amount ? (float) $reg->support_amount : null,
-                    'registered_at' => $reg->registered_at->toISOString(),
-                ];
-            })
+            'registrations' => PicnicRegistrationResource::collection($registrations)
         ]);
     }
 
     /**
-     * Build game groups with members and auto-assigned coordinators
+     * Build game groups with ONE coordinator per user rule
+     *
+     * FIXED: Uses centralized coordinator determination logic
      */
     private function buildGameGroups($registrations): array
     {
@@ -143,34 +132,58 @@ class PicnicRegistrationController extends Controller
             'Ayo'
         ];
 
+        // CRITICAL: Determine coordinators ONCE for all games
+        $coordinatorAssignments = $this->determineCoordinators($registrations, $games);
+
         $gameGroups = [];
 
         foreach ($games as $game) {
-            // Get all members who selected this game
-            $members = $registrations
+            // Get all registrations for this game
+            $gameRegistrations = $registrations
                 ->filter(fn($reg) => in_array($game, $reg->games))
-                ->map(fn($reg) => [
-                    'id' => $reg->user->id,
-                    'name' => $reg->user->first_name . ' ' . $reg->user->last_name,
-                    'email' => $reg->user->email,
-                    'phone_number' => $reg->user->phone_number,
-                    'registered_at' => $reg->registered_at->toISOString(),
+                ->sortBy([
+                    ['registered_at', 'asc'],
+                    ['id', 'asc']
                 ])
-                ->sortBy('first_name') // Sort alphabetically
+                ->values();
+
+            // Get coordinator from global assignments
+            $coordinatorId = $coordinatorAssignments[$game] ?? null;
+            $coordinatorRegistration = $coordinatorId
+                ? $gameRegistrations->firstWhere('user_id', $coordinatorId)
+                : null;
+
+            // Build coordinator object
+            $coordinator = null;
+            if ($coordinatorRegistration) {
+                $coordinator = [
+                    'id' => $coordinatorRegistration->user->id,
+                    'name' => $coordinatorRegistration->user->first_name . ' ' . $coordinatorRegistration->user->last_name,
+                    'email' => $coordinatorRegistration->user->email,
+                    'phone_number' => $coordinatorRegistration->user->phone_number,
+                    'registered_at' => $coordinatorRegistration->registered_at->toISOString(),
+                    'is_coordinator' => true,
+                ];
+            }
+
+            // Build members list with coordinator flag
+            $members = $gameRegistrations
+                ->map(function ($reg) use ($coordinatorId) {
+                    return [
+                        'id' => $reg->user->id,
+                        'name' => $reg->user->first_name . ' ' . $reg->user->last_name,
+                        'email' => $reg->user->email,
+                        'phone_number' => $reg->user->phone_number,
+                        'registered_at' => $reg->registered_at->toISOString(),
+                        'is_coordinator' => $reg->user_id === $coordinatorId,
+                    ];
+                })
                 ->values()
                 ->toArray();
 
-            // Assign first person (alphabetically) as coordinator
-            $coordinator = !empty($members) ? array_merge($members[0], ['is_coordinator' => true]) : null;
-
-            // Mark coordinator in members list
-            if ($coordinator) {
-                $members[0]['is_coordinator'] = true;
-            }
-
             $gameGroups[] = [
                 'game' => $game,
-                'total_members' => count($members),
+                'total_members' => $gameRegistrations->count(),
                 'coordinator' => $coordinator,
                 'members' => $members,
             ];
@@ -180,5 +193,52 @@ class PicnicRegistrationController extends Controller
         usort($gameGroups, fn($a, $b) => $b['total_members'] <=> $a['total_members']);
 
         return $gameGroups;
+    }
+
+    /**
+     * Determine coordinator assignments across ALL games
+     *
+     * This is the SINGLE SOURCE OF TRUTH for coordinator assignments.
+     * Ensures one coordinator per user across all games.
+     *
+     * @param \Illuminate\Support\Collection $registrations
+     * @param array $games
+     * @return array [game_name => user_id]
+     */
+    private function determineCoordinators($registrations, array $games): array
+    {
+        $coordinatorAssignments = [];
+        $assignedCoordinators = [];
+
+        foreach ($games as $game) {
+            // Get all registrations for this game, sorted by time
+            $gameRegistrations = $registrations
+                ->filter(fn($reg) => in_array($game, $reg->games))
+                ->sortBy([
+                    ['registered_at', 'asc'],
+                    ['id', 'asc']
+                ])
+                ->values();
+
+            // Find first person who isn't already a coordinator
+            $coordinatorId = null;
+
+            foreach ($gameRegistrations as $reg) {
+                if (!in_array($reg->user_id, $assignedCoordinators)) {
+                    $coordinatorId = $reg->user_id;
+                    $assignedCoordinators[] = $coordinatorId;
+                    break;
+                }
+            }
+
+            // Fallback: if everyone is already a coordinator, use first person
+            if (!$coordinatorId && $gameRegistrations->count() > 0) {
+                $coordinatorId = $gameRegistrations->first()->user_id;
+            }
+
+            $coordinatorAssignments[$game] = $coordinatorId;
+        }
+
+        return $coordinatorAssignments;
     }
 }
