@@ -16,6 +16,15 @@ class ServiceController extends Controller
         $services = Service::get();
         return ServiceResource::collection($services);
     }
+
+    public function fetchCoreAppData()
+    {
+        $response = [
+            'birthday_list' => User::birthdayThisWeek()->get(), // User::members()->birthdayThisWeek()->get(),
+        ];
+        return $this->successResponse($response, 'Retrieved successfully', 200);
+    }
+
     public function today(Request $request)
     {
         $now = Carbon::now('Africa/Lagos');
@@ -35,7 +44,6 @@ class ServiceController extends Controller
 
         $response = [
             'service' => new ServiceResource($service),
-            'birthday_list' => User::birthdayThisWeek()->get(), // User::members()->birthdayThisWeek()->get(),
             'service_status' => $serviceStatus['status'],
             'can_mark' => $this->canMarkAttendance($serviceStatus['status'], $attendance),
         ];

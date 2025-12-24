@@ -19,6 +19,7 @@ use App\Enums\RoleEnum;
 use App\Http\Controllers\ClientErrorLogController;
 use App\Http\Controllers\EventRegistrationController;
 use App\Http\Controllers\EventTransactionController;
+use App\Http\Controllers\PicnicRegistrationController;
 
 // Refactor controllers
 /////////////////////////////////////////////////////////////////////////
@@ -33,7 +34,10 @@ Route::middleware('guest')->group(function () {
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
-    // Route::get('/test2', [TestController::class, 'index2']);
+    // picnic
+    Route::post('/picnic/register', [PicnicRegistrationController::class, 'register']);
+    Route::get('/picnic/my-registration', [PicnicRegistrationController::class, 'myRegistration']);
+
     Route::apiResource('event-registrations', EventRegistrationController::class);
     Route::get('admin/event-registrations', [EventRegistrationController::class, 'adminIndex']);
     Route::get('registrations/{registration}/transactions', [EventTransactionController::class, 'index']);
@@ -90,6 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('admin')
         ->middleware("role:" . RoleEnum::ADMIN->value)
         ->group(function () {
+            Route::get('/picnic/registrations/admin', [PicnicRegistrationController::class, 'adminIndex']);
             // First-timers
             Route::get('first-timers/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics']);
             // Members
@@ -144,7 +149,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Service
     Route::prefix('services')->group(function () {
         Route::get('/today-service', [ServiceController::class, 'today']);
+        Route::get('/core-app-data', [ServiceController::class, 'fetchCoreAppData']);
     });
+
 
     // -----------------------------------------
     // Admin-only
