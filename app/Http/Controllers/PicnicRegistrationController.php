@@ -88,7 +88,7 @@ class PicnicRegistrationController extends Controller
         $year = $request->input('year', now()->year);
 
         // Get all registrations with users
-        $registrations = PicnicRegistration::with('user:id,name,email,phone')
+        $registrations = PicnicRegistration::with('user:id,first_name,last_name,email,phone_number')
             ->forYear($year)
             ->orderBy('registered_at', 'desc')
             ->get();
@@ -114,9 +114,9 @@ class PicnicRegistrationController extends Controller
                     'id' => $reg->id,
                     'user' => [
                         'id' => $reg->user->id,
-                        'name' => $reg->user->name,
+                        'name' => $reg->user->first_name . ' ' . $reg->user->last_name,
                         'email' => $reg->user->email,
-                        'phone' => $reg->user->phone,
+                        'phone_number' => $reg->user->phone_number,
                     ],
                     'games' => $reg->games,
                     'support_amount' => $reg->support_amount ? (float) $reg->support_amount : null,
@@ -151,12 +151,12 @@ class PicnicRegistrationController extends Controller
                 ->filter(fn($reg) => in_array($game, $reg->games))
                 ->map(fn($reg) => [
                     'id' => $reg->user->id,
-                    'name' => $reg->user->name,
+                    'name' => $reg->user->first_name . ' ' . $reg->user->last_name,
                     'email' => $reg->user->email,
-                    'phone' => $reg->user->phone,
+                    'phone_number' => $reg->user->phone_number,
                     'registered_at' => $reg->registered_at->toISOString(),
                 ])
-                ->sortBy('name') // Sort alphabetically
+                ->sortBy('first_name') // Sort alphabetically
                 ->values()
                 ->toArray();
 

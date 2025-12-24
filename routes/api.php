@@ -94,7 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('admin')
         ->middleware("role:" . RoleEnum::ADMIN->value)
         ->group(function () {
-            Route::get('/picnic/registrations/admin', [PicnicRegistrationController::class, 'adminIndex']);
+            Route::get('/picnic/registrations', [PicnicRegistrationController::class, 'adminIndex']);
             // First-timers
             Route::get('first-timers/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics']);
             // Members
