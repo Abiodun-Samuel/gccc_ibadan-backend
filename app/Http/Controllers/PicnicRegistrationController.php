@@ -9,7 +9,6 @@ use App\Models\PicnicRegistration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-
 class PicnicRegistrationController extends Controller
 {
     public function register(PicnicRegistrationRequest $request): JsonResponse
@@ -17,12 +16,19 @@ class PicnicRegistrationController extends Controller
         $userId = auth()->id();
         $currentYear = now()->year;
 
-        // Check existing registration
         $existingRegistration = PicnicRegistration::where('user_id', $userId)
             ->where('year', $currentYear)
             ->first();
 
-        // If creating new registration, check if limit reached
+        if (!$existingRegistration) {
+            return response()->json([
+                'message' => 'Registration is closed. The guest list is complete! Check back next year.',
+                'available_slots' => 0,
+                'max_capacity' => config('picnic.max_registrations_per_year'),
+                'registration_status' => 'closed'
+            ], 422);
+        }
+
         if (!$existingRegistration && PicnicRegistration::isLimitReached($currentYear)) {
             return response()->json([
                 'message' => 'Registration is full. We have reached the maximum capacity of 70 participants.',
@@ -31,7 +37,6 @@ class PicnicRegistrationController extends Controller
             ], 422);
         }
 
-        // Create or update registration
         $registration = PicnicRegistration::updateOrCreate(
             [
                 'user_id' => $userId,
