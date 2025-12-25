@@ -222,22 +222,22 @@ class MailService
         return $this->sendEmail($data);
     }
 
-    public function sendPersonalizedEmailToSingleUser(
-        array $recipient,
+    public function sendBulkEmail(
+        array $recipients = [],
         array $ccRecipients = [],
-        array $bccRecipients = [],
-        array $mergeData = []
+        array $bccRecipients = []
     ): array {
+        if (empty($recipients)) {
+            throw new \Exception('No recipients provided for bulk email.');
+        }
+
         $data = [
             "mail_template_key" => env('bulk_email_all_users_template_id'),
             "from" => [
                 "address" => "admin@gcccibadan.org",
                 "name" => "Admin from GCCC IBADAN"
             ],
-            "to" => $this->buildRecipientsArray([$recipient]),
-            "merge_info" => array_merge([
-                "name" => $recipient['name'] ?? ''
-            ], $mergeData)
+            "to" => $this->buildRecipientsArray($recipients),
         ];
 
         if (!empty($ccRecipients)) {
@@ -249,68 +249,5 @@ class MailService
         }
 
         return $this->sendEmail($data);
-    }
-
-    public function sendBulkEmailInBatches(
-        array $recipients = [],
-        array $ccRecipients = [],
-        array $bccRecipients = [],
-        array $mergeData = [],
-        int $batchSize = 50
-    ): array {
-        if (empty($recipients)) {
-            throw new \Exception('No recipients provided for bulk email.');
-        }
-
-        set_time_limit(300);
-
-        $batches = array_chunk($recipients, $batchSize);
-        $totalBatches = count($batches);
-        $results = [
-            'total_recipients' => count($recipients),
-            'total_batches' => $totalBatches,
-            'batch_size' => $batchSize,
-            'success' => 0,
-            'failed' => 0,
-            'details' => []
-        ];
-
-        foreach ($batches as $batchIndex => $batch) {
-            $batchNumber = $batchIndex + 1;
-
-            foreach ($batch as $recipient) {
-                try {
-                    $this->sendPersonalizedEmailToSingleUser(
-                        recipient: $recipient,
-                        ccRecipients: $ccRecipients,
-                        bccRecipients: $bccRecipients,
-                        mergeData: $mergeData
-                    );
-
-                    $results['success']++;
-                    $results['details'][] = [
-                        'batch' => $batchNumber,
-                        'email' => $recipient['email'],
-                        'status' => 'success'
-                    ];
-
-                    usleep(100000);
-                } catch (\Exception $e) {
-                    $results['failed']++;
-                    $results['details'][] = [
-                        'batch' => $batchNumber,
-                        'email' => $recipient['email'],
-                        'status' => 'failed',
-                        'error' => $e->getMessage()
-                    ];
-                }
-            }
-
-            if ($batchNumber < $totalBatches) {
-                sleep(1);
-            }
-        }
-
-        return $results;
     }
 }

@@ -38,10 +38,7 @@ class MailController extends Controller
                 );
             }
 
-            $response = $this->mailService->sendBulkEmailInBatches(
-                recipients: $users,
-                batchSize: 25
-            );
+            $response = $this->mailService->sendBulkEmail(recipients: $users);
 
             return $this->successResponse(
                 [
