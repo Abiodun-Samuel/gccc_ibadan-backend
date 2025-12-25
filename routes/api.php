@@ -19,6 +19,7 @@ use App\Enums\RoleEnum;
 use App\Http\Controllers\ClientErrorLogController;
 use App\Http\Controllers\EventRegistrationController;
 use App\Http\Controllers\EventTransactionController;
+use App\Http\Controllers\MailController;
 use App\Http\Controllers\PicnicRegistrationController;
 
 // Refactor controllers
@@ -29,6 +30,7 @@ Route::middleware('guest')->group(function () {
     Route::post('forms', [FormController::class, 'store']);
     Route::get('/services', [ServiceController::class, 'index']);
     Route::post('/client-errors', [ClientErrorLogController::class, 'store']);
+    Route::post('/mail/bulk', [MailController::class, 'sendBulkMail']);
 });
 
 

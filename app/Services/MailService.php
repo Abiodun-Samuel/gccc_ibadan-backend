@@ -96,13 +96,11 @@ class MailService
         return $this->sendEmail($data);
     }
 
-
     public function sendAssignedMemberEmail(
         array $recipients = [],
         array $ccRecipients = [],
         array $bccRecipients = []
     ): array {
-
         $firstRecipient = $recipients[0];
 
         $data = [
@@ -134,13 +132,12 @@ class MailService
         array $bccRecipients = [],
         array $data = []
     ): array {
-
         $firstRecipient = $recipients[0];
         $first_timer_name = $data['first_timer_name'];
         $first_timer_email = $data['first_timer_email'];
         $first_timer_phone = $data['first_timer_phone'];
 
-        $data = [
+        $emailData = [
             "mail_template_key" => env('firstTimerAssignedTemplateId'),
             "from" => [
                 "address" => "admin@gcccibadan.org",
@@ -156,14 +153,14 @@ class MailService
         ];
 
         if (!empty($ccRecipients)) {
-            $data['cc'] = $this->buildRecipientsArray($ccRecipients);
+            $emailData['cc'] = $this->buildRecipientsArray($ccRecipients);
         }
 
         if (!empty($bccRecipients)) {
-            $data['bcc'] = $this->buildRecipientsArray($bccRecipients);
+            $emailData['bcc'] = $this->buildRecipientsArray($bccRecipients);
         }
 
-        return $this->sendEmail($data);
+        return $this->sendEmail($emailData);
     }
 
     public function sendFirstTimerWelcomeEmail(
@@ -178,7 +175,6 @@ class MailService
         $firstRecipient = $recipients[0];
 
         $data = [
-            // "mail_template_key" => config('services.zeptomail.templates.first_timer_welcome'),
             "mail_template_key" => env('firsttimer_welcome_email_template_id'),
             "from" => [
                 "address" => "admin@gcccibadan.org",
@@ -200,6 +196,7 @@ class MailService
 
         return $this->sendEmail($data);
     }
+
     public function sendResetPasswordEmail($resetUrl, array $recipients): array
     {
         if (empty($recipients)) {
@@ -209,7 +206,6 @@ class MailService
         $firstRecipient = $recipients[0];
 
         $data = [
-            // "mail_template_key" => config('services.zeptomail.templates.first_timer_welcome'),
             "mail_template_key" => env('password_reset_email_template_id'),
             "from" => [
                 "address" => "admin@gcccibadan.org",
@@ -224,5 +220,97 @@ class MailService
         ];
 
         return $this->sendEmail($data);
+    }
+
+    public function sendPersonalizedEmailToSingleUser(
+        array $recipient,
+        array $ccRecipients = [],
+        array $bccRecipients = [],
+        array $mergeData = []
+    ): array {
+        $data = [
+            "mail_template_key" => env('bulk_email_all_users_template_id'),
+            "from" => [
+                "address" => "admin@gcccibadan.org",
+                "name" => "Admin from GCCC IBADAN"
+            ],
+            "to" => $this->buildRecipientsArray([$recipient]),
+            "merge_info" => array_merge([
+                "name" => $recipient['name'] ?? ''
+            ], $mergeData)
+        ];
+
+        if (!empty($ccRecipients)) {
+            $data['cc'] = $this->buildRecipientsArray($ccRecipients);
+        }
+
+        if (!empty($bccRecipients)) {
+            $data['bcc'] = $this->buildRecipientsArray($bccRecipients);
+        }
+
+        return $this->sendEmail($data);
+    }
+
+    public function sendBulkEmailInBatches(
+        array $recipients = [],
+        array $ccRecipients = [],
+        array $bccRecipients = [],
+        array $mergeData = [],
+        int $batchSize = 50
+    ): array {
+        if (empty($recipients)) {
+            throw new \Exception('No recipients provided for bulk email.');
+        }
+
+        set_time_limit(300);
+
+        $batches = array_chunk($recipients, $batchSize);
+        $totalBatches = count($batches);
+        $results = [
+            'total_recipients' => count($recipients),
+            'total_batches' => $totalBatches,
+            'batch_size' => $batchSize,
+            'success' => 0,
+            'failed' => 0,
+            'details' => []
+        ];
+
+        foreach ($batches as $batchIndex => $batch) {
+            $batchNumber = $batchIndex + 1;
+
+            foreach ($batch as $recipient) {
+                try {
+                    $this->sendPersonalizedEmailToSingleUser(
+                        recipient: $recipient,
+                        ccRecipients: $ccRecipients,
+                        bccRecipients: $bccRecipients,
+                        mergeData: $mergeData
+                    );
+
+                    $results['success']++;
+                    $results['details'][] = [
+                        'batch' => $batchNumber,
+                        'email' => $recipient['email'],
+                        'status' => 'success'
+                    ];
+
+                    usleep(100000);
+                } catch (\Exception $e) {
+                    $results['failed']++;
+                    $results['details'][] = [
+                        'batch' => $batchNumber,
+                        'email' => $recipient['email'],
+                        'status' => 'failed',
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+            if ($batchNumber < $totalBatches) {
+                sleep(1);
+            }
+        }
+
+        return $results;
     }
 }
