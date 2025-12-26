@@ -31,6 +31,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/services', [ServiceController::class, 'index']);
     Route::post('/client-errors', [ClientErrorLogController::class, 'store']);
     Route::post('/mail/bulk', [MailController::class, 'sendBulkMail']);
+    Route::post('/picnic/send-venue-email', [MailController::class, 'sendVenueEmail']);
 });
 
 
