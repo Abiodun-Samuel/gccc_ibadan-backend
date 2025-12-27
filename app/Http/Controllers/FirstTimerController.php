@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RoleEnum;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\FirstTimerResource;
+use App\Models\FollowUpStatus;
 use App\Models\User;
 use App\Services\FirstTimerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class FirstTimerController extends Controller
@@ -151,6 +154,61 @@ class FirstTimerController extends Controller
                 $e->getMessage(),
                 Response::HTTP_SERVICE_UNAVAILABLE
             );
+        }
+    }
+
+    public function assignMemberRole()
+    {
+        try {
+            DB::beginTransaction();
+
+            $integratedFirstTimers = User::firstTimers()->where('follow_up_status_id', FollowUpStatus::INTEGRATED_ID)
+                ->get();
+
+            if ($integratedFirstTimers->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No first timers found with integrated status'
+                ], 404);
+            }
+
+            $assignedCount = 0;
+            $alreadyMemberCount = 0;
+            $noUserCount = 0;
+
+            foreach ($integratedFirstTimers as $user) {
+
+                if ($user->hasRole(RoleEnum::MEMBER->value)) {
+                    $alreadyMemberCount++;
+                    continue;
+                }
+                $user->assignRole(RoleEnum::MEMBER->value);
+                $assignedCount++;
+            }
+
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Member role successfully assigned to {$assignedCount} integrated first timers",
+                'data' => [
+                    'stats' => [
+                        'total_found' => $integratedFirstTimers->count(),
+                        'assigned' => $assignedCount,
+                        'already_member' => $alreadyMemberCount,
+                        'no_user_account' => $noUserCount
+                    ]
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while assigning member role',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }

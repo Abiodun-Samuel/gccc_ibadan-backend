@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/picnic/registrations', [PicnicRegistrationController::class, 'adminIndex']);
             // First-timers
             Route::get('first-timers/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics']);
+            Route::post('/first-timers/integrated/assign-member-role', [FirstTimerController::class, 'assignMemberRole']);
             // Members
             Route::get('/members/role/{role}', [MemberController::class, 'getMembersByRole']);
             // Forms
