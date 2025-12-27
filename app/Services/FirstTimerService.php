@@ -9,7 +9,6 @@ use App\Models\FollowUpStatus;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -21,6 +20,9 @@ class FirstTimerService
         private readonly MailService $mailService
     ) {}
 
+    /**
+     * Apply filters to attendance query
+     */
     private function applyAttendanceFilters($query, array $filters): void
     {
         $query->when(
@@ -49,6 +51,9 @@ class FirstTimerService
         );
     }
 
+    /**
+     * Get all first timers with optional filters
+     */
     public function getAllFirstTimers(array $filters = []): Collection
     {
         $query = User::firstTimers()
@@ -64,7 +69,6 @@ class FirstTimerService
      */
     public function createFirstTimer($data): User
     {
-
         return DB::transaction(function () use ($data) {
             $followupMember = $this->findLeastLoadedFollowupMember($data['gender']);
 
@@ -78,13 +82,13 @@ class FirstTimerService
 
             $recipients = [['name' => $followupMember?->first_name, 'email' => $followupMember?->email]];
 
-            $data = [
+            $emailData = [
                 "first_timer_name" => $firstTimer->first_name ?? '',
                 "first_timer_email" => $firstTimer?->email ?? '',
                 "first_timer_phone" => $firstTimer?->phone_number ?? ''
             ];
 
-            $this->mailService->sendFirstTimerAssignedEmail($recipients, [], [], $data);
+            $this->mailService->sendFirstTimerAssignedEmail($recipients, [], [], $emailData);
 
             $firstTimer->assignRole(RoleEnum::FIRST_TIMER->value);
             $firstTimer->load(['followUpStatus', 'assignedTo']);
@@ -99,7 +103,7 @@ class FirstTimerService
     public function getFirstTimerById(User $firstTimer): User
     {
         if (!$firstTimer->hasRole(RoleEnum::FIRST_TIMER->value)) {
-            throw new NotFoundHttpException('The first timer you’re looking for may have been removed or no longer exists.');
+            throw new NotFoundHttpException('The first timer you are looking for may have been removed or no longer exists.');
         }
         return $firstTimer->load(['followUpStatus', 'assignedTo']);
     }
@@ -111,13 +115,28 @@ class FirstTimerService
     {
         return DB::transaction(function () use ($firstTimer, $data) {
             $oldFollowUpStatusId = $firstTimer->follow_up_status_id;
+
             $firstTimer->update($data);
+
             $newFollowUpStatusId = $data['follow_up_status_id'] ?? null;
+
+            // Auto-assign member role when status changes to integrated (ID: 7)
             if ($newFollowUpStatusId == 7 && $oldFollowUpStatusId != 7) {
-                $firstTimer->assignRole(RoleEnum::MEMBER->value);
+                $this->assignMemberRole($firstTimer);
             }
+
             return $firstTimer->fresh(['followUpStatus', 'assignedTo']);
         });
+    }
+
+    /**
+     * Assign member role to first timer
+     */
+    private function assignMemberRole(User $firstTimer): void
+    {
+        if (!$firstTimer->hasRole(RoleEnum::MEMBER->value)) {
+            $firstTimer->assignRole(RoleEnum::MEMBER->value);
+        }
     }
 
     /**
@@ -173,17 +192,13 @@ class FirstTimerService
      */
     public function getFirstTimersAnalytics(int $year): array
     {
-        $cacheKey = "first_timers_analytics_{$year}";
+        $monthNames = $this->getMonthNames();
+        $statuses = FollowUpStatus::pluck('title', 'id');
+        $integratedStatusId = FollowUpStatus::where('title', FollowUpStatusEnum::INTEGRATED->value)->value('id');
 
-        return Cache::remember($cacheKey, now()->addDay(), function () use ($year) {
-            $monthNames = $this->getMonthNames();
-            $statuses = FollowUpStatus::pluck('title', 'id');
-            $integratedStatusId = FollowUpStatus::where('title', FollowUpStatusEnum::INTEGRATED->value)->value('id');
+        $results = $this->fetchAnalyticsData($year, $integratedStatusId);
 
-            $results = $this->fetchAnalyticsData($year, $integratedStatusId);
-
-            return $this->processAnalyticsData($results, $monthNames, $statuses, $integratedStatusId, $year);
-        });
+        return $this->processAnalyticsData($results, $monthNames, $statuses, $integratedStatusId, $year);
     }
 
     /**
@@ -226,6 +241,9 @@ class FirstTimerService
         ];
     }
 
+    /**
+     * Fetch analytics data from database
+     */
     private function fetchAnalyticsData(int $year, ?int $integratedStatusId): Collection
     {
         return User::firstTimers()

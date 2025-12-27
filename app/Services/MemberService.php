@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\RoleEnum;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use InvalidArgumentException;
@@ -13,9 +12,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class MemberService
 {
-    private const CACHE_KEY_PREFIX = 'members_list';
-    private const CACHE_TTL = 5; // minutes
-
     protected MailService $mailService;
 
     public function __construct(MailService $mailService)
@@ -52,25 +48,17 @@ class MemberService
     }
 
     /**
-     * Fetch all members with optional filters and caching.
+     * Fetch all members with optional filters.
      */
     public function getAllMembers(array $filters = []): Collection
     {
-        $cacheKey = $this->generateCacheKey(self::CACHE_KEY_PREFIX, $filters);
-
-        return Cache::remember(
-            $cacheKey,
-            now()->addMinutes(self::CACHE_TTL),
-            function () use ($filters) {
-                $query = User::members();
-                $this->applyMembersFilters($query, $filters);
-                return $query->get();
-            }
-        );
+        $query = User::members();
+        $this->applyMembersFilters($query, $filters);
+        return $query->get();
     }
 
     /**
-     * Get users by role with caching.
+     * Get users by role.
      */
     public function getUsersByRole(string $role): Collection
     {
@@ -80,27 +68,18 @@ class MemberService
             throw new InvalidArgumentException("Invalid role: {$role}");
         }
 
-        $cacheKey = self::CACHE_KEY_PREFIX . "_role_{$role}";
-
-        return Cache::remember(
-            $cacheKey,
-            now()->addMinutes(self::CACHE_TTL),
-            fn() => match ($role) {
-                'admin' => User::admins()->get(),
-                'leader' => User::leaders()->get(),
-                'member' => User::members()->get(),
-                'firstTimer' => User::firstTimers()->get(),
-            }
-        );
+        return match ($role) {
+            'admin' => User::admins()->get(),
+            'leader' => User::leaders()->get(),
+            'member' => User::members()->get(),
+            'firstTimer' => User::firstTimers()->get(),
+        };
     }
 
-    /**
-     * Find a single member with relationships.
-     */
     public function findMember(User $user): User
     {
         if (!$user->hasRole(RoleEnum::MEMBER->value)) {
-            throw new NotFoundHttpException('The member you’re looking for may have been removed or no longer exists.');
+            throw new NotFoundHttpException('The member you are looking for may have been removed or no longer exists.');
         }
         return $user->load(['assignedTo'])->loadFullProfile();
     }
@@ -143,8 +122,6 @@ class MemberService
             }
         }
 
-        $this->clearCache();
-
         return [
             'successful' => $successful,
             'failed' => $failed,
@@ -171,7 +148,6 @@ class MemberService
                 : null;
 
             $member->update($validatedData);
-            $this->clearCache();
 
             return $member->fresh(['assignedTo']);
         });
@@ -185,8 +161,6 @@ class MemberService
         return DB::transaction(function () use ($ids) {
             DB::table('unit_user')->whereIn('user_id', $ids)->delete();
             $deletedCount = User::whereIn('id', $ids)->delete();
-
-            $this->clearCache();
 
             return [
                 'deleted_count' => $deletedCount,
@@ -203,9 +177,7 @@ class MemberService
     {
         return DB::transaction(function () use ($member) {
             $member->units()->detach();
-            $deleted = $member->delete();
-            $this->clearCache();
-            return $deleted;
+            return $member->delete();
         });
     }
 
@@ -238,28 +210,8 @@ class MemberService
     }
 
     /**
-     * Clear member-related caches.
+     * Get user-friendly error messages.
      */
-    private function clearCache(): void
-    {
-        Cache::forget(self::CACHE_KEY_PREFIX);
-        foreach (['admin', 'leader', 'member', 'firstTimer'] as $role) {
-            Cache::forget(self::CACHE_KEY_PREFIX . "_role_{$role}");
-        }
-    }
-
-    /**
-     * Generate a consistent cache key with filters.
-     */
-    private function generateCacheKey(string $baseKey, array $filters = []): string
-    {
-        if (empty($filters)) {
-            return $baseKey;
-        }
-        $filterKey = md5(json_encode($filters));
-        return "{$baseKey}_{$filterKey}";
-    }
-
     private function getUserFriendlyError(\Exception $e): string
     {
         $message = $e->getMessage();
