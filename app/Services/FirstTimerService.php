@@ -110,7 +110,12 @@ class FirstTimerService
     public function updateFirstTimer(User $firstTimer, array $data): User
     {
         return DB::transaction(function () use ($firstTimer, $data) {
+            $oldFollowUpStatusId = $firstTimer->follow_up_status_id;
             $firstTimer->update($data);
+            $newFollowUpStatusId = $data['follow_up_status_id'] ?? null;
+            if ($newFollowUpStatusId == 7 && $oldFollowUpStatusId != 7) {
+                $firstTimer->assignRole(RoleEnum::MEMBER->value);
+            }
             return $firstTimer->fresh(['followUpStatus', 'assignedTo']);
         });
     }

@@ -186,7 +186,6 @@ class FirstTimerController extends Controller
                 $assignedCount++;
             }
 
-
             DB::commit();
 
             return response()->json([
