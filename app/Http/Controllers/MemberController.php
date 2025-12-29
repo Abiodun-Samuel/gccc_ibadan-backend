@@ -63,6 +63,15 @@ class MemberController extends Controller
             return $this->errorResponse($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+    public function getAllUsers(): JsonResponse
+    {
+        try {
+            $users = $this->memberService->getAllUsers();
+            return $this->successResponse(UserResource::collection($users), 'users retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
     public function getMembersByRole(Request $request, string $role)
     {
         try {

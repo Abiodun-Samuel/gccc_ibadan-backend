@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Enums\RoleEnum;
 use App\Models\User;
-use DB;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class UserRoleService
 {
@@ -15,7 +15,7 @@ class UserRoleService
         $hierarchicalRoles = $this->resolveHierarchicalRoles($roles);
         $user->assignRole($hierarchicalRoles);
 
-        return $user->load(['roles']);
+        return $user->load('permissions', 'roles');
     }
 
     public function assignRoleToUsers(array|Collection $users, string $role): Collection
@@ -29,7 +29,21 @@ class UserRoleService
                 $user->syncRoles($hierarchicalRoles);
             }
 
-            return $users->load(['roles']);
+            return $users->load('permissions', 'roles');
+        });
+    }
+
+    public function syncUsersPermissions(array|Collection $users, array $permissions): Collection
+    {
+        $users = $this->normalizeUsers($users);
+
+        return DB::transaction(function () use ($users, $permissions) {
+
+            foreach ($users as $user) {
+                $user->syncPermissions($permissions);
+            }
+
+            return  $users->load('permissions', 'roles');
         });
     }
 
@@ -56,7 +70,7 @@ class UserRoleService
     {
 
         if ($role === RoleEnum::MEMBER->value) {
-            return $user->load(['roles']);
+            return $user->load('permissions', 'roles');
         }
 
         $user->removeRole($role);
@@ -65,7 +79,7 @@ class UserRoleService
             $user->assignRole(RoleEnum::MEMBER->value);
         }
 
-        return $user->load(['roles']);
+        return $user->load('permissions', 'roles');
     }
 
     private function normalizeUsers(array|Collection $users): Collection

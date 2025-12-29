@@ -57,6 +57,12 @@ class MemberService
         return $query->get();
     }
 
+    public function getAllUsers(): Collection
+    {
+        $users = User::get();
+        return $users;
+    }
+
     /**
      * Get users by role.
      */

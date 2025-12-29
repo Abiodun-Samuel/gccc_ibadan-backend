@@ -48,6 +48,7 @@ class UserResource extends JsonResource
             ]),
 
             'roles' => $this->whenLoaded('roles', fn() => $this->getRoleNames()),
+            'permissions' => $this->whenLoaded('permissions', fn() => $this->getAllPermissions()->pluck('name')),
 
             'education' => $this->education,
             'field_of_study' => $this->field_of_study,

@@ -75,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     //members
     Route::apiResource('members', MemberController::class);
+    Route::get('members/users/all', [MemberController::class, 'getAllUsers']);
     Route::post('members/delete', [MemberController::class, 'destroy']);
     // Attendance
     Route::prefix('attendance')->group(function () {
@@ -164,6 +165,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/analytics', [AdminController::class, 'getAdminAnalytics']);
         Route::post('/assign-role', [AdminController::class, 'assignRoleToUsers']);
+        Route::post('/sync-permissions', [AdminController::class, 'syncUsersPermissions']);
         // Usher Attendance
         Route::apiResource('usher-attendance', UsherAttendanceController::class);
     });
