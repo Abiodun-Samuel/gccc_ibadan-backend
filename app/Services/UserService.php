@@ -30,8 +30,14 @@ class UserService
      */
     public function getAssignedMembers(User $user)
     {
-        $user->load(['assignedUsers'])->members();
-        return $user;
+        return $user->assignedUsers()
+            ->members()
+            // ->with(['followUpStatus', 'assignedTo'])
+            // ->latest('date_of_visit')
+            ->get();
+
+        // $user->load(['assignedUsers'])->members();
+        // return $user;
     }
 
     /**
