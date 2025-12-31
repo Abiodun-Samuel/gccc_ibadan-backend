@@ -251,6 +251,35 @@ class MailService
         return $this->sendEmail($data);
     }
 
+    public function sendNewMembersAssignedMail(
+        array $recipients = [],
+        array $ccRecipients = [],
+        array $bccRecipients = []
+    ): array {
+        if (empty($recipients)) {
+            throw new \Exception('No recipients provided for bulk email.');
+        }
+
+        $data = [
+            "mail_template_key" => env('ASSIGNED_MEMBERS_TEMPLATE_ID'),
+            "from" => [
+                "address" => "admin@gcccibadan.org",
+                "name" => "Admin from GCCC IBADAN"
+            ],
+            "to" => $this->buildRecipientsArray($recipients),
+        ];
+
+        if (!empty($ccRecipients)) {
+            $data['cc'] = $this->buildRecipientsArray($ccRecipients);
+        }
+
+        if (!empty($bccRecipients)) {
+            $data['bcc'] = $this->buildRecipientsArray($bccRecipients);
+        }
+
+        return $this->sendEmail($data);
+    }
+
     public function sendPicnicVenueEmail(
         array $recipients = [],
         array $ccRecipients = [],

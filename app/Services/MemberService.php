@@ -18,7 +18,6 @@ class MemberService
     {
         $this->mailService = $mailService;
     }
-
     /**
      * Apply filters for members query.
      */
@@ -247,18 +246,33 @@ class MemberService
         }
 
         return DB::transaction(function () use ($memberIds, $followupLeaderIds) {
-            $assignments = $this->distributeEvenly($memberIds, $followupLeaderIds);
+            // Remove leaders from member list to prevent self-assignment
+            $membersToAssign = array_values(array_diff($memberIds, $followupLeaderIds));
+
+            if (empty($membersToAssign)) {
+                return [
+                    'success' => false,
+                    'message' => 'No members to assign after excluding leaders',
+                    'total_assigned' => 0,
+                    'assignments' => [],
+                ];
+            }
+
+            $assignments = $this->distributeEvenly($membersToAssign, $followupLeaderIds);
             $this->bulkUpdateAssignments($assignments);
+            $this->sendAssignmentNotifications($assignments);
 
             return [
                 'success' => true,
-                'total_assigned' => count($memberIds),
+                'total_assigned' => count($membersToAssign),
+                'excluded_leaders' => count($memberIds) - count($membersToAssign),
+                'assignments' => $assignments,
             ];
         });
     }
 
     /**
-     * Distribute members evenly using simple round-robin
+     * Distribute members evenly using round-robin algorithm
      */
     protected function distributeEvenly(array $memberIds, array $followupLeaderIds): array
     {
@@ -274,7 +288,7 @@ class MemberService
     }
 
     /**
-     * Bulk update using optimized CASE statement
+     * Bulk update using parameterized query to prevent SQL injection
      */
     protected function bulkUpdateAssignments(array $assignments): void
     {
@@ -287,15 +301,62 @@ class MemberService
         $bindings = [];
 
         foreach ($assignments as $memberId => $followupLeaderId) {
-            $caseParts[] = "WHEN {$memberId} THEN ?";
+            $caseParts[] = "WHEN ? THEN ?";
+            $bindings[] = $memberId;
             $bindings[] = $followupLeaderId;
         }
 
         $caseStatement = "CASE id " . implode(' ', $caseParts) . " END";
+        $placeholders = implode(',', array_fill(0, count($memberIds), '?'));
 
         DB::update(
-            "UPDATE users SET followup_by_id = {$caseStatement}, updated_at = ? WHERE id IN (" . implode(',', $memberIds) . ")",
-            array_merge($bindings, [now()])
+            "UPDATE users SET followup_by_id = {$caseStatement}, updated_at = ? WHERE id IN ({$placeholders})",
+            array_merge($bindings, [now()], $memberIds)
         );
+    }
+
+    /**
+     * Send email notifications to all assigned leaders at once
+     */
+    protected function sendAssignmentNotifications(array $assignments): void
+    {
+        if (empty($assignments)) {
+            return;
+        }
+
+        // Group members by their assigned leader
+        $leaderAssignments = [];
+        foreach ($assignments as $memberId => $leaderId) {
+            $leaderAssignments[$leaderId][] = $memberId;
+        }
+
+        // Fetch all leaders and members in 2 optimized queries
+        $leaders = User::whereIn('id', array_keys($leaderAssignments))
+            ->select('id', 'first_name', 'last_name', 'email')
+            ->get()
+            ->keyBy('id');
+
+        $members = User::whereIn('id', array_keys($assignments))
+            ->select('id', 'first_name', 'last_name', 'email', 'phone_number')
+            ->get()
+            ->keyBy('id');
+
+        // Build recipients array for bulk email
+        $recipients = $leaders->filter()
+            ->map(fn($leader) => [
+                'name' => trim($leader->first_name . ' ' . ($leader->last_name ?? '')),
+                'email' => $leader->email,
+            ])
+            ->values()
+            ->toArray();
+
+        // Send one email to all leaders at once
+        if (!empty($recipients)) {
+            try {
+                $this->mailService->sendNewMembersAssignedMail($recipients);
+            } catch (\Exception $e) {
+                throw $e; // Re-throw to rollback transaction
+            }
+        }
     }
 }

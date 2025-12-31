@@ -125,7 +125,7 @@ class UserSeeder extends Seeder
             $userData['date_of_birth'] = null;
 
             $user = User::create($userData);
-            if ($userData['email'] == 'admin@gcccibadan.org'  || $userData['email'] == 'Opeyemiadebowale1759@gmail.com' || $userData['email'] == 'abiodunsamyemi@gmail.com') {
+            if ($userData['email'] == 'admin@gcccibadan.org'  || $userData['email'] == 'abiodunsamyemi@gmail.com') {
                 $this->service->assignUserRoles($user, [
                     RoleEnum::ADMIN->value,
                     RoleEnum::LEADER->value,
