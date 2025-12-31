@@ -30,7 +30,8 @@ class UserService
      */
     public function getAssignedMembers(User $user)
     {
-        return $user->load(['assignedUsers'])->members();
+        $user->load(['assignedUsers']); //->members();
+        return $user;
     }
 
     /**
