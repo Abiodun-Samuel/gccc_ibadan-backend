@@ -329,4 +329,234 @@ class FirstTimerService
 
         return $formatted;
     }
+
+    /**
+     * Get comprehensive annual report for first timers
+     */
+    public function getAnnualReport(int $year): array
+    {
+        $monthNames = $this->getMonthNames();
+
+        // Single query with eager loading
+        $statuses = FollowUpStatus::pluck('title', 'id');
+        $integratedStatusId = FollowUpStatus::where('title', FollowUpStatusEnum::INTEGRATED->value)->value('id');
+
+        // Get all first timers in one query with only needed columns
+        $firstTimers = User::firstTimers()
+            ->select('id', 'first_name', 'last_name', 'phone_number', 'email', 'follow_up_status_id', 'date_of_visit', 'gender')
+            ->whereYear('date_of_visit', $year)
+            ->orderBy('date_of_visit', 'desc')
+            ->get();
+
+        // Early return if no data
+        if ($firstTimers->isEmpty()) {
+            return $this->getEmptyReport($year, $monthNames, $statuses);
+        }
+
+        // Calculate all metrics in a single pass
+        $metrics = $this->calculateMetrics($firstTimers, $statuses, $integratedStatusId, $monthNames);
+
+        return [
+            'year' => $year,
+            'summary' => [
+                'total_first_timers' => $metrics['total_count'],
+                'total_integrated' => $metrics['integrated_count'],
+                'integration_rate' => $metrics['total_count'] > 0
+                    ? round(($metrics['integrated_count'] / $metrics['total_count']) * 100, 2)
+                    : 0,
+                'total_male' => $metrics['male_count'],
+                'total_female' => $metrics['female_count'],
+                'average_per_month' => round($metrics['total_count'] / 12, 2),
+                'peak_month' => $metrics['peak_month'],
+            ],
+            'monthly_breakdown' => $metrics['monthly_data'],
+            'status_summary' => $metrics['status_summary'],
+        ];
+    }
+
+    /**
+     * Calculate all metrics in a single iteration
+     */
+    private function calculateMetrics(Collection $firstTimers, Collection $statuses, ?int $integratedStatusId, array $monthNames): array
+    {
+        // Initialize counters
+        $totalCount = 0;
+        $integratedCount = 0;
+        $maleCount = 0;
+        $femaleCount = 0;
+        $monthlyData = $this->initializeMonthlyData($monthNames, $statuses);
+        $statusGroups = [];
+        $monthlyCounts = array_fill(1, 12, 0);
+
+        // Single pass through all first timers
+        foreach ($firstTimers as $firstTimer) {
+            $totalCount++;
+            $month = (int) date('n', strtotime($firstTimer->date_of_visit));
+            $statusId = $firstTimer->follow_up_status_id;
+            $statusTitle = $statuses->get($statusId, 'Unknown');
+
+            // Prepare first timer data once
+            $firstTimerData = [
+                'id' => $firstTimer->id,
+                'first_name' => $firstTimer->first_name,
+                'last_name' => $firstTimer->last_name,
+                'full_name' => trim($firstTimer->first_name . ' ' . $firstTimer->last_name),
+                'phone_number' => $firstTimer->phone_number,
+                'email' => $firstTimer->email,
+                'gender' => $firstTimer->gender,
+                'date_of_visit' => $firstTimer->date_of_visit,
+                'status' => $statusTitle
+            ];
+
+            // Update monthly data
+            $monthlyData[$month]['total_count']++;
+            $monthlyData[$month]['first_timers'][] = $firstTimerData;
+            $monthlyCounts[$month]++;
+
+            // Count gender
+            $gender = strtolower($firstTimer->gender ?? '');
+            if ($gender === 'male') {
+                $maleCount++;
+                $monthlyData[$month]['male_count']++;
+            } elseif ($gender === 'female') {
+                $femaleCount++;
+                $monthlyData[$month]['female_count']++;
+            }
+
+            // Count integrated
+            if ($statusId == $integratedStatusId) {
+                $integratedCount++;
+                $monthlyData[$month]['integrated_count']++;
+            }
+
+            // Group by status
+            if (!isset($monthlyData[$month]['statuses'][$statusTitle])) {
+                $monthlyData[$month]['statuses'][$statusTitle] = [
+                    'count' => 0,
+                    'first_timers' => []
+                ];
+            }
+            $monthlyData[$month]['statuses'][$statusTitle]['count']++;
+            $monthlyData[$month]['statuses'][$statusTitle]['first_timers'][] = $firstTimerData;
+
+            // Group for status summary
+            if (!isset($statusGroups[$statusTitle])) {
+                $statusGroups[$statusTitle] = [
+                    'status' => $statusTitle,
+                    'status_id' => $statusId !== null && $statuses->has($statusId) ? $statusId : null,
+                    'count' => 0,
+                    'first_timers' => []
+                ];
+            }
+            $statusGroups[$statusTitle]['count']++;
+            $statusGroups[$statusTitle]['first_timers'][] = [
+                'id' => $firstTimer->id,
+                'first_name' => $firstTimer->first_name,
+                'last_name' => $firstTimer->last_name,
+                'full_name' => trim($firstTimer->first_name . ' ' . $firstTimer->last_name),
+                'phone_number' => $firstTimer->phone_number,
+                'email' => $firstTimer->email,
+                'gender' => $firstTimer->gender,
+                'date_of_visit' => $firstTimer->date_of_visit
+            ];
+        }
+
+        // Calculate percentages for status summary
+        $statusSummary = [];
+        foreach ($statusGroups as $statusGroup) {
+            $statusSummary[] = array_merge($statusGroup, [
+                'percentage' => $totalCount > 0
+                    ? round(($statusGroup['count'] / $totalCount) * 100, 2)
+                    : 0
+            ]);
+        }
+
+        // Find peak month
+        $maxCount = max($monthlyCounts);
+        $peakMonth = array_search($maxCount, $monthlyCounts);
+
+        return [
+            'total_count' => $totalCount,
+            'integrated_count' => $integratedCount,
+            'male_count' => $maleCount,
+            'female_count' => $femaleCount,
+            'monthly_data' => array_values($monthlyData),
+            'status_summary' => $statusSummary,
+            'peak_month' => [
+                'month' => $monthNames[$peakMonth],
+                'count' => $maxCount
+            ]
+        ];
+    }
+
+    /**
+     * Initialize monthly data structure
+     */
+    private function initializeMonthlyData(array $monthNames, Collection $statuses): array
+    {
+        $monthlyData = [];
+
+        foreach (range(1, 12) as $month) {
+            $monthlyData[$month] = [
+                'month' => $monthNames[$month],
+                'month_number' => $month,
+                'total_count' => 0,
+                'integrated_count' => 0,
+                'male_count' => 0,
+                'female_count' => 0,
+                'statuses' => [],
+                'first_timers' => []
+            ];
+
+            // Pre-initialize known statuses only
+            foreach ($statuses as $statusTitle) {
+                $monthlyData[$month]['statuses'][$statusTitle] = [
+                    'count' => 0,
+                    'first_timers' => []
+                ];
+            }
+        }
+
+        return $monthlyData;
+    }
+
+    /**
+     * Get empty report structure
+     */
+    private function getEmptyReport(int $year, array $monthNames, Collection $statuses): array
+    {
+        $emptyMonthly = [];
+        foreach (range(1, 12) as $month) {
+            $statusData = [];
+            foreach ($statuses as $statusTitle) {
+                $statusData[$statusTitle] = ['count' => 0, 'first_timers' => []];
+            }
+
+            $emptyMonthly[] = [
+                'month' => $monthNames[$month],
+                'month_number' => $month,
+                'total_count' => 0,
+                'integrated_count' => 0,
+                'male_count' => 0,
+                'female_count' => 0,
+                'statuses' => $statusData,
+                'first_timers' => []
+            ];
+        }
+
+        return [
+            'year' => $year,
+            'summary' => [
+                'total_first_timers' => 0,
+                'total_integrated' => 0,
+                'integration_rate' => 0,
+                'total_male' => 0,
+                'total_female' => 0,
+                'average_per_month' => 0,
+                'peak_month' => ['month' => $monthNames[1], 'count' => 0],
+            ],
+            'monthly_breakdown' => $emptyMonthly,
+            'status_summary' => [],
+        ];
+    }
 }

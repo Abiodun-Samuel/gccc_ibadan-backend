@@ -11,14 +11,17 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // foreach (RoleEnum::values() as $roleName) {
-        //     Role::firstOrCreate(['name' => $roleName]);
-        // }
+        foreach (RoleEnum::values() as $roleName) {
+            Role::firstOrCreate(['name' => $roleName]);
+        }
         // php artisan db:seed --class=RolesAndPermissionsSeeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
         $permissions = [
-            'view-prayer-request',
-            // Add other permissions here as needed
+            'view-prayer',
+            'view-question',
+            'view-attendance-records',
+            'edit-attendance-records',
+            'delete-attendance-records',
         ];
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
