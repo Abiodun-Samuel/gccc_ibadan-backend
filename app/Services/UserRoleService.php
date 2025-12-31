@@ -50,6 +50,14 @@ class UserRoleService
     private function resolveHierarchicalRoles(array $roles): array
     {
         $uniqueRoles = array_unique($roles);
+        if (in_array(RoleEnum::PASTOR->value, $uniqueRoles)) {
+            return [
+                RoleEnum::PASTOR->value,
+                RoleEnum::ADMIN->value,
+                RoleEnum::LEADER->value,
+                RoleEnum::MEMBER->value,
+            ];
+        }
         if (in_array(RoleEnum::ADMIN->value, $uniqueRoles)) {
             return [
                 RoleEnum::ADMIN->value,
@@ -61,6 +69,11 @@ class UserRoleService
             return [
                 RoleEnum::LEADER->value,
                 RoleEnum::MEMBER->value,
+            ];
+        }
+        if (in_array(RoleEnum::FIRST_TIMER->value, $uniqueRoles)) {
+            return [
+                RoleEnum::FIRST_TIMER->value,
             ];
         }
         return [RoleEnum::MEMBER->value];

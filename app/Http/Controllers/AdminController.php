@@ -26,7 +26,7 @@ class AdminController extends Controller
         $validated = $request->validate([
             'user_ids' => 'required|array',
             'user_ids.*' => 'exists:users,id',
-            'role' => 'required|in:admin,leader,member',
+            'role' => 'required|in:admin,leader,member,pastor,firstTimer',
         ]);
         $this->userRoleService->assignRoleToUsers(
             $validated['user_ids'],
