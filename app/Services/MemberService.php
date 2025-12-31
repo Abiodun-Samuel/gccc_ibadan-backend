@@ -68,17 +68,19 @@ class MemberService
      */
     public function getUsersByRole(string $role): Collection
     {
-        $validRoles = ['admin', 'leader', 'member', 'firstTimer'];
+        $validRoles = ['admin', 'leader', 'member', 'firstTimer', 'pastor', 'all'];
 
         if (!in_array($role, $validRoles, true)) {
             throw new InvalidArgumentException("Invalid role: {$role}");
         }
 
         return match ($role) {
+            'pastor' => User::pastors()->get(),
             'admin' => User::admins()->get(),
             'leader' => User::leaders()->get(),
             'member' => User::members()->get(),
             'firstTimer' => User::firstTimers()->get(),
+            'all' => User::get()
         };
     }
 
@@ -231,5 +233,69 @@ class MemberService
             return 'Duplicate entry detected';
         }
         return 'An error occurred while creating this member';
+    }
+
+
+    public function assignMembersToFollowupLeaders(array $memberIds, array $followupLeaderIds): array
+    {
+        if (empty($memberIds)) {
+            throw new \InvalidArgumentException('Member IDs array cannot be empty');
+        }
+
+        if (empty($followupLeaderIds)) {
+            throw new \InvalidArgumentException('Follow-up leader IDs array cannot be empty');
+        }
+
+        return DB::transaction(function () use ($memberIds, $followupLeaderIds) {
+            $assignments = $this->distributeEvenly($memberIds, $followupLeaderIds);
+            $this->bulkUpdateAssignments($assignments);
+
+            return [
+                'success' => true,
+                'total_assigned' => count($memberIds),
+            ];
+        });
+    }
+
+    /**
+     * Distribute members evenly using simple round-robin
+     */
+    protected function distributeEvenly(array $memberIds, array $followupLeaderIds): array
+    {
+        $assignments = [];
+        $totalLeaders = count($followupLeaderIds);
+
+        foreach ($memberIds as $index => $memberId) {
+            $leaderIndex = $index % $totalLeaders;
+            $assignments[$memberId] = $followupLeaderIds[$leaderIndex];
+        }
+
+        return $assignments;
+    }
+
+    /**
+     * Bulk update using optimized CASE statement
+     */
+    protected function bulkUpdateAssignments(array $assignments): void
+    {
+        if (empty($assignments)) {
+            return;
+        }
+
+        $memberIds = array_keys($assignments);
+        $caseParts = [];
+        $bindings = [];
+
+        foreach ($assignments as $memberId => $followupLeaderId) {
+            $caseParts[] = "WHEN {$memberId} THEN ?";
+            $bindings[] = $followupLeaderId;
+        }
+
+        $caseStatement = "CASE id " . implode(' ', $caseParts) . " END";
+
+        DB::update(
+            "UPDATE users SET followup_by_id = {$caseStatement}, updated_at = ? WHERE id IN (" . implode(',', $memberIds) . ")",
+            array_merge($bindings, [now()])
+        );
     }
 }

@@ -104,6 +104,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('first-timers/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics']);
             Route::post('/first-timers/integrated/assign-member-role', [FirstTimerController::class, 'assignMemberRole']);
             // Members
+            Route::post('/members/assign', [MemberController::class, 'assignMembers']);
             Route::get('/members/role/{role}', [MemberController::class, 'getMembersByRole']);
             // Forms
             Route::prefix('forms')->controller(FormController::class)->group(function () {
@@ -163,7 +164,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin-only
     // -----------------------------------------
     Route::middleware(['role:' . RoleEnum::ADMIN->value])->prefix('admin')->group(function () {
-
         Route::get('/analytics', [AdminController::class, 'getAdminAnalytics']);
         Route::post('/assign-role', [AdminController::class, 'assignRoleToUsers']);
         Route::post('/sync-permissions', [AdminController::class, 'syncUsersPermissions']);

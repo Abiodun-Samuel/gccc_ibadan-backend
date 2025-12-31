@@ -125,6 +125,10 @@ class User extends Authenticatable
     | Query Scopes
     --------------------------------------------------------------*/
 
+    public function scopePastors($query)
+    {
+        return $query->role(RoleEnum::PASTOR->value);
+    }
     public function scopeAdmins($query)
     {
         return $query->role(RoleEnum::ADMIN->value);

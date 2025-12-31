@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AssignMembersRequest;
 use App\Http\Requests\StoreBulkMemberRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
@@ -145,6 +146,22 @@ class MemberController extends Controller
         } catch (\Exception $e) {
             return $this->errorResponse(
                 'Failed to delete members: ' . $e->getMessage(),
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    public function assignMembers(AssignMembersRequest $request): JsonResponse
+    {
+        try {
+            $result = $this->memberService->assignMembersToFollowupLeaders(
+                $request->input('member_ids'),
+                $request->input('followup_leader_ids')
+            );
+            return $this->successResponse($result, 'Members have been assigned successfully.');
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                'Assignment failed:' . $e->getMessage(),
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
