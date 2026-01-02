@@ -12,6 +12,8 @@ class FollowUpStatus extends Model
     public const CONTACTED_ID = 5;
     public const OPT_OUT_ID = 9;
     public const INTEGRATED_ID = 7;
+    public const AWAY = 10;
+    public const VISITING = 8;
 
     protected $fillable = ['title', 'color', 'description'];
 

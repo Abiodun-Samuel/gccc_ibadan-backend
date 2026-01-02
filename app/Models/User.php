@@ -178,6 +178,13 @@ class User extends Authenticatable
         $today = Carbon::now();
         $nextSevenDays = Carbon::now()->addDays(7);
 
+        // Statuses to exclude from birthday notifications
+        $excludedStatuses = [
+            FollowUpStatus::OPT_OUT_ID,
+            FollowUpStatus::AWAY,
+            FollowUpStatus::VISITING,
+        ];
+
         return $query->select([
             'id',
             'email',
@@ -185,22 +192,28 @@ class User extends Authenticatable
             'last_name',
             'avatar',
             'phone_number',
-            'date_of_birth'
+            'date_of_birth',
+            'follow_up_status_id'
         ])
             ->whereNotNull('date_of_birth')
+            ->where(function ($q) use ($excludedStatuses) {
+                // Include users with no status OR users with status not in excluded list
+                $q->whereNull('follow_up_status_id')
+                    ->orWhereNotIn('follow_up_status_id', $excludedStatuses);
+            })
             ->where(function ($q) use ($today, $nextSevenDays) {
-                // Handle birthdays within the same month
-                $q->whereRaw(
-                    "DATE_FORMAT(date_of_birth, '%m-%d') BETWEEN ? AND ?",
-                    [
-                        $today->format('m-d'),
-                        $nextSevenDays->format('m-d')
-                    ]
-                );
-
-                // Handle month-end edge case (e.g., Dec 28 - Jan 4)
-                if ($today->month !== $nextSevenDays->month) {
-                    $q->orWhereRaw(
+                if ($today->month === $nextSevenDays->month) {
+                    // Birthdays within the same month
+                    $q->whereRaw(
+                        "DATE_FORMAT(date_of_birth, '%m-%d') BETWEEN ? AND ?",
+                        [
+                            $today->format('m-d'),
+                            $nextSevenDays->format('m-d')
+                        ]
+                    );
+                } else {
+                    // Handle month-end edge case (e.g., Dec 28 - Jan 4)
+                    $q->whereRaw(
                         "DATE_FORMAT(date_of_birth, '%m-%d') >= ?",
                         [$today->format('m-d')]
                     )->orWhereRaw(
