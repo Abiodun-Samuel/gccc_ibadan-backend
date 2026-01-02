@@ -374,18 +374,35 @@ class MemberService
     public function updateGloryTeamMembers(): int
     {
         try {
-            $updated = DB::table('users')
-                ->whereExists(function ($query) {
-                    $query->select(DB::raw(1))
-                        ->from('unit_user')
-                        ->whereColumn('unit_user.user_id', 'users.id');
+            $updated = User::query()
+                ->where(function ($query) {
+                    // Users in any unit
+                    $query->whereHas('units')
+                        // OR users with admin, pastor, or leader roles
+                        ->orWhereHas('roles', function ($roleQuery) {
+                            $roleQuery->whereIn('name', ['admin', 'pastor', 'leader']);
+                        });
                 })
                 ->where('is_glory_team_member', false)
                 ->update(['is_glory_team_member' => true]);
+
             return $updated;
         } catch (\Exception $e) {
-
             throw new \Exception('Failed to update glory team members: ' . $e->getMessage());
         }
+        // try {
+        //     $updated = DB::table('users')
+        //         ->whereExists(function ($query) {
+        //             $query->select(DB::raw(1))
+        //                 ->from('unit_user')
+        //                 ->whereColumn('unit_user.user_id', 'users.id');
+        //         })
+        //         ->where('is_glory_team_member', false)
+        //         ->update(['is_glory_team_member' => true]);
+        //     return $updated;
+        // } catch (\Exception $e) {
+
+        //     throw new \Exception('Failed to update glory team members: ' . $e->getMessage());
+        // }
     }
 }
