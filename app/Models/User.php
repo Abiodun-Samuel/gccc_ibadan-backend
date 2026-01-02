@@ -42,6 +42,7 @@ class User extends Authenticatable
         'service_experience',
         'prayer_point',
         'notes',
+        'is_glory_team_member',
         'community',
         'country',
         'city_or_state',
@@ -103,6 +104,7 @@ class User extends Authenticatable
             'week_ending' => 'date',
             'located_in_ibadan' => 'boolean',
             'whatsapp_interest' => 'boolean',
+            'is_glory_team_member' => 'boolean',
             'is_student' => 'boolean',
             'attendance_badges' => AsCollection::class,
         ];
@@ -145,6 +147,15 @@ class User extends Authenticatable
     {
         return $query->role(RoleEnum::FIRST_TIMER->value);
     }
+    public function scopeGloryTeamMembers($query)
+    {
+        return $query->where('is_glory_team_member', true);
+    }
+    public function scopeNotGloryTeamMembers($query)
+    {
+        return $query->where('is_glory_team_member', false);
+    }
+
     public function scopeActivelyFollowedFirstTimers($query)
     {
         return $query->firstTimers()->whereNotIn('status', ['disabled', 'deactivated'])

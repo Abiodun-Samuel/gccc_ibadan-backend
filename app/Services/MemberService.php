@@ -62,25 +62,37 @@ class MemberService
         return $users;
     }
 
-    /**
-     * Get users by role.
-     */
-    public function getUsersByRole(string $role): Collection
+    public function getUsersByRole(string $role, array $filters = []): Collection
     {
-        $validRoles = ['admin', 'leader', 'member', 'firstTimer', 'pastor', 'all'];
+        $validRoles = [
+            'admin',
+            'leader',
+            'member',
+            'firstTimer',
+            'pastor',
+            'gloryTeam',
+            'nonGloryTeam',
+            'all',
+        ];
 
         if (!in_array($role, $validRoles, true)) {
             throw new InvalidArgumentException("Invalid role: {$role}");
         }
 
-        return match ($role) {
-            'pastor' => User::pastors()->get(),
-            'admin' => User::admins()->get(),
-            'leader' => User::leaders()->get(),
-            'member' => User::members()->get(),
-            'firstTimer' => User::firstTimers()->get(),
-            'all' => User::get()
+        $query = match ($role) {
+            'pastor' => User::pastors(),
+            'admin' => User::admins(),
+            'leader' => User::leaders(),
+            'member' => User::members(),
+            'firstTimer' => User::firstTimers(),
+            'gloryTeam' => User::gloryTeamMembers()->members(),
+            'nonGloryTeam' => User::notGloryTeamMembers()->members(),
+            'all' => User::query(),
         };
+
+        $this->applyMembersFilters($query, $filters);
+
+        return $query->with(['units'])->get();
     }
 
     public function findMember(User $user): User
@@ -357,6 +369,23 @@ class MemberService
             } catch (\Exception $e) {
                 throw $e; // Re-throw to rollback transaction
             }
+        }
+    }
+    public function updateGloryTeamMembers(): int
+    {
+        try {
+            $updated = DB::table('users')
+                ->whereExists(function ($query) {
+                    $query->select(DB::raw(1))
+                        ->from('unit_user')
+                        ->whereColumn('unit_user.user_id', 'users.id');
+                })
+                ->where('is_glory_team_member', false)
+                ->update(['is_glory_team_member' => true]);
+            return $updated;
+        } catch (\Exception $e) {
+
+            throw new \Exception('Failed to update glory team members: ' . $e->getMessage());
         }
     }
 }

@@ -75,8 +75,13 @@ class MemberController extends Controller
     }
     public function getMembersByRole(Request $request, string $role)
     {
+        $filters = $request->only([
+            'date_of_birth',
+            'birth_month',
+            'community',
+        ]);
         try {
-            $members = $this->memberService->getUsersByRole($role);
+            $members = $this->memberService->getUsersByRole($role, $filters);
             return $this->successResponse(UserResource::collection($members), ucfirst($role) . "s retrieved successfully", Response::HTTP_OK);
         } catch (\InvalidArgumentException $e) {
             return $this->errorResponse($e->getMessage(), Response::HTTP_BAD_REQUEST);
@@ -162,6 +167,19 @@ class MemberController extends Controller
         } catch (\Exception $e) {
             return $this->errorResponse(
                 'Assignment failed:' . $e->getMessage(),
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    public function updateGloryTeamMembers(): JsonResponse
+    {
+        try {
+            $result = $this->memberService->updateGloryTeamMembers();
+            return $this->successResponse($result, 'Glory team members have been updated successfully.');
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                'Failed:' . $e->getMessage(),
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }

@@ -31,6 +31,7 @@ class StoreUserRequest extends FormRequest
             'born_again' => ['nullable', 'string', 'max:255'],
             'whatsapp_interest' => ['nullable', 'boolean'],
             'is_student' => ['nullable', 'boolean'],
+            'is_glory_team_member' => ['nullable', 'sometimes', 'boolean'],
             'address' => ['nullable', 'string', 'max:255'],
             'how_did_you_learn' => ['nullable', 'string', 'max:255'],
             'invited_by' => ['nullable', 'string', 'max:255'],

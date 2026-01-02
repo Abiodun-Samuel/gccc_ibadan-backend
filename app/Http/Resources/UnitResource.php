@@ -7,6 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class UnitResource extends JsonResource
 {
+
     /**
      * Transform the resource into an array.
      *
@@ -26,48 +27,77 @@ class UnitResource extends JsonResource
             'assistant_leader_id' => $this->assistant_leader_id,
             'assistant_leader_id_2' => $this->assistant_leader_id_2,
 
-            'leader' => $this->whenLoaded('leader', fn() => [
-                'id' => $this->leader?->id,
-                'full_name' => "{$this->leader?->first_name} {$this->leader?->last_name}",
-                'initials' => generateInitials($this->leader?->first_name, $this->leader?->last_name),
-                'email' => $this->leader?->email,
-                'phone' => $this->leader?->phone_number,
-                'gender' => $this->leader?->gender,
-                'avatar' => $this->leader?->avatar,
-            ]),
+            'leader' => $this->whenLoaded('leader', fn() => $this->formatLeaderData($this->leader)),
+            'assistantLeader' => $this->whenLoaded('assistantLeader', fn() => $this->formatLeaderData($this->assistantLeader)),
+            'assistantLeader2' => $this->whenLoaded('assistantLeader2', fn() => $this->formatLeaderData($this->assistantLeader2)),
 
-            'assistantLeader' => $this->whenLoaded('assistantLeader', fn() =>  [
-                'id' => $this->assistantLeader?->id,
-                'full_name' => "{$this->assistantLeader?->first_name} {$this->assistantLeader?->last_name}",
-                'initials' => generateInitials($this->assistantLeader?->first_name, $this->assistantLeader?->last_name),
-                'email' => $this->assistantLeader?->email,
-                'phone' => $this->assistantLeader?->phone_number,
-                'gender' => $this->assistantLeader?->gender,
-                'avatar' => $this->assistantLeader?->avatar,
-            ]),
-
-            'assistantLeader2' => $this->whenLoaded('assistantLeader2', fn() =>  [
-                'id' => $this->assistantLeader2?->id,
-                'full_name' => "{$this->assistantLeader2?->first_name} {$this->assistantLeader2?->last_name}",
-                'initials' => generateInitials($this->assistantLeader2?->first_name, $this->assistantLeader2?->last_name),
-                'email' => $this->assistantLeader2?->email,
-                'phone' => $this->assistantLeader2?->phone_number,
-                'gender' => $this->assistantLeader2?->gender,
-                'avatar' => $this->assistantLeader2?->avatar,
-            ]),
-
-            'members' => $this->whenLoaded('members'),
-            'members_count' => $this->members_count ?? 0,
+            'members' => $this->whenLoaded('members', fn() => $this->members->map(function ($member) {
+                return $this->formatLeaderData($member);
+            })),
+            'members_count' => $this->getMembersCount(),
 
             'isLeader' => $isLeader,
             'isAssistantLeader' => $isAssistantLeader,
-            'isMember' =>
-            $isLeader ||
-                $isAssistantLeader ||
-                $this->members->contains($user?->id),
+            'isMember' => $this->checkIsMember($user, $isLeader, $isAssistantLeader),
 
             'created_at' => $this->created_at?->toDateTimeString(),
             'updated_at' => $this->updated_at?->toDateTimeString(),
         ];
+    }
+
+    /**
+     * Format leader data
+     */
+    private function formatLeaderData($leader): ?array
+    {
+        if (!$leader) {
+            return null;
+        }
+
+        return [
+            'id' => $leader->id,
+            'first_name' => $leader->first_name,
+            'last_name' => $leader->last_name,
+            'full_name' => "{$leader->first_name} {$leader->last_name}",
+            'initials' => generateInitials($leader->first_name, $leader->last_name),
+            'email' => $leader->email,
+            'phone' => $leader->phone_number,
+            'gender' => $leader->gender,
+            'avatar' => $leader?->avatar,
+        ];
+    }
+
+    /**
+     * Get members count safely
+     */
+    private function getMembersCount(): int
+    {
+        if (isset($this->members_count)) {
+            return $this->members_count;
+        }
+
+        if ($this->relationLoaded('members')) {
+            return $this->members->count();
+        }
+
+        return 0;
+    }
+
+    /**
+     * Check if user is a member
+     */
+    private function checkIsMember($user, bool $isLeader, bool $isAssistantLeader): bool
+    {
+        // If already a leader or assistant leader, they're a member
+        if ($isLeader || $isAssistantLeader) {
+            return true;
+        }
+
+        // Only check members collection if it's loaded
+        if ($this->relationLoaded('members') && $user) {
+            return $this->members->contains($user->id);
+        }
+
+        return false;
     }
 }

@@ -21,7 +21,7 @@ class UserResource extends JsonResource
             'gender' => $this->gender,
             'address' => $this->address,
             'community' => $this->community,
-            'worker' => $this->getWorkerStatus(),
+            'is_glory_team_member' => $this->is_glory_team_member,
             'status' => $this->status,
 
             'date_of_birth' => $this->date_of_birth?->format('Y-m-d'),
@@ -73,15 +73,6 @@ class UserResource extends JsonResource
     private function getAssignedToFullName(): string
     {
         return "{$this->assignedTo->first_name} {$this->assignedTo->last_name}";
-    }
-
-    private function getWorkerStatus(): string
-    {
-        // Check if units relationship is loaded and has records
-        if ($this->relationLoaded('units') && $this->units->isNotEmpty()) {
-            return 'Yes';
-        }
-        return $this->worker ?? 'No';
     }
 
     private function getSocialLinks(): array

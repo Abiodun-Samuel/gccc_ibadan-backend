@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AbsenteeAssignment;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class UserService
@@ -79,5 +80,19 @@ class UserService
 
         // Upload new avatar
         return $this->uploadService->upload($avatarFile, $folder);
+    }
+
+    public function getUsersForBulkEmail(array $userIds): Collection
+    {
+        return User::whereIn('id', $userIds)
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->select([
+                'id',
+                'email',
+                'first_name',
+                'last_name'
+            ])
+            ->get();
     }
 }

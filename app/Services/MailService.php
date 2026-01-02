@@ -223,22 +223,41 @@ class MailService
     }
 
     public function sendBulkEmail(
+        string $templateId,
         array $recipients = [],
         array $ccRecipients = [],
-        array $bccRecipients = []
+        array $bccRecipients = [],
+        bool $useMergeInfo = false
     ): array {
         if (empty($recipients)) {
             throw new \Exception('No recipients provided for bulk email.');
         }
 
         $data = [
-            "mail_template_key" => env('bulk_email_all_users_template_id'),
+            "mail_template_key" => $templateId,
             "from" => [
                 "address" => "admin@gcccibadan.org",
                 "name" => "Admin from GCCC IBADAN"
             ],
-            "to" => $this->buildRecipientsArray($recipients),
+            "to" => []
         ];
+
+        // Build recipients
+        foreach ($recipients as $recipient) {
+            $to = [
+                "email_address" => [
+                    "address" => $recipient['email'],
+                    "name" => $recipient['name'] ?? ''
+                ]
+            ];
+
+            $data['to'][] = $to;
+        }
+
+        // Add merge_info at root level if using personalization (for single recipient)
+        if ($useMergeInfo && count($recipients) === 1 && !empty($recipients[0]['merge_info'])) {
+            $data['merge_info'] = $recipients[0]['merge_info'];
+        }
 
         if (!empty($ccRecipients)) {
             $data['cc'] = $this->buildRecipientsArray($ccRecipients);

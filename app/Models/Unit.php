@@ -27,6 +27,6 @@ class Unit extends Model
     {
         return $this->belongsToMany(User::class, 'unit_user')
             ->withTimestamps()
-            ->select('users.id', 'users.first_name', 'users.last_name', 'users.email', 'users.phone_number', 'users.gender');
+            ->select('users.id', 'users.first_name', 'users.last_name', 'users.email', 'users.phone_number', 'users.gender', 'users.avatar');
     }
 }

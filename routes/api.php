@@ -30,8 +30,7 @@ Route::middleware('guest')->group(function () {
     Route::post('forms', [FormController::class, 'store']);
     Route::get('/services', [ServiceController::class, 'index']);
     Route::post('/client-errors', [ClientErrorLogController::class, 'store']);
-    Route::post('/mail/bulk', [MailController::class, 'sendBulkMail']);
-    Route::post('/picnic/send-venue-email', [MailController::class, 'sendVenueEmail']);
+    // Route::post('/picnic/send-venue-email', [MailController::class, 'sendVenueEmail']);
 });
 
 
@@ -98,12 +97,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('admin')
         ->middleware("role:" . RoleEnum::ADMIN->value)
         ->group(function () {
+            Route::post('/mail/bulk', [MailController::class, 'sendBulkMail']);
+
             Route::get('/picnic/registrations', [PicnicRegistrationController::class, 'adminIndex']);
             // First-timers
             Route::get('/first-timers/annual-report-details', [FirstTimerController::class, 'getAnnualReport']);
             Route::get('first-timers/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics']);
             Route::post('/first-timers/integrated/assign-member-role', [FirstTimerController::class, 'assignMemberRole']);
             // Members
+            Route::post('/members/glory-team/update', [MemberController::class, 'updateGloryTeamMembers']);
             Route::post('/members/assign', [MemberController::class, 'assignMembers']);
             Route::get('/members/role/{role}', [MemberController::class, 'getMembersByRole']);
             // Forms
@@ -139,7 +141,6 @@ Route::middleware('auth:sanctum')->group(function () {
 // -----------------------------------------
 // Public routes
 // -----------------------------------------
-Route::get('/test', [TestController::class, 'index']);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
