@@ -61,7 +61,7 @@ class UnitResource extends JsonResource
             'full_name' => "{$leader->first_name} {$leader->last_name}",
             'initials' => generateInitials($leader->first_name, $leader->last_name),
             'email' => $leader->email,
-            'phone' => $leader->phone_number,
+            'phone_number' => $leader->phone_number,
             'gender' => $leader->gender,
             'avatar' => $leader?->avatar,
         ];
