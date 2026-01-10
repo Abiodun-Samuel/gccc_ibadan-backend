@@ -14,7 +14,6 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\UsherAttendanceController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\TestController;
 use App\Enums\RoleEnum;
 use App\Http\Controllers\ClientErrorLogController;
 use App\Http\Controllers\EventRegistrationController;
@@ -122,19 +121,10 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::post('/mark', [AttendanceController::class, 'adminMarkAttendance']);
                 Route::post('/assign-absentees-to-leaders', [AttendanceController::class, 'assignAbsenteesToLeaders']);
                 Route::get('/monthly-stats', [AttendanceController::class, 'getAdminAttendanceMonthlyStats']);
-                Route::get('/report', [AttendanceController::class, 'getAttendanceReport']);
             });
             Route::post('/media/fetch', [MediaController::class, 'fetchFromYouTube']);
         });
 });
-
-
-
-
-
-
-
-
 
 
 /////////////////////////////////////////////////////////////////////////
@@ -160,6 +150,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/today-service', [ServiceController::class, 'today']);
         Route::get('/core-app-data', [ServiceController::class, 'fetchCoreAppData']);
     });
+    // Usher Attendance
+    Route::apiResource('usher-attendance', UsherAttendanceController::class);
+    Route::prefix('attendance')->group(function () {
+        Route::get('/report', [AttendanceController::class, 'getAttendanceReport']);
+    });
 
 
     // -----------------------------------------
@@ -169,7 +164,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/analytics', [AdminController::class, 'getAdminAnalytics']);
         Route::post('/assign-role', [AdminController::class, 'assignRoleToUsers']);
         Route::post('/sync-permissions', [AdminController::class, 'syncUsersPermissions']);
-        // Usher Attendance
-        Route::apiResource('usher-attendance', UsherAttendanceController::class);
     });
 });
