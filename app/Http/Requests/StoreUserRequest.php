@@ -24,6 +24,7 @@ class StoreUserRequest extends FormRequest
             'avatar' => ['nullable', 'string'],
             'secondary_avatar' => ['sometimes', 'nullable', 'string'],
             'phone_number' => ['required', 'string'],
+            'whatsapp_number' => ['nullable', 'string', 'max:20', 'regex:/^[\d\s\+\-\(\)]+$/'],
             'gender' => ['nullable', Rule::in(['Male', 'Female', 'Other'])],
             'status' => ['nullable', Rule::in(Status::values())],
             'located_in_ibadan' => ['nullable', 'boolean'],

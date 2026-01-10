@@ -24,6 +24,7 @@ class UpdateUserRequest extends FormRequest
             'avatar' => ['nullable', 'string'],
             'secondary_avatar' => ['nullable', 'sometimes', 'string'],
             'phone_number' => ['nullable', 'sometimes', 'string', 'max:20'],
+            'whatsapp_number' => ['nullable', 'string', 'max:20', 'regex:/^[\d\s\+\-\(\)]+$/'],
             'gender' => ['nullable', Rule::in(['Male', 'Female', 'Other'])],
             'status' => ['nullable', Rule::in(Status::values())],
             'located_in_ibadan' => ['nullable', 'boolean'],

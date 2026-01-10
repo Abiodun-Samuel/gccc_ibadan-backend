@@ -18,6 +18,7 @@ class UserResource extends JsonResource
             'initials' => generateInitials($this->first_name, $this->last_name),
             'email' => $this->email,
             'phone_number' => $this->phone_number,
+            'whatsapp_number' => $this->whatsapp_number,
             'gender' => $this->gender,
             'address' => $this->address,
             'community' => $this->community,

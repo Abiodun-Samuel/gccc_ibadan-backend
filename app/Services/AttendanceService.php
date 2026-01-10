@@ -8,6 +8,7 @@ use App\Models\Attendance;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +20,7 @@ class AttendanceService
     /**
      * Get all attendance records with optional filters
      */
-    public function getAllAttendance(array $filters = []): Collection
+    public function getAllAttendance(array $filters = []): LengthAwarePaginator //Collection
     {
         $query = Attendance::query()
             ->with(['user:id,first_name,last_name,email,gender,avatar,phone_number', 'service'])
@@ -37,7 +38,7 @@ class AttendanceService
 
         return $query->latest('attendance_date')
             ->latest('id')
-            ->get();
+            ->paginate(200);
     }
 
     /**

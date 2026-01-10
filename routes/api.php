@@ -101,7 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
             Route::get('/picnic/registrations', [PicnicRegistrationController::class, 'adminIndex']);
             // First-timers
-            Route::get('/first-timers/annual-report-details', [FirstTimerController::class, 'getAnnualReport']);
+            Route::get('/first-timers/report', [FirstTimerController::class, 'getFirstTimerReport']);
             Route::get('first-timers/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics']);
             Route::post('/first-timers/integrated/assign-member-role', [FirstTimerController::class, 'assignMemberRole']);
             // Members
@@ -122,6 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::post('/mark', [AttendanceController::class, 'adminMarkAttendance']);
                 Route::post('/assign-absentees-to-leaders', [AttendanceController::class, 'assignAbsenteesToLeaders']);
                 Route::get('/monthly-stats', [AttendanceController::class, 'getAdminAttendanceMonthlyStats']);
+                Route::get('/report', [AttendanceController::class, 'getAttendanceReport']);
             });
             Route::post('/media/fetch', [MediaController::class, 'fetchFromYouTube']);
         });

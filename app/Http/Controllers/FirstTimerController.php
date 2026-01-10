@@ -211,17 +211,12 @@ class FirstTimerController extends Controller
         }
     }
 
-    public function getAnnualReport(Request $request)
+    public function getFirstTimerReport(Request $request)
     {
-        $request->validate([
-            'year' => 'required|integer|min:2000|max:' . date('Y')
-        ]);
+        $request->validate(['year' => 'required|integer|min:2022']);
 
-        $report = $this->firstTimerService->getAnnualReport($request->year);
+        $report = $this->firstTimerService->getFirstTimerReport($request->year);
 
-        return $this->successResponse(
-            $report,
-            Response::HTTP_OK
-        );
+        return $this->successResponse($report, Response::HTTP_OK);
     }
 }

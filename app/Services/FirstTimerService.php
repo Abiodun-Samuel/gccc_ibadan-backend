@@ -57,7 +57,7 @@ class FirstTimerService
     public function getAllFirstTimers(array $filters = []): Collection
     {
         $query = User::firstTimers()
-            ->with(['followUpStatus', 'assignedTo']);
+            ->with(['followUpStatus', 'assignedTo', 'attendances.service']);
         $this->applyAttendanceFilters($query, $filters);
         return $query
             ->orderBy('date_of_visit', 'desc')
@@ -330,10 +330,7 @@ class FirstTimerService
         return $formatted;
     }
 
-    /**
-     * Get comprehensive annual report for first timers
-     */
-    public function getAnnualReport(int $year): array
+    public function getFirstTimerReport(int $year): array
     {
         $monthNames = $this->getMonthNames();
 
@@ -341,9 +338,16 @@ class FirstTimerService
         $statuses = FollowUpStatus::pluck('title', 'id');
         $integratedStatusId = FollowUpStatus::where('title', FollowUpStatusEnum::INTEGRATED->value)->value('id');
 
-        // Get all first timers in one query with only needed columns
+        // Get all first timers with feedbacks in one optimized query
         $firstTimers = User::firstTimers()
             ->select('id', 'first_name', 'last_name', 'phone_number', 'email', 'follow_up_status_id', 'date_of_visit', 'gender')
+            ->with([
+                'followUpFeedbacks' => function ($query) {
+                    $query->select('id', 'user_id', 'created_by', 'note', 'type', 'service_date', 'created_at', 'updated_at')
+                        ->latest()
+                        ->with(['createdBy:id,first_name,last_name,email,avatar,phone_number,gender']);
+                }
+            ])
             ->whereYear('date_of_visit', $year)
             ->orderBy('date_of_visit', 'desc')
             ->get();
@@ -395,6 +399,30 @@ class FirstTimerService
             $statusId = $firstTimer->follow_up_status_id;
             $statusTitle = $statuses->get($statusId, 'Unknown');
 
+            // Format followup feedbacks
+            $feedbacks = $firstTimer->followUpFeedbacks->map(function ($feedback) {
+                return [
+                    'id' => $feedback->id,
+                    'type' => $feedback->type,
+                    'note' => $feedback->note,
+                    'service_date' => $feedback->service_date?->format('Y-m-d'),
+                    'service_date_human' => $feedback->service_date?->format('M d, Y'),
+                    'created_by' => $feedback->createdBy ? [
+                        'id' => $feedback->createdBy->id,
+                        'full_name' => trim($feedback->createdBy->first_name . ' ' . $feedback->createdBy->last_name),
+                        'initials' => generateInitials($feedback->createdBy->first_name, $feedback->createdBy->last_name),
+                        'email' => $feedback->createdBy->email,
+                        'avatar' => $feedback->createdBy->avatar,
+                        'phone' => $feedback->createdBy->phone_number,
+                        'gender' => $feedback->createdBy->gender,
+                    ] : null,
+                    'created_at' => $feedback->created_at->toIso8601String(),
+                    'created_at_human' => $feedback->created_at->diffForHumans(),
+                    'updated_at' => $feedback->updated_at->toIso8601String(),
+                    'updated_at_human' => $feedback->updated_at->diffForHumans(),
+                ];
+            })->toArray();
+
             // Prepare first timer data once
             $firstTimerData = [
                 'id' => $firstTimer->id,
@@ -405,7 +433,9 @@ class FirstTimerService
                 'email' => $firstTimer->email,
                 'gender' => $firstTimer->gender,
                 'date_of_visit' => $firstTimer->date_of_visit,
-                'status' => $statusTitle
+                'status' => $statusTitle,
+                'followup_feedbacks' => $feedbacks,
+                'feedbacks_count' => count($feedbacks),
             ];
 
             // Update monthly data
@@ -457,7 +487,9 @@ class FirstTimerService
                 'phone_number' => $firstTimer->phone_number,
                 'email' => $firstTimer->email,
                 'gender' => $firstTimer->gender,
-                'date_of_visit' => $firstTimer->date_of_visit
+                'date_of_visit' => $firstTimer->date_of_visit,
+                'followup_feedbacks' => $feedbacks,
+                'feedbacks_count' => count($feedbacks),
             ];
         }
 

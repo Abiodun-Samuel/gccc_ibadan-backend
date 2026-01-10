@@ -52,6 +52,8 @@ class FirstTimerResource extends JsonResource
                 'color' => $this->followUpStatus->color,
             ]),
 
+            'attendances' => AttendanceResource::collection($this->whenLoaded('attendances')),
+
             'assigned_to_member' => $this->whenLoaded('assignedTo', fn() => [
                 'id' => $this->assignedTo->id,
                 'full_name' => "{$this->assignedTo->first_name} {$this->assignedTo->last_name}",
