@@ -22,6 +22,7 @@ class StoreUserRequest extends FormRequest
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'avatar' => ['nullable', 'string'],
+            'anniversaries' => ['nullable'],
             'secondary_avatar' => ['sometimes', 'nullable', 'string'],
             'phone_number' => ['required', 'string'],
             'whatsapp_number' => ['nullable', 'string', 'max:20', 'regex:/^[\d\s\+\-\(\)]+$/'],

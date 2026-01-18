@@ -63,6 +63,7 @@ class User extends Authenticatable
         'email_verified_at',
         'password',
         'attendance_badges',
+        'anniversaries',
     ];
 
     protected array $completionFields = [
@@ -80,7 +81,7 @@ class User extends Authenticatable
         'avatar',
         'address',
         'date_of_birth',
-        'community'
+        'community',
     ];
 
     /*--------------------------------------------------------------
@@ -108,9 +109,22 @@ class User extends Authenticatable
             'whatsapp_interest' => 'boolean',
             'is_glory_team_member' => 'boolean',
             'is_student' => 'boolean',
+            'anniversaries' => 'array',
             'attendance_badges' => AsCollection::class,
         ];
     }
+    /*--------------------------------------------------------------
+    | Anniversary Types
+    --------------------------------------------------------------*/
+    public const ANNIVERSARY_TYPES = [
+        'wedding' => 'Wedding Anniversary',
+        'work' => 'Work Anniversary',
+        'salvation' => 'Salvation Date',
+        'baptism' => 'Baptism Date',
+        'membership' => 'Membership Date',
+        'custom' => 'Custom',
+    ];
+
     public function isProfileCompleted(): bool
     {
         return collect($this->completionFields)
@@ -173,6 +187,45 @@ class User extends Authenticatable
     public function loadFullProfile()
     {
         return $this->load(['units.leader', 'units.assistantLeader', 'units.assistantLeader2', 'units.members', 'roles', 'permissions']);
+    }
+
+    public function scopeAnniversaryThisWeek(Builder $query): Builder
+    {
+        $today = Carbon::now();
+
+        // Build array of month-day combinations for next 7 days
+        $datePatterns = [];
+        for ($i = 0; $i <= 7; $i++) {
+            $datePatterns[] = '-' . $today->copy()->addDays($i)->format('m-d');
+        }
+
+        // Create regex pattern to match any of these dates
+        $pattern = implode('|', array_map('preg_quote', $datePatterns));
+
+        $excludedStatuses = [
+            FollowUpStatus::OPT_OUT_ID,
+            FollowUpStatus::AWAY,
+            FollowUpStatus::VISITING,
+        ];
+
+        return $query->select([
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'avatar',
+            'phone_number',
+            'anniversaries',
+            'follow_up_status_id'
+        ])->whereNotNull('anniversaries')
+            ->where(function ($q) use ($excludedStatuses) {
+                $q->whereNull('follow_up_status_id')
+                    ->orWhereNotIn('follow_up_status_id', $excludedStatuses);
+            })
+            ->whereRaw(
+                "JSON_EXTRACT(anniversaries, '$[*].date') REGEXP ?",
+                [$pattern]
+            );
     }
 
     public function scopeBirthdayThisWeek(Builder $query): Builder

@@ -23,6 +23,7 @@ class UpdateUserRequest extends FormRequest
             'email' => ['nullable', 'sometimes', 'email', 'max:255'],
             'avatar' => ['nullable', 'string'],
             'secondary_avatar' => ['nullable', 'sometimes', 'string'],
+            'anniversaries' => ['nullable'],
             'phone_number' => ['nullable', 'sometimes', 'string', 'max:20'],
             'whatsapp_number' => ['nullable', 'string', 'max:20', 'regex:/^[\d\s\+\-\(\)]+$/'],
             'gender' => ['nullable', Rule::in(['Male', 'Female', 'Other'])],

@@ -21,6 +21,7 @@ class ServiceController extends Controller
     {
         $response = [
             'birthday_list' => User::birthdayThisWeek()->get(), // User::members()->birthdayThisWeek()->get(),
+            'anniversary_list' => User::anniversaryThisWeek()->get(), // User::members()->birthdayThisWeek()->get(),
         ];
         return $this->successResponse($response, 'Retrieved successfully', 200);
     }
