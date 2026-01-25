@@ -1,168 +1,358 @@
 <?php
 
-use App\Http\Controllers\FollowupFeedbackController;
-use App\Http\Controllers\FollowUpStatusController;
-use App\Http\Controllers\MediaController;
-use App\Http\Controllers\UnitController;
-use App\Http\Controllers\UserController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ServiceController;
-use App\Http\Controllers\FormController;
-use App\Http\Controllers\FirstTimerController;
-use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\UsherAttendanceController;
-use App\Http\Controllers\MemberController;
 use App\Http\Controllers\AdminController;
-use App\Enums\RoleEnum;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientErrorLogController;
 use App\Http\Controllers\EventRegistrationController;
 use App\Http\Controllers\EventTransactionController;
+use App\Http\Controllers\FirstTimerController;
+use App\Http\Controllers\FollowupFeedbackController;
+use App\Http\Controllers\FollowUpStatusController;
+use App\Http\Controllers\FormController;
 use App\Http\Controllers\MailController;
+use App\Http\Controllers\MediaController;
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PicnicRegistrationController;
+use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\UnitController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\UsherAttendanceController;
+use App\Enums\RoleEnum;
+use Illuminate\Support\Facades\Route;
 
-// Refactor controllers
-/////////////////////////////////////////////////////////////////////////
-// Guest routes
-Route::middleware('guest')->group(function () {
-    Route::post('first-timers', [FirstTimerController::class, 'store']);
-    Route::post('forms', [FormController::class, 'store']);
-    Route::get('/services', [ServiceController::class, 'index']);
-    Route::post('/client-errors', [ClientErrorLogController::class, 'store']);
-    // Route::post('/picnic/send-venue-email', [MailController::class, 'sendVenueEmail']);
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application.
+| Routes are loaded by the RouteServiceProvider and assigned to the "api"
+| middleware group. Well-structured and organized for maintainability.
+|
+*/
+
+// ============================================================================
+// PUBLIC ROUTES (No Authentication Required)
+// ============================================================================
+
+Route::prefix('auth')->name('auth.')->group(function () {
+    Route::post('/login', [AuthController::class, 'login'])->name('login');
+    Route::post('/register', [AuthController::class, 'register'])->name('register');
+    Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->name('forgot-password');
+    Route::post('/reset-password', [AuthController::class, 'reset'])->name('reset-password');
 });
 
+Route::middleware('guest')->group(function () {
+    // Guest First Timer Registration
+    Route::post('/first-timers', [FirstTimerController::class, 'store'])->name('first-timers.guest.store');
 
-// Authenticated routes
+    // Guest Form Submission
+    Route::post('/forms', [FormController::class, 'store'])->name('forms.guest.store');
+
+    // Public Services
+    Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
+
+    // Client Error Logging
+    Route::post('/client-errors', [ClientErrorLogController::class, 'store'])->name('client-errors.store');
+});
+
+// ============================================================================
+// AUTHENTICATED ROUTES (Require Authentication)
+// ============================================================================
+
 Route::middleware('auth:sanctum')->group(function () {
-    // picnic
-    Route::post('/picnic/register', [PicnicRegistrationController::class, 'register']);
-    Route::get('/picnic/my-registration', [PicnicRegistrationController::class, 'myRegistration']);
 
-    Route::apiResource('event-registrations', EventRegistrationController::class);
-    Route::get('admin/event-registrations', [EventRegistrationController::class, 'adminIndex']);
-    Route::get('registrations/{registration}/transactions', [EventTransactionController::class, 'index']);
-    Route::post('registrations/{registration}/transactions', [EventTransactionController::class, 'store']);
-    Route::patch('transactions/{transaction}', [EventTransactionController::class, 'update']);
+    // ------------------------------------------------------------------------
+    // Authentication & User Profile
+    // ------------------------------------------------------------------------
+    Route::prefix('auth')->name('auth.')->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+        Route::get('/me', [AuthController::class, 'me'])->name('me');
+    });
 
-    // Users (for leaders, admin and members)
-    Route::put('/update-profile', [UserController::class, 'update']);
-    Route::get('/leaders/absentees', [UserController::class, 'getAssignedAbsentees']);
-    Route::get('/members/assigned', [UserController::class, 'getAssignedMembers']);
-    // Follow-up statuses
-    Route::apiResource('follow-up-statuses', FollowUpStatusController::class);
-    // followup feedbacks
-    Route::apiResource('followup-feedbacks', FollowupFeedbackController::class);
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::put('/update', [UserController::class, 'update'])->name('update');
+    });
 
+    // Alternative route for backward compatibility
+    Route::put('/update-profile', [UserController::class, 'update'])->name('user.update-profile');
+
+    // ------------------------------------------------------------------------
+    // Services
+    // ------------------------------------------------------------------------
+    Route::prefix('services')->name('services.')->group(function () {
+        Route::get('/today-service', [ServiceController::class, 'today'])->name('today');
+        Route::get('/core-app-data', [ServiceController::class, 'fetchCoreAppData'])->name('core-app-data');
+    });
+
+    // ------------------------------------------------------------------------
+    // Media
+    // ------------------------------------------------------------------------
+    Route::get('/media', [MediaController::class, 'index'])->name('media.index');
+
+    // ------------------------------------------------------------------------
+    // Follow-Up System
+    // ------------------------------------------------------------------------
+    Route::prefix('follow-up-statuses')->name('follow-up-statuses.')->group(function () {
+        Route::get('/', [FollowUpStatusController::class, 'index'])->name('index');
+        Route::post('/', [FollowUpStatusController::class, 'store'])->name('store');
+        Route::get('/{followUpStatus}', [FollowUpStatusController::class, 'show'])->name('show');
+        Route::put('/{followUpStatus}', [FollowUpStatusController::class, 'update'])->name('update');
+        Route::patch('/{followUpStatus}', [FollowUpStatusController::class, 'update'])->name('patch');
+        Route::delete('/{followUpStatus}', [FollowUpStatusController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('followup-feedbacks')->name('followup-feedbacks.')->group(function () {
+        Route::get('/', [FollowupFeedbackController::class, 'index'])->name('index');
+        Route::post('/', [FollowupFeedbackController::class, 'store'])->name('store');
+        Route::get('/{followupFeedback}', [FollowupFeedbackController::class, 'show'])->name('show');
+        Route::put('/{followupFeedback}', [FollowupFeedbackController::class, 'update'])->name('update');
+        Route::patch('/{followupFeedback}', [FollowupFeedbackController::class, 'update'])->name('patch');
+        Route::delete('/{followupFeedback}', [FollowupFeedbackController::class, 'destroy'])->name('destroy');
+    });
+
+    // Follow-up Feedback Reports
+    Route::prefix('followup-reports')->name('followup-reports.')->group(function () {
+        Route::get('/first-timers', [FollowupFeedbackController::class, 'getFirstTimersWithFollowups'])->name('first-timers');
+        Route::get('/absent-members', [FollowupFeedbackController::class, 'getAbsentMembersWithFollowups'])->name('absent-members');
+        Route::get('/all-members', [FollowupFeedbackController::class, 'getMembersWithFollowups'])->name('all-members');
+    });
+
+    // Backward compatibility routes for followup feedbacks
     Route::get('/first-timers/followup-feedbacks', [FollowupFeedbackController::class, 'getFirstTimersWithFollowups']);
     Route::get('/absent-members/followup-feedbacks', [FollowupFeedbackController::class, 'getAbsentMembersWithFollowups']);
     Route::get('/all-members/followup-feedbacks', [FollowupFeedbackController::class, 'getMembersWithFollowups']);
     Route::get('/members/{user}/followup-feedbacks', [FollowupFeedbackController::class, 'getFollowUpsByMember']);
     Route::get('/first-timers/{firstTimer}/followup-feedbacks', [FollowupFeedbackController::class, 'getFollowUpsByFirstTimer']);
 
-    // First-timers
-    Route::prefix('first-timers')
-        ->controller(FirstTimerController::class)
-        ->name('first-timers.')
-        ->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::get('/assigned', 'getAssignedFirstTimers')->name('assigned');
-            Route::post('/{firstTimer}/welcome-email', 'sendFirstTimerWelcomeEmail')->name('welcome-email');
-            Route::get('/{firstTimer}', 'show')->name('show');
-            Route::put('/{firstTimer}', 'update')->name('update');
-        });
-    //members
-    Route::apiResource('members', MemberController::class);
-    Route::get('members/users/all', [MemberController::class, 'getAllUsers']);
-    Route::post('members/delete', [MemberController::class, 'destroy']);
-    // Attendance
-    Route::prefix('attendance')->group(function () {
-        Route::post('/mark', [AttendanceController::class, 'markAttendance']);
-        Route::get('/history', [AttendanceController::class, 'history']);
-        Route::get('/monthly-stats', [AttendanceController::class, 'getUserAttendanceMonthlyStats']);
+    // ------------------------------------------------------------------------
+    // First Timers Management
+    // ------------------------------------------------------------------------
+    Route::prefix('first-timers')->name('first-timers.')->group(function () {
+        Route::get('/', [FirstTimerController::class, 'index'])->name('index');
+        Route::get('/assigned', [FirstTimerController::class, 'getAssignedFirstTimers'])->name('assigned');
+        Route::get('/{firstTimer}', [FirstTimerController::class, 'show'])->name('show');
+        Route::put('/{firstTimer}', [FirstTimerController::class, 'update'])->name('update');
+        Route::post('/{firstTimer}/welcome-email', [FirstTimerController::class, 'sendFirstTimerWelcomeEmail'])->name('welcome-email');
     });
-    //media
-    Route::get('/media', [MediaController::class, 'index']);
 
+    // ------------------------------------------------------------------------
+    // Members Management
+    // ------------------------------------------------------------------------
+    Route::prefix('members')->name('members.')->group(function () {
+        Route::get('/', [MemberController::class, 'index'])->name('index');
+        Route::post('/', [MemberController::class, 'store'])->name('store');
+        Route::get('/users/all', [MemberController::class, 'getAllUsers'])->name('users.all');
+        Route::get('/{member}', [MemberController::class, 'show'])->name('show');
+        Route::put('/{member}', [MemberController::class, 'update'])->name('update');
+        Route::patch('/{member}', [MemberController::class, 'update'])->name('patch');
+        Route::delete('/{member}', [MemberController::class, 'destroy'])->name('destroy-single');
+        Route::post('/delete', [MemberController::class, 'destroy'])->name('destroy');
+    });
 
-    // leaders-only routes
+    // ------------------------------------------------------------------------
+    // Attendance (User)
+    // ------------------------------------------------------------------------
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::post('/mark', [AttendanceController::class, 'markAttendance'])->name('mark');
+        Route::get('/history', [AttendanceController::class, 'history'])->name('history');
+        Route::get('/monthly-stats', [AttendanceController::class, 'getUserAttendanceMonthlyStats'])->name('monthly-stats');
+        Route::get('/report', [AttendanceController::class, 'getAttendanceReport'])->name('report');
+    });
+
+    // ------------------------------------------------------------------------
+    // Usher Attendance
+    // ------------------------------------------------------------------------
+    Route::prefix('usher-attendance')->name('usher-attendance.')->group(function () {
+        Route::get('/', [UsherAttendanceController::class, 'index'])->name('index');
+        Route::post('/', [UsherAttendanceController::class, 'store'])->name('store');
+        Route::get('/{usherAttendance}', [UsherAttendanceController::class, 'show'])->name('show');
+        Route::put('/{usherAttendance}', [UsherAttendanceController::class, 'update'])->name('update');
+        Route::patch('/{usherAttendance}', [UsherAttendanceController::class, 'update'])->name('patch');
+        Route::delete('/{usherAttendance}', [UsherAttendanceController::class, 'destroy'])->name('destroy');
+    });
+
+    // ------------------------------------------------------------------------
+    // Event Registrations & Transactions
+    // ------------------------------------------------------------------------
+    Route::prefix('event-registrations')->name('event-registrations.')->group(function () {
+        Route::get('/', [EventRegistrationController::class, 'index'])->name('index');
+        Route::post('/', [EventRegistrationController::class, 'store'])->name('store');
+        Route::get('/{eventRegistration}', [EventRegistrationController::class, 'show'])->name('show');
+        Route::put('/{eventRegistration}', [EventRegistrationController::class, 'update'])->name('update');
+        Route::patch('/{eventRegistration}', [EventRegistrationController::class, 'update'])->name('patch');
+        Route::delete('/{eventRegistration}', [EventRegistrationController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('registrations')->name('registrations.')->group(function () {
+        Route::get('/{registration}/transactions', [EventTransactionController::class, 'index'])->name('transactions.index');
+        Route::post('/{registration}/transactions', [EventTransactionController::class, 'store'])->name('transactions.store');
+    });
+
+    Route::patch('/transactions/{transaction}', [EventTransactionController::class, 'update'])->name('transactions.update');
+
+    // ------------------------------------------------------------------------
+    // Picnic Registration
+    // ------------------------------------------------------------------------
+    Route::prefix('picnic')->name('picnic.')->group(function () {
+        Route::post('/register', [PicnicRegistrationController::class, 'register'])->name('register');
+        Route::get('/my-registration', [PicnicRegistrationController::class, 'myRegistration'])->name('my-registration');
+    });
+
+    // ------------------------------------------------------------------------
+    // Messaging System
+    // ------------------------------------------------------------------------
+    Route::prefix('messages')->name('messages.')->group(function () {
+        // Get messages
+        Route::get('/inbox', [MessageController::class, 'inbox'])->name('inbox');
+        Route::get('/sent', [MessageController::class, 'sent'])->name('sent');
+        Route::get('/archived', [MessageController::class, 'archived'])->name('archived');
+        Route::get('/unread-count', [MessageController::class, 'unreadCount'])->name('unread-count');
+
+        // Conversations
+        Route::get('/conversations', [MessageController::class, 'recentConversations'])->name('conversations');
+        Route::get('/conversation/{userId}', [MessageController::class, 'conversation'])->name('conversation');
+
+        // CRUD operations
+        Route::post('/', [MessageController::class, 'store'])->name('store');
+        Route::get('/{messageId}', [MessageController::class, 'show'])->name('show');
+        Route::delete('/{message}', [MessageController::class, 'destroy'])->name('destroy');
+
+        // Reply to message
+        Route::post('/{message}/reply', [MessageController::class, 'reply'])->name('reply');
+
+        // Mark as read/unread
+        Route::patch('/{message}/mark-read', [MessageController::class, 'markAsRead'])->name('mark-read');
+        Route::patch('/{message}/mark-unread', [MessageController::class, 'markAsUnread'])->name('mark-unread');
+        Route::post('/mark-multiple-read', [MessageController::class, 'markMultipleAsRead'])->name('mark-multiple-read');
+
+        // Archive/Unarchive
+        Route::patch('/{message}/archive', [MessageController::class, 'archive'])->name('archive');
+        Route::patch('/{message}/unarchive', [MessageController::class, 'unarchive'])->name('unarchive');
+
+        // Bulk operations
+        Route::post('/bulk-delete', [MessageController::class, 'bulkDelete'])->name('bulk-delete');
+
+        // Search
+        Route::get('/search/query', [MessageController::class, 'search'])->name('search');
+    });
+
+    // ========================================================================
+    // LEADER ROUTES (Admin & Leader Access)
+    // ========================================================================
     Route::prefix('leaders')
+        ->name('leaders.')
         ->middleware(['role:' . RoleEnum::ADMIN->value . '|' . RoleEnum::LEADER->value])
         ->group(function () {
-            Route::apiResource('units', UnitController::class);
+            // Units Management
+            Route::prefix('units')->name('units.')->group(function () {
+                Route::get('/', [UnitController::class, 'index'])->name('index');
+                Route::post('/', [UnitController::class, 'store'])->name('store');
+                Route::get('/{unit}', [UnitController::class, 'show'])->name('show');
+                Route::put('/{unit}', [UnitController::class, 'update'])->name('update');
+                Route::patch('/{unit}', [UnitController::class, 'update'])->name('patch');
+                Route::delete('/{unit}', [UnitController::class, 'destroy'])->name('destroy');
+            });
+
+            // Leader-specific User Routes
+            Route::get('/absentees', [UserController::class, 'getAssignedAbsentees'])->name('absentees');
+            Route::get('/assigned-members', [UserController::class, 'getAssignedMembers'])->name('assigned-members');
         });
 
+    // Backward compatibility for leader routes
+    Route::get('/leaders/absentees', [UserController::class, 'getAssignedAbsentees']);
+    Route::get('/members/assigned', [UserController::class, 'getAssignedMembers']);
 
+    // ========================================================================
+    // ADMIN ROUTES (Admin-Only Access)
+    // ========================================================================
     Route::prefix('admin')
-        ->middleware("role:" . RoleEnum::ADMIN->value)
+        ->name('admin.')
+        ->middleware(['role:' . RoleEnum::ADMIN->value])
         ->group(function () {
-            Route::post('/mail/bulk', [MailController::class, 'sendBulkMail']);
 
-            Route::get('/picnic/registrations', [PicnicRegistrationController::class, 'adminIndex']);
-            // First-timers
-            Route::get('/first-timers/report', [FirstTimerController::class, 'getFirstTimerReport']);
-            Route::get('first-timers/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics']);
-            Route::post('/first-timers/integrated/assign-member-role', [FirstTimerController::class, 'assignMemberRole']);
-            // Members
-            Route::post('/members/glory-team/update', [MemberController::class, 'updateGloryTeamMembers']);
-            Route::post('/members/assign', [MemberController::class, 'assignMembers']);
-            Route::get('/members/role/{role}', [MemberController::class, 'getMembersByRole']);
-            // Forms
-            Route::prefix('forms')->controller(FormController::class)->group(function () {
-                Route::get('/', 'index');
-                Route::delete('/', 'destroy');
-                Route::patch('/completed', 'markAsCompleted');
+            // --------------------------------------------------------------------
+            // Admin Dashboard & Analytics
+            // --------------------------------------------------------------------
+            Route::get('/analytics', [AdminController::class, 'getAdminAnalytics'])->name('analytics');
+
+            // --------------------------------------------------------------------
+            // Admin User Management
+            // --------------------------------------------------------------------
+            Route::prefix('users')->name('users.')->group(function () {
+                Route::post('/assign-role', [AdminController::class, 'assignRoleToUsers'])->name('assign-role');
+                Route::post('/sync-permissions', [AdminController::class, 'syncUsersPermissions'])->name('sync-permissions');
             });
-            // attendance
-            Route::prefix('attendance')->group(function () {
-                Route::get('/', [AttendanceController::class, 'index']);
-                Route::post('/mark-absentees', [AttendanceController::class, 'markAbsentees']);
-                Route::post('/badges/award', [AttendanceController::class, 'awardMonthlyBadges']);
-                Route::post('/mark', [AttendanceController::class, 'adminMarkAttendance']);
-                Route::post('/assign-absentees-to-leaders', [AttendanceController::class, 'assignAbsenteesToLeaders']);
-                Route::get('/monthly-stats', [AttendanceController::class, 'getAdminAttendanceMonthlyStats']);
+
+            // Backward compatibility
+            Route::post('/assign-role', [AdminController::class, 'assignRoleToUsers']);
+            Route::post('/sync-permissions', [AdminController::class, 'syncUsersPermissions']);
+
+            // --------------------------------------------------------------------
+            // Admin First Timers
+            // --------------------------------------------------------------------
+            Route::prefix('first-timers')->name('first-timers.')->group(function () {
+                Route::get('/report', [FirstTimerController::class, 'getFirstTimerReport'])->name('report');
+                Route::get('/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics'])->name('analytics');
+                Route::post('/integrated/assign-member-role', [FirstTimerController::class, 'assignMemberRole'])->name('assign-member-role');
             });
-            Route::post('/media/fetch', [MediaController::class, 'fetchFromYouTube']);
+
+            // --------------------------------------------------------------------
+            // Admin Members
+            // --------------------------------------------------------------------
+            Route::prefix('members')->name('members.')->group(function () {
+                Route::get('/role/{role}', [MemberController::class, 'getMembersByRole'])->name('by-role');
+                Route::post('/assign', [MemberController::class, 'assignMembers'])->name('assign');
+                Route::post('/glory-team/update', [MemberController::class, 'updateGloryTeamMembers'])->name('glory-team.update');
+            });
+
+            // --------------------------------------------------------------------
+            // Admin Forms
+            // --------------------------------------------------------------------
+            Route::prefix('forms')->name('forms.')->group(function () {
+                Route::get('/', [FormController::class, 'index'])->name('index');
+                Route::delete('/', [FormController::class, 'destroy'])->name('destroy');
+                Route::patch('/completed', [FormController::class, 'markAsCompleted'])->name('mark-completed');
+            });
+
+            // --------------------------------------------------------------------
+            // Admin Attendance
+            // --------------------------------------------------------------------
+            Route::prefix('attendance')->name('attendance.')->group(function () {
+                Route::get('/', [AttendanceController::class, 'index'])->name('index');
+                Route::post('/mark', [AttendanceController::class, 'adminMarkAttendance'])->name('mark');
+                Route::post('/mark-absentees', [AttendanceController::class, 'markAbsentees'])->name('mark-absentees');
+                Route::post('/assign-absentees-to-leaders', [AttendanceController::class, 'assignAbsenteesToLeaders'])->name('assign-absentees');
+                Route::post('/badges/award', [AttendanceController::class, 'awardMonthlyBadges'])->name('badges.award');
+                Route::get('/monthly-stats', [AttendanceController::class, 'getAdminAttendanceMonthlyStats'])->name('monthly-stats');
+            });
+
+            // --------------------------------------------------------------------
+            // Admin Media
+            // --------------------------------------------------------------------
+            Route::prefix('media')->name('media.')->group(function () {
+                Route::post('/fetch', [MediaController::class, 'fetchFromYouTube'])->name('fetch-youtube');
+            });
+
+            // --------------------------------------------------------------------
+            // Admin Mail
+            // --------------------------------------------------------------------
+            Route::prefix('mail')->name('mail.')->group(function () {
+                Route::post('/bulk', [MailController::class, 'sendBulkMail'])->name('bulk');
+            });
+
+            // --------------------------------------------------------------------
+            // Admin Event Registrations
+            // --------------------------------------------------------------------
+            Route::get('/event-registrations', [EventRegistrationController::class, 'adminIndex'])->name('event-registrations.index');
+
+            // --------------------------------------------------------------------
+            // Admin Picnic Registrations
+            // --------------------------------------------------------------------
+            Route::prefix('picnic')->name('picnic.')->group(function () {
+                Route::get('/registrations', [PicnicRegistrationController::class, 'adminIndex'])->name('registrations');
+            });
         });
-});
-
-
-/////////////////////////////////////////////////////////////////////////
-
-// -----------------------------------------
-// Public routes
-// -----------------------------------------
-
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/forgot-password', [AuthController::class, 'sendResetLink']);
-Route::post('/reset-password', [AuthController::class, 'reset']);
-
-// -----------------------------------------
-// Authenticated routes
-// -----------------------------------------
-Route::middleware('auth:sanctum')->group(function () {
-    // Auth
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/me', [AuthController::class, 'me']);
-    // Service
-    Route::prefix('services')->group(function () {
-        Route::get('/today-service', [ServiceController::class, 'today']);
-        Route::get('/core-app-data', [ServiceController::class, 'fetchCoreAppData']);
-    });
-    // Usher Attendance
-    Route::apiResource('usher-attendance', UsherAttendanceController::class);
-    Route::prefix('attendance')->group(function () {
-        Route::get('/report', [AttendanceController::class, 'getAttendanceReport']);
-    });
-
-
-    // -----------------------------------------
-    // Admin-only
-    // -----------------------------------------
-    Route::middleware(['role:' . RoleEnum::ADMIN->value])->prefix('admin')->group(function () {
-        Route::get('/analytics', [AdminController::class, 'getAdminAnalytics']);
-        Route::post('/assign-role', [AdminController::class, 'assignRoleToUsers']);
-        Route::post('/sync-permissions', [AdminController::class, 'syncUsersPermissions']);
-    });
 });

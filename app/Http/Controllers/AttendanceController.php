@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use App\Models\UsherAttendance;
 use App\Models\FollowUpStatus;
 use App\Enums\RoleEnum;
+use App\Http\Resources\UserResource;
 use App\Models\AbsenteeAssignment;
 use App\Models\Attendance;
 use App\Models\FollowupFeedback;
@@ -42,17 +43,33 @@ class AttendanceController extends Controller
             'Attendance records retrieved successfully'
         );
     }
+    protected function getAttendanceMessage($attendance): string
+    {
+        if ($attendance->status !== 'present') {
+            return 'Attendance marked successfully.';
+        }
 
+        $stars = $attendance->service->reward_stars ?? 5;
+
+        return sprintf(
+            'Congratulations! You have earned %d %s for attending %s. Keep up the great work! ⭐',
+            $stars,
+            $stars === 1 ? 'star' : 'stars',
+            $attendance->service->name
+        );
+    }
     public function markAttendance(MarkAttendanceRequest $request): JsonResponse
     {
+        $user =  $request->user();
         $attendance = $this->attendanceService->markUserAttendance(
-            $request->user(),
+            $user,
             $request->validated()
         );
+        $message = $this->getAttendanceMessage($attendance);
 
         return $this->successResponse(
-            new AttendanceResource($attendance),
-            'Attendance marked successfully',
+            ['user' => UserResource::make($user->loadFullProfile())],  // new AttendanceResource($attendance),
+            $message,
             Response::HTTP_CREATED
         );
     }

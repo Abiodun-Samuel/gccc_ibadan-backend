@@ -71,6 +71,42 @@ class MailService
         ], $recipients);
     }
 
+    public function sendNewMessageNotificationEmail(
+        array $recipients,
+        string $senderName,
+        array $ccRecipients = [],
+        array $bccRecipients = []
+    ): array {
+        if (empty($recipients)) {
+            throw new \Exception('No recipients provided for message notification email.');
+        }
+
+        $firstRecipient = $recipients[0];
+
+        $data = [
+            "mail_template_key" => env('MESSAGE_NOTIFICATION_TEMPLATE_ID'),
+            "from" => [
+                "address" => "admin@gcccibadan.org",
+                "name" => "GCCC Ibadan"
+            ],
+            "to" => $this->buildRecipientsArray($recipients),
+            "merge_info" => [
+                "name" => $firstRecipient['name'] ?? '',
+                "sender_name" => $senderName,
+            ]
+        ];
+
+        if (!empty($ccRecipients)) {
+            $data['cc'] = $this->buildRecipientsArray($ccRecipients);
+        }
+
+        if (!empty($bccRecipients)) {
+            $data['bcc'] = $this->buildRecipientsArray($bccRecipients);
+        }
+
+        return $this->sendEmail($data);
+    }
+
     public function sendAbsentMemberAssignmentEmail(
         array $recipients = [],
         array $ccRecipients = [],

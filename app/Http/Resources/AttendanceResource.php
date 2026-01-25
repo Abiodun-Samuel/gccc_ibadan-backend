@@ -30,10 +30,11 @@ class AttendanceResource extends JsonResource
             'service' => $this->whenLoaded('service', fn() => [
                 'id' => $this->service->id,
                 'name' => $this->service?->name,
+                'reward_stars' => $this->service?->reward_stars,
                 'day_of_week' => $this->service?->day_of_week,
                 'description' => $this->service?->description,
                 'start_time' => $this->service?->start_time,
-            ]) ,
+            ]),
             'created_at' => $this->created_at,
         ];
     }

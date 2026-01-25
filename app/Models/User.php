@@ -25,6 +25,7 @@ class User extends Authenticatable
         'follow_up_status_id',
         'first_name',
         'last_name',
+        'total_stars',
         'email',
         'avatar',
         'secondary_avatar',
@@ -189,51 +190,10 @@ class User extends Authenticatable
         return $this->load(['units.leader', 'units.assistantLeader', 'units.assistantLeader2', 'units.members', 'roles', 'permissions']);
     }
 
-    public function scopeAnniversaryThisWeek(Builder $query): Builder
+    public function scopeBirthdaysThisMonth(Builder $query): Builder
     {
-        $today = Carbon::now();
+        $currentMonth = Carbon::now()->format('m');
 
-        // Build array of month-day combinations for next 7 days
-        $datePatterns = [];
-        for ($i = 0; $i <= 7; $i++) {
-            $datePatterns[] = '-' . $today->copy()->addDays($i)->format('m-d');
-        }
-
-        // Create regex pattern to match any of these dates
-        $pattern = implode('|', array_map('preg_quote', $datePatterns));
-
-        $excludedStatuses = [
-            FollowUpStatus::OPT_OUT_ID,
-            FollowUpStatus::AWAY,
-            FollowUpStatus::VISITING,
-        ];
-
-        return $query->select([
-            'id',
-            'email',
-            'first_name',
-            'last_name',
-            'avatar',
-            'phone_number',
-            'anniversaries',
-            'follow_up_status_id'
-        ])->whereNotNull('anniversaries')
-            ->where(function ($q) use ($excludedStatuses) {
-                $q->whereNull('follow_up_status_id')
-                    ->orWhereNotIn('follow_up_status_id', $excludedStatuses);
-            })
-            ->whereRaw(
-                "JSON_EXTRACT(anniversaries, '$[*].date') REGEXP ?",
-                [$pattern]
-            );
-    }
-
-    public function scopeBirthdayThisWeek(Builder $query): Builder
-    {
-        $today = Carbon::now();
-        $nextSevenDays = Carbon::now()->addDays(7);
-
-        // Statuses to exclude from birthday notifications
         $excludedStatuses = [
             FollowUpStatus::OPT_OUT_ID,
             FollowUpStatus::AWAY,
@@ -252,32 +212,41 @@ class User extends Authenticatable
         ])
             ->whereNotNull('date_of_birth')
             ->where(function ($q) use ($excludedStatuses) {
-                // Include users with no status OR users with status not in excluded list
                 $q->whereNull('follow_up_status_id')
                     ->orWhereNotIn('follow_up_status_id', $excludedStatuses);
             })
-            ->where(function ($q) use ($today, $nextSevenDays) {
-                if ($today->month === $nextSevenDays->month) {
-                    // Birthdays within the same month
-                    $q->whereRaw(
-                        "DATE_FORMAT(date_of_birth, '%m-%d') BETWEEN ? AND ?",
-                        [
-                            $today->format('m-d'),
-                            $nextSevenDays->format('m-d')
-                        ]
-                    );
-                } else {
-                    // Handle month-end edge case (e.g., Dec 28 - Jan 4)
-                    $q->whereRaw(
-                        "DATE_FORMAT(date_of_birth, '%m-%d') >= ?",
-                        [$today->format('m-d')]
-                    )->orWhereRaw(
-                        "DATE_FORMAT(date_of_birth, '%m-%d') <= ?",
-                        [$nextSevenDays->format('m-d')]
-                    );
-                }
+            ->whereRaw("MONTH(date_of_birth) = ?", [$currentMonth])
+            ->orderByRaw("DAY(date_of_birth) ASC");
+    }
+
+    public function scopeAnniversariesThisMonth(Builder $query): Builder
+    {
+        $currentMonth = Carbon::now()->format('m');
+
+        $excludedStatuses = [
+            FollowUpStatus::OPT_OUT_ID,
+            FollowUpStatus::AWAY,
+            FollowUpStatus::VISITING,
+        ];
+
+        return $query->select([
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'avatar',
+            'phone_number',
+            'anniversaries',
+            'follow_up_status_id'
+        ])
+            ->whereNotNull('anniversaries')
+            ->where('anniversaries', '!=', '[]')      // Exclude empty arrays
+            ->where('anniversaries', '!=', 'null')    // Exclude null string
+            ->where(function ($q) use ($excludedStatuses) {
+                $q->whereNull('follow_up_status_id')
+                    ->orWhereNotIn('follow_up_status_id', $excludedStatuses);
             })
-            ->orderByRaw("DATE_FORMAT(date_of_birth, '%m-%d')");
+            ->whereRaw("anniversaries LIKE ?", ['%-' . $currentMonth . '-%']);
     }
     /*--------------------------------------------------------------
     | Relationships → Hierarchical / User-based

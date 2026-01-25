@@ -103,14 +103,18 @@ class AttendanceService
     {
         $service = Service::findOrFail($data['service_id']);
         $attendanceDate = $this->getServiceDate($service);
-
-        return $this->upsertAttendance([
+        $isNowPresent = $data['status'] === 'present';
+        if ($isNowPresent) {
+            $user->increment('total_stars', $service->reward_stars);
+        }
+        $attendance = $this->upsertAttendance([
             'user_id' => $user->id,
             'service_id' => $service->id,
             'attendance_date' => $attendanceDate,
             'status' => $data['status'],
             'mode' => $data['status'] === 'present' ? $data['mode'] : null,
         ]);
+        return $attendance->load(['service', 'user']);
     }
 
     /**
@@ -154,8 +158,7 @@ class AttendanceService
                 'mode' => $data['mode'],
             ]
         );
-
-        return $attendance->load(['user:id,first_name,last_name,email,gender,avatar,phone_number', 'service']);
+        return $attendance;
     }
 
     /**

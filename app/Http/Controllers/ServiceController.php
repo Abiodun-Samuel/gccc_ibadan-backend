@@ -20,8 +20,8 @@ class ServiceController extends Controller
     public function fetchCoreAppData()
     {
         $response = [
-            'birthday_list' => User::birthdayThisWeek()->get(), // User::members()->birthdayThisWeek()->get(),
-            'anniversary_list' => User::anniversaryThisWeek()->get(), // User::members()->birthdayThisWeek()->get(),
+            'birthday_list' => User::birthdaysThisMonth()->get(),
+            'anniversary_list' => User::anniversariesThisMonth()->get(),
         ];
         return $this->successResponse($response, 'Retrieved successfully', 200);
     }
@@ -108,16 +108,17 @@ class ServiceController extends Controller
         $diffInSeconds = $now->diffInSeconds($serviceDateTime, false);
         $diffInHours = $now->diffInHours($serviceDateTime, false);
 
-        if ($diffInHours <= -6) {
+        if ($diffInHours <= -9) {
             return ['status' => 'ended'];
         }
 
-        if ($diffInSeconds <= 0 && $diffInHours > -6) {
+        if ($diffInSeconds <= 0 && $diffInHours > -9) {
             return ['status' => 'ongoing'];
         }
+
         $secondsRemaining = (int) abs($diffInSeconds);
         return [
-            'status' => 'upcoming',
+            'status' => 'upcoming', //
             'seconds_until_start' => $secondsRemaining,
         ];
     }
