@@ -43,10 +43,8 @@ class UploadService
                 throw new InvalidArgumentException('Upload failed: No URL returned from Cloudinary.');
             }
             return $uploadResult['secure_url'];
-
         } catch (\Cloudinary\Api\Exception\ApiError $e) {
             throw new InvalidArgumentException('File upload failed: ' . $e->getMessage());
-
         } catch (InvalidArgumentException $e) {
             throw $e;
         } catch (Exception $e) {

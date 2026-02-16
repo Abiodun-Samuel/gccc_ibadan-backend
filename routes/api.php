@@ -4,8 +4,6 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientErrorLogController;
-use App\Http\Controllers\EventRegistrationController;
-use App\Http\Controllers\EventTransactionController;
 use App\Http\Controllers\FirstTimerController;
 use App\Http\Controllers\FollowupFeedbackController;
 use App\Http\Controllers\FollowUpStatusController;
@@ -14,23 +12,18 @@ use App\Http\Controllers\MailController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MessageController;
-use App\Http\Controllers\PicnicRegistrationController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UsherAttendanceController;
 use App\Enums\RoleEnum;
+use App\Http\Controllers\EventController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application.
-| Routes are loaded by the RouteServiceProvider and assigned to the "api"
-| middleware group. Well-structured and organized for maintainability.
-|
 */
 
 // ============================================================================
@@ -45,15 +38,17 @@ Route::prefix('auth')->name('auth.')->group(function () {
 });
 
 Route::middleware('guest')->group(function () {
+    Route::prefix('events')->group(function () {
+        Route::get('/', [EventController::class, 'index']);
+        Route::get('/upcoming', [EventController::class, 'upcoming']);
+        Route::get('/{id}', [EventController::class, 'show']);
+    });    // Get si
     // Guest First Timer Registration
     Route::post('/first-timers', [FirstTimerController::class, 'store'])->name('first-timers.guest.store');
-
     // Guest Form Submission
     Route::post('/forms', [FormController::class, 'store'])->name('forms.guest.store');
-
     // Public Services
     Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
-
     // Client Error Logging
     Route::post('/client-errors', [ClientErrorLogController::class, 'store'])->name('client-errors.store');
 });
@@ -63,7 +58,6 @@ Route::middleware('guest')->group(function () {
 // ============================================================================
 
 Route::middleware('auth:sanctum')->group(function () {
-
     // ------------------------------------------------------------------------
     // Authentication & User Profile
     // ------------------------------------------------------------------------
@@ -174,32 +168,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{usherAttendance}', [UsherAttendanceController::class, 'destroy'])->name('destroy');
     });
 
-    // ------------------------------------------------------------------------
-    // Event Registrations & Transactions
-    // ------------------------------------------------------------------------
-    Route::prefix('event-registrations')->name('event-registrations.')->group(function () {
-        Route::get('/', [EventRegistrationController::class, 'index'])->name('index');
-        Route::post('/', [EventRegistrationController::class, 'store'])->name('store');
-        Route::get('/{eventRegistration}', [EventRegistrationController::class, 'show'])->name('show');
-        Route::put('/{eventRegistration}', [EventRegistrationController::class, 'update'])->name('update');
-        Route::patch('/{eventRegistration}', [EventRegistrationController::class, 'update'])->name('patch');
-        Route::delete('/{eventRegistration}', [EventRegistrationController::class, 'destroy'])->name('destroy');
-    });
-
-    Route::prefix('registrations')->name('registrations.')->group(function () {
-        Route::get('/{registration}/transactions', [EventTransactionController::class, 'index'])->name('transactions.index');
-        Route::post('/{registration}/transactions', [EventTransactionController::class, 'store'])->name('transactions.store');
-    });
-
-    Route::patch('/transactions/{transaction}', [EventTransactionController::class, 'update'])->name('transactions.update');
-
-    // ------------------------------------------------------------------------
-    // Picnic Registration
-    // ------------------------------------------------------------------------
-    Route::prefix('picnic')->name('picnic.')->group(function () {
-        Route::post('/register', [PicnicRegistrationController::class, 'register'])->name('register');
-        Route::get('/my-registration', [PicnicRegistrationController::class, 'myRegistration'])->name('my-registration');
-    });
 
     // ------------------------------------------------------------------------
     // Messaging System
@@ -336,23 +304,18 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::post('/fetch', [MediaController::class, 'fetchFromYouTube'])->name('fetch-youtube');
             });
 
+            Route::prefix('events')->group(function () {
+                Route::post('/', [EventController::class, 'store']);          // Create event
+                Route::put('/{id}', [EventController::class, 'update']);      // Update event
+                Route::patch('/{id}', [EventController::class, 'update']);    // Update event (PATCH)
+                Route::delete('/{id}', [EventController::class, 'destroy']);  // Delete event
+            });
+
             // --------------------------------------------------------------------
             // Admin Mail
             // --------------------------------------------------------------------
             Route::prefix('mail')->name('mail.')->group(function () {
                 Route::post('/bulk', [MailController::class, 'sendBulkMail'])->name('bulk');
-            });
-
-            // --------------------------------------------------------------------
-            // Admin Event Registrations
-            // --------------------------------------------------------------------
-            Route::get('/event-registrations', [EventRegistrationController::class, 'adminIndex'])->name('event-registrations.index');
-
-            // --------------------------------------------------------------------
-            // Admin Picnic Registrations
-            // --------------------------------------------------------------------
-            Route::prefix('picnic')->name('picnic.')->group(function () {
-                Route::get('/registrations', [PicnicRegistrationController::class, 'adminIndex'])->name('registrations');
             });
         });
 });
