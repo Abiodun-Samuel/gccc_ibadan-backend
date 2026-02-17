@@ -14,7 +14,7 @@ class MailController extends Controller
 {
     protected $mailService;
     protected $userService;
-    private const BATCH_SIZE = 100;
+    private const BATCH_SIZE = 50;
 
     public function __construct(MailService $mailService, UserService $userService)
     {
@@ -117,5 +117,32 @@ class MailController extends Controller
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
+    }
+    /**
+     * Compose an appropriate message for bulk email results
+     *
+     * @param int $totalUsers
+     * @param int $successCount
+     * @param int $failureCount
+     * @return string
+     */
+    private function composeBulkEmailMessage(
+        int $totalUsers,
+        int $successCount,
+        int $failureCount
+    ): string {
+        // All emails sent successfully
+        if ($failureCount === 0) {
+            return "Successfully sent emails to all {$successCount} recipients.";
+        }
+
+        // All emails failed
+        if ($successCount === 0) {
+            return "Failed to send emails to all {$totalUsers} recipients. Please check the email addresses and try again.";
+        }
+
+        // Partial success
+        $successRate = round(($successCount / $totalUsers) * 100, 1);
+        return "Sent {$successCount} out of {$totalUsers} emails ({$successRate}% success rate). {$failureCount} email(s) failed to send.";
     }
 }
