@@ -335,27 +335,23 @@ class MailService
         return $this->sendEmail($data);
     }
 
-    public function sendPicnicVenueEmail(
-        array $recipients = [],
+    public function sendTemplateBatch(
+        string $templateId,
+        array $recipients,
         array $ccRecipients = [],
         array $bccRecipients = []
     ): array {
         if (empty($recipients)) {
-            throw new \Exception('No recipients provided for picnic venue email.');
+            throw new \InvalidArgumentException('Recipients array cannot be empty.');
         }
 
-        $firstRecipient = $recipients[0];
-
         $data = [
-            "mail_template_key" => env('PICNIC_VENUE_EMAIL_TEMPLATE_ID'),
-            "from" => [
-                "address" => "admin@gcccibadan.org",
-                "name" => "Glory Centre Community Church"
+            'mail_template_key' => $templateId,
+            'from' => [
+                'address' => 'admin@gcccibadan.org',
+                'name'    => 'GCCC IBADAN',
             ],
-            "to" => $this->buildRecipientsArray($recipients),
-            "merge_info" => [
-                "name" => $firstRecipient['name'] ?? '',
-            ]
+            'to' => $this->buildRecipientsArray($recipients),
         ];
 
         if (!empty($ccRecipients)) {

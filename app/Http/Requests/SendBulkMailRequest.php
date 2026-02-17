@@ -18,16 +18,15 @@ class SendBulkMailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'template_id' => ['required', 'string'],
-            'user_ids' => ['required', 'array', 'min:1'],
-            'user_ids.*' => ['required', 'integer', 'exists:users,id'],
-            'use_merge_info' => ['sometimes', 'boolean'],
+            'user_ids'      => ['required', 'array', 'min:1'],
+            'user_ids.*'    => ['required', 'integer', 'exists:users,id'],
+            'template_id'   => ['required', 'string'],
             'cc_recipients' => ['sometimes', 'array'],
-            'cc_recipients.*.email' => ['required', 'email'],
-            'cc_recipients.*.name' => ['sometimes', 'string'],
+            'cc_recipients.*.email' => ['required_with:cc_recipients', 'email'],
+            'cc_recipients.*.name'  => ['sometimes', 'string'],
             'bcc_recipients' => ['sometimes', 'array'],
-            'bcc_recipients.*.email' => ['required', 'email'],
-            'bcc_recipients.*.name' => ['sometimes', 'string'],
+            'bcc_recipients.*.email' => ['required_with:bcc_recipients', 'email'],
+            'bcc_recipients.*.name'  => ['sometimes', 'string'],
         ];
     }
 

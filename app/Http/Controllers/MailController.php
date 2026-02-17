@@ -14,6 +14,7 @@ class MailController extends Controller
 {
     protected $mailService;
     protected $userService;
+    private const BATCH_SIZE = 100;
 
     public function __construct(MailService $mailService, UserService $userService)
     {
@@ -26,7 +27,6 @@ class MailController extends Controller
         try {
             $validated = $request->validated();
 
-            // Get users with their email and names
             $users = $this->userService->getUsersForBulkEmail($validated['user_ids']);
 
             if ($users->isEmpty()) {
@@ -36,183 +36,86 @@ class MailController extends Controller
                 );
             }
 
-            // Send emails individually
-            $successCount = 0;
-            $failureCount = 0;
-            $failures = [];
+            // Map users to the recipient shape ZeptoMail expects.
+            $recipients = $users->map(fn($user) => [
+                'email' => $user->email,
+                'name'  => trim("{$user->first_name} {$user->last_name}"),
+            ])->values()->all();
 
-            foreach ($users as $user) {
+            $totalUsers    = count($recipients);
+            $batches       = array_chunk($recipients, self::BATCH_SIZE);
+            $batchCount    = count($batches);
+            $successCount  = 0;
+            $failureCount  = 0;
+            $failedBatches = [];
+
+            foreach ($batches as $batchIndex => $batch) {
                 try {
-                    $recipient = [
-                        'email' => $user->email,
-                        'name' => $user->first_name,
-                    ];
-
-                    // Add merge info if requested
-                    if ($validated['use_merge_info'] ?? false) {
-                        $recipient['merge_info'] = [
-                            'name' => $user->first_name,
-                        ];
-                    }
-
-                    // Send individual email
-                    $this->mailService->sendBulkEmail(
+                    $this->mailService->sendTemplateBatch(
                         templateId: $validated['template_id'],
-                        recipients: [$recipient],
-                        ccRecipients: $validated['cc_recipients'] ?? [],
+                        recipients: $batch,
+                        ccRecipients: $validated['cc_recipients']  ?? [],
                         bccRecipients: $validated['bcc_recipients'] ?? [],
-                        useMergeInfo: $validated['use_merge_info'] ?? false
                     );
 
-                    $successCount++;
+                    $successCount += count($batch);
 
-                    // Small delay to avoid rate limiting
-                    usleep(100000); // 0.1 seconds
-
+                    Log::info('Bulk email batch sent', [
+                        'template_id' => $validated['template_id'],
+                        'batch'       => ($batchIndex + 1) . "/{$batchCount}",
+                        'recipients'  => count($batch),
+                    ]);
                 } catch (\Exception $e) {
-                    $failureCount++;
-                    $failures[] = [
-                        'user_id' => $user->id,
-                        'email' => $user->email,
-                        'name' => $user->first_name . ' ' . $user->last_name,
-                        'error' => $e->getMessage()
+                    $failureCount += count($batch);
+
+                    $failedBatches[] = [
+                        'batch'      => $batchIndex + 1,
+                        'recipients' => count($batch),
+                        'emails'     => array_column($batch, 'email'),
+                        'error'      => $e->getMessage(),
                     ];
 
-                    Log::error('Failed to send bulk email to user', [
-                        'user_id' => $user->id,
-                        'email' => $user->email,
-                        'error' => $e->getMessage()
+                    Log::error('Bulk email batch failed', [
+                        'template_id' => $validated['template_id'],
+                        'batch'       => ($batchIndex + 1) . "/{$batchCount}",
+                        'recipients'  => count($batch),
+                        'error'       => $e->getMessage(),
                     ]);
                 }
             }
 
-            $totalUsers = $users->count();
             $isFullSuccess = $failureCount === 0;
 
             Log::info('Bulk email sending completed', [
-                'template_id' => $validated['template_id'],
-                'total_users' => $totalUsers,
+                'template_id'   => $validated['template_id'],
+                'total_users'   => $totalUsers,
+                'batches_sent'  => $batchCount,
                 'success_count' => $successCount,
-                'failure_count' => $failureCount
+                'failure_count' => $failureCount,
             ]);
-
-            // Compose appropriate message based on results
-            $message = $this->composeBulkEmailMessage($totalUsers, $successCount, $failureCount);
 
             return response()->json([
                 'success' => $isFullSuccess,
-                'message' => $message,
-                'data' => [
-                    'template_id' => $validated['template_id'],
-                    'use_merge_info' => $validated['use_merge_info'] ?? false,
-                    'total_users' => $totalUsers,
-                    'emails_sent' => $successCount,
+                'message' => $this->composeBulkEmailMessage($totalUsers, $successCount, $failureCount),
+                'data'    => [
+                    'template_id'   => $validated['template_id'],
+                    'total_users'   => $totalUsers,
+                    'batches'       => $batchCount,
+                    'emails_sent'   => $successCount,
                     'emails_failed' => $failureCount,
-                    'failures' => $failures
-                ]
+                    'failures'      => $failedBatches,
+                ],
             ], $isFullSuccess ? Response::HTTP_OK : 207);
         } catch (\Exception $e) {
             Log::error('Bulk email sending failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return $this->errorResponse(
                 'Failed to send bulk email: ' . $e->getMessage(),
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
-        }
-    }
-
-    /**
-     * Compose an appropriate message for bulk email results
-     *
-     * @param int $totalUsers
-     * @param int $successCount
-     * @param int $failureCount
-     * @return string
-     */
-    private function composeBulkEmailMessage(
-        int $totalUsers,
-        int $successCount,
-        int $failureCount
-    ): string {
-        // All emails sent successfully
-        if ($failureCount === 0) {
-            return "Successfully sent emails to all {$successCount} recipients.";
-        }
-
-        // All emails failed
-        if ($successCount === 0) {
-            return "Failed to send emails to all {$totalUsers} recipients. Please check the email addresses and try again.";
-        }
-
-        // Partial success
-        $successRate = round(($successCount / $totalUsers) * 100, 1);
-        return "Sent {$successCount} out of {$totalUsers} emails ({$successRate}% success rate). {$failureCount} email(s) failed to send.";
-    }
-    public function sendVenueEmail(): JsonResponse
-    {
-        try {
-            $year = now()->year;
-
-            $registrations = PicnicRegistration::with('user:id,first_name,last_name,email')
-                ->forYear($year)
-                ->get();
-
-            if ($registrations->isEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "No registrations found for year {$year}"
-                ], 404);
-            }
-
-            // Send to all participants
-            $successCount = 0;
-            $failureCount = 0;
-            $failures = [];
-
-            foreach ($registrations as $registration) {
-                try {
-                    $this->mailService->sendPicnicVenueEmail([
-                        [
-                            'email' => $registration->user->email,
-                            'name' => $registration->user->first_name
-                        ]
-                    ]);
-
-                    $successCount++;
-
-                    usleep(100000);
-                } catch (\Exception $e) {
-                    $failureCount++;
-                    $failures[] = [
-                        'user_id' => $registration->user_id,
-                        'email' => $registration->user->email,
-                        'name' => $registration->user->first_name . ' ' . $registration->user->last_name,
-                        'error' => $e->getMessage()
-                    ];
-                }
-            }
-
-            return response()->json([
-                'success' => $failureCount === 0,
-                'message' => $failureCount === 0
-                    ? 'All venue emails sent successfully'
-                    : 'Some emails failed to send',
-                'statistics' => [
-                    'total_registrations' => $registrations->count(),
-                    'emails_sent' => $successCount,
-                    'emails_failed' => $failureCount,
-                    'success_rate' => round(($successCount / $registrations->count()) * 100, 2) . '%'
-                ],
-                'failures' => $failures
-            ], $failureCount === 0 ? 200 : 207);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to send venue emails: ' . $e->getMessage()
-            ], 500);
         }
     }
 }
