@@ -18,6 +18,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\UsherAttendanceController;
 use App\Enums\RoleEnum;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\RegistrationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,6 +39,12 @@ Route::prefix('auth')->name('auth.')->group(function () {
 });
 
 Route::middleware('guest')->group(function () {
+
+    Route::prefix('event-registrations')->group(function () {
+        Route::get('/', [RegistrationController::class, 'index']);
+        Route::post('/', [RegistrationController::class, 'store']);
+    });
+
     Route::prefix('events')->group(function () {
         Route::get('/', [EventController::class, 'index']);
         Route::get('/upcoming', [EventController::class, 'upcoming']);
@@ -240,6 +247,11 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('admin.')
         ->middleware(['role:' . RoleEnum::ADMIN->value])
         ->group(function () {
+
+            Route::prefix('event-registrations')->group(function () {
+                Route::put('/{registration}', [RegistrationController::class, 'update']);
+                Route::delete('/{registration}', [RegistrationController::class, 'destroy']);
+            });
 
             // --------------------------------------------------------------------
             // Admin Dashboard & Analytics
