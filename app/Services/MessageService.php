@@ -83,7 +83,7 @@ class MessageService
                 'subject' => $data['subject'] ?? null,
                 'body' => $data['body'],
             ]);
-            // $this->sendMessageNotificationEmail($message, $sender);
+            $this->sendMessageNotificationEmail($message, $sender);
 
             return $message;
         });
