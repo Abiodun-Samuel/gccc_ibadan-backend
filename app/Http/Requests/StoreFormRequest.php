@@ -25,6 +25,7 @@ class StoreFormRequest extends FormRequest
     {
         return [
             'type' => ['required', Rule::in(FormTypeEnum::values())],
+            'user_id' => ['sometimes', 'nullable', 'exists:users,id'],
             'content' => ['required', 'string', 'min:3'],
             'name' => ['required_if:type,testimony', 'nullable', 'string', 'max:255'],
             'phone_number' => ['required_if:type,testimony', 'nullable', 'string', 'max:20'],

@@ -2,186 +2,169 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Event;
+use App\Http\Requests\StoreEventRequest;
+use App\Http\Requests\UpdateEventRequest;
 use App\Http\Resources\EventResource;
+use App\Models\Event;
+use App\Services\UploadService;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\Response;
 
 class EventController extends Controller
 {
-    /**
-     * Display a listing of events (PUBLIC)
-     *
-     * Filters: status, search, per_page
-     */
-    public function index(Request $request)
+    public function __construct(protected UploadService $uploadService) {}
+
+    public function index(Request $request): JsonResponse
     {
-        $query = Event::query();
-
-        // Filter by status
-        if ($request->has('status')) {
-            $query->byStatus($request->status);
-        }
-
-        // Search
-        if ($request->has('search')) {
-            $query->search($request->search);
-        }
-
-        // Order by date
-        $order = $request->input('order', 'asc'); // asc for upcoming first, desc for latest first
-        $query->orderByDate($order);
-
-        // Pagination
-        $perPage = $request->input('per_page', 15);
-        $events = $query->paginate($perPage);
-
-        return EventResource::collection($events);
-    }
-
-    /**
-     * Display a single event (PUBLIC)
-     */
-    public function show($id)
-    {
-        $event = Event::findOrFail($id);
-
-        return new EventResource($event);
-    }
-
-    /**
-     * Store a new event (ADMIN ONLY)
-     */
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i',
-            'location' => 'required|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'registration_link' => 'nullable|url',
-            'registration_deadline' => 'nullable|date',
-            'audio_streaming_link' => 'nullable|url',
-            'video_streaming_link' => 'nullable|url',
+        $request->validate([
+            'status'   => ['sometimes', 'string'],
+            'search'   => ['sometimes', 'string', 'max:255'],
+            'order'    => ['sometimes', 'in:asc,desc'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        $events = Event::query()
+            ->when($request->status,   fn($q) => $q->byStatus($request->status))
+            ->when($request->search,   fn($q) => $q->search($request->search))
+            ->orderByDate($request->input('order', 'asc'))
+            ->paginate($request->integer('per_page', 15));
 
-        $data = $validator->validated();
-
-        // Handle image upload
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $path = $image->store('events', 'public');
-            $data['image'] = '/storage/' . $path;
-        }
-
-        $event = Event::create($data);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Event created successfully',
-            'data' => new EventResource($event)
-        ], 201);
+        return $this->successResponse(EventResource::collection($events), 'Events retrieved successfully.', Response::HTTP_OK);
     }
 
     /**
-     * Update an event (ADMIN ONLY)
+     * Show a single event (PUBLIC).
      */
-    public function update(Request $request, $id)
+    public function show(Event $event): JsonResponse
     {
-        $event = Event::findOrFail($id);
+        return $this->successResponse(
+            new EventResource($event),
+            'Event retrieved successfully.'
+        );
+    }
 
-        $validator = Validator::make($request->all(), [
-            'title' => 'sometimes|required|string|max:255',
-            'description' => 'sometimes|required|string',
-            'start_date' => 'sometimes|required|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'start_time' => 'sometimes|required|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i',
-            'location' => 'sometimes|required|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'registration_link' => 'nullable|url',
-            'registration_deadline' => 'nullable|date',
-            'audio_streaming_link' => 'nullable|url',
-            'video_streaming_link' => 'nullable|url',
-        ]);
+    /**
+     * Create a new event (ADMIN ONLY).
+     */
+    public function store(StoreEventRequest $request): JsonResponse
+    {
+        try {
+            $data = $request->validated();
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $data = $validator->validated();
-
-        // Handle image upload
-        if ($request->hasFile('image')) {
-            // Delete old image
-            if ($event->image) {
-                $oldPath = str_replace('/storage/', '', $event->image);
-                Storage::disk('public')->delete($oldPath);
+            if (!empty($data['image'])) {
+                $data['image'] = $this->uploadService->upload($data['image'], 'events');
             }
 
-            $image = $request->file('image');
-            $path = $image->store('events', 'public');
-            $data['image'] = '/storage/' . $path;
+            $event = Event::create($data);
+
+            return $this->successResponse(
+                new EventResource($event),
+                'Event created successfully.',
+                Response::HTTP_CREATED
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                $e->getMessage(),
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
         }
-
-        $event->update($data);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Event updated successfully',
-            'data' => new EventResource($event)
-        ]);
     }
 
     /**
-     * Delete an event (ADMIN ONLY)
+     * Update an existing event (ADMIN ONLY).
      */
-    public function destroy($id)
+    public function update(UpdateEventRequest $request, Event $event): JsonResponse
     {
-        $event = Event::findOrFail($id);
+        try {
+            $data = $request->validated();
 
-        // Delete image if exists
-        if ($event->image) {
-            $path = str_replace('/storage/', '', $event->image);
-            Storage::disk('public')->delete($path);
+            if (isset($data['image'])) {
+                if ($event->image) {
+                    $this->uploadService->delete($event->image);
+                }
+
+                $data['image'] = $this->uploadService->upload($data['image'], 'events');
+            }
+
+            $event->update($data);
+
+            return $this->successResponse(
+                new EventResource($event->fresh()),
+                'Event updated successfully.'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                $e->getMessage(),
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
         }
-
-        $event->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Event deleted successfully'
-        ]);
     }
 
     /**
-     * Get upcoming events (PUBLIC)
+     * Delete an event (ADMIN ONLY).
      */
-    public function upcoming(Request $request)
+    public function destroy(Event $event): JsonResponse
     {
-        $perPage = $request->input('per_page', 10);
+        try {
+            if ($event->image) {
+                $this->uploadService->delete($event->image);
+            }
 
-        $events = Event::upcoming()
-            ->orderByDate('asc')
-            ->paginate($perPage);
+            $event->delete();
 
-        return EventResource::collection($events);
+            return $this->successResponse(null, 'Event deleted successfully.');
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                $e->getMessage(),
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+    public function closest(): JsonResponse
+    {
+        $event = $this->resolveClosestEvent();
+
+        if (!$event) {
+            return $this->errorResponse('No events found.', Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->successResponse(
+            new EventResource($event),
+            'Event retrieved successfully.'
+        );
+    }
+
+    private function resolveClosestEvent(): ?Event
+    {
+        $timeNow = Carbon::now()->format('H:i:s');
+
+        $todayUpcoming = Event::today()
+            ->where(
+                fn($q) => $q
+                    ->whereNull('start_time')
+                    ->orWhere('start_time', '>=', $timeNow)
+            )
+            ->orderByRaw('ISNULL(start_time) ASC')
+            ->orderBy('start_time', 'asc')
+            ->first();
+
+        if ($todayUpcoming) {
+            return $todayUpcoming;
+        }
+
+        $todayPast = Event::today()
+            ->whereNotNull('start_time')
+            ->where('start_time', '<', $timeNow)
+            ->orderBy('start_time', 'desc')
+            ->first();
+
+        if ($todayPast) {
+            return $todayPast;
+        }
+
+        return Event::afterToday()->orderByDateTime()->first()
+            ?? Event::orderByDateTime()->first();
     }
 }

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 
 class Event extends Model
 {
@@ -133,18 +134,35 @@ class Event extends Model
         return $this->start_date->format('F d, Y');
     }
 
+
+
     /**
      * Accessor: Formatted time range
      */
-    public function getFormattedTimeAttribute(): string
+    public function getFormattedTimeAttribute(): ?string
     {
+        if (!$this->start_time) {
+            return null;
+        }
+
         $start = Carbon::parse($this->start_time)->format('g:i A');
+
         if ($this->end_time) {
             $end = Carbon::parse($this->end_time)->format('g:i A');
             return "{$start} - {$end}";
         }
+
         return $start;
     }
+    // public function getFormattedTimeAttribute(): string
+    // {
+    //     $start = Carbon::parse($this->start_time)->format('g:i A');
+    //     if ($this->end_time) {
+    //         $end = Carbon::parse($this->end_time)->format('g:i A');
+    //         return "{$start} - {$end}";
+    //     }
+    //     return $start;
+    // }
 
     /**
      * Check if registration is open
@@ -168,5 +186,23 @@ class Event extends Model
     public function hasStreaming(): bool
     {
         return !empty($this->audio_streaming_link) || !empty($this->video_streaming_link);
+    }
+
+    public function scopeAfterToday(Builder $query): Builder
+    {
+        return $query->whereDate('start_date', '>', Carbon::today());
+    }
+
+    public function scopeToday(Builder $query): Builder
+    {
+        return $query->whereDate('start_date', Carbon::today());
+    }
+
+    public function scopeOrderByDateTime(Builder $query): Builder
+    {
+        return $query
+            ->orderBy('start_date', 'asc')
+            ->orderByRaw('ISNULL(start_time) ASC')
+            ->orderBy('start_time', 'asc');
     }
 }

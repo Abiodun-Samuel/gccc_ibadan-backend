@@ -47,9 +47,10 @@ Route::middleware('guest')->group(function () {
 
     Route::prefix('events')->group(function () {
         Route::get('/', [EventController::class, 'index']);
-        Route::get('/upcoming', [EventController::class, 'upcoming']);
-        Route::get('/{id}', [EventController::class, 'show']);
-    });    // Get si
+        Route::get('/closest',  [EventController::class, 'closest']);
+        Route::get('/{event}', [EventController::class, 'show']);
+    });
+
     // Guest First Timer Registration
     Route::post('/first-timers', [FirstTimerController::class, 'store'])->name('first-timers.guest.store');
     // Guest Form Submission
@@ -316,11 +317,14 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::post('/fetch', [MediaController::class, 'fetchFromYouTube'])->name('fetch-youtube');
             });
 
+            // --------------------------------------------------------------------
+            // Events
+            // --------------------------------------------------------------------
             Route::prefix('events')->group(function () {
-                Route::post('/', [EventController::class, 'store']);          // Create event
-                Route::put('/{id}', [EventController::class, 'update']);      // Update event
-                Route::patch('/{id}', [EventController::class, 'update']);    // Update event (PATCH)
-                Route::delete('/{id}', [EventController::class, 'destroy']);  // Delete event
+                Route::post('/', [EventController::class, 'store']);
+                Route::put('/{event}', [EventController::class, 'update']);
+                Route::patch('/{event}', [EventController::class, 'update']);
+                Route::delete('/{event}', [EventController::class, 'destroy']);
             });
 
             // --------------------------------------------------------------------

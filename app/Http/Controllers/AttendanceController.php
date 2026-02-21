@@ -68,7 +68,7 @@ class AttendanceController extends Controller
         $message = $this->getAttendanceMessage($attendance);
 
         return $this->successResponse(
-            ['user' => UserResource::make($user->loadFullProfile())],  // new AttendanceResource($attendance),
+            ['user' => UserResource::make($user->loadFullProfile())],
             $message,
             Response::HTTP_CREATED
         );

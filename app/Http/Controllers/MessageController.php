@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ReplyMessageRequest;
 use App\Http\Requests\SendMessageRequest;
 use App\Http\Resources\MessageResource;
+use App\Http\Resources\UserResource;
 use App\Models\Message;
 use App\Services\MessageService;
 use Illuminate\Http\JsonResponse;
@@ -134,17 +135,20 @@ class MessageController extends Controller
     public function store(SendMessageRequest $request): JsonResponse
     {
         try {
+            $user = $request->user();
             $message = $this->messageService->sendMessage(
                 $request->user(),
                 $request->validated()
             );
 
+            $user->increment('total_stars', 10);
+
             // Load relationships for response
             $message->load(['sender', 'recipient']);
 
             return $this->successResponse(
-                new MessageResource($message),
-                'Message sent successfully',
+                new UserResource($user->fresh()),
+                'Message sent successfully, Congratulations! You have earned 10points for sending a wish.',
                 Response::HTTP_CREATED
             );
         } catch (\Exception $e) {

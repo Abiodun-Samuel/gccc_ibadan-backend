@@ -16,16 +16,14 @@ class FormController extends Controller
     {
         $validated = $request->validate([
             'type' => ['required', 'string', Rule::in(FormTypeEnum::values())],
-            'per_page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $perPage = $validated['per_page'] ?? config('app.pagination.per_page');
         $type = $validated['type'];
 
-        $forms = Form::query()
+        $forms = Form::with('user')
             ->where('type', $type)
             ->latest()
-            ->paginate($perPage);
+            ->get();
 
         return $this->successResponse(
             FormResource::collection($forms),
