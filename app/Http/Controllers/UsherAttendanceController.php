@@ -8,20 +8,36 @@ use App\Http\Resources\UsherAttendanceResource;
 use App\Models\UsherAttendance;
 use App\Services\UsherAttendanceService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class UsherAttendanceController extends Controller
 {
     public function __construct(
         private readonly UsherAttendanceService $service
-    ) {
-    }
+    ) {}
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $attendances = $this->service->getAllAttendances();
-        return $this->successResponse(UsherAttendanceResource::collection($attendances), 'Attendances retrieved successfully');
+        $chartData   = $this->service->getChartData(
+            $request->integer('year', now()->year)
+        );
+
+        return $this->successResponse(
+            [
+                'attendances' => UsherAttendanceResource::collection($attendances),
+                'chart'       => $chartData,
+            ],
+            'Attendances retrieved successfully'
+        );
     }
+
+    // public function index(): JsonResponse
+    // {
+    //     $attendances = $this->service->getAllAttendances();
+    //     return $this->successResponse(UsherAttendanceResource::collection($attendances), 'Attendances retrieved successfully');
+    // }
 
     public function store(StoreUsherAttendanceRequest $request): JsonResponse
     {

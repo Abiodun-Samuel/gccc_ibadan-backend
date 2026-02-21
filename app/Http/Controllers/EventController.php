@@ -71,21 +71,35 @@ class EventController extends Controller
             );
         }
     }
+    private function isBase64(string $value): bool
+    {
+        if (str_starts_with($value, 'data:')) {
+            return true;
+        }
 
-    /**
-     * Update an existing event (ADMIN ONLY).
-     */
+        // Fallback: try decoding — valid base64 re-encodes to itself
+        $decoded = base64_decode($value, strict: true);
+
+        return $decoded !== false && base64_encode($decoded) === $value;
+    }
+
     public function update(UpdateEventRequest $request, Event $event): JsonResponse
     {
         try {
             $data = $request->validated();
 
             if (isset($data['image'])) {
-                if ($event->image) {
-                    $this->uploadService->delete($event->image);
-                }
+                if ($this->isBase64($data['image'])) {
+                    // New image uploaded — delete the old one, upload the new one
+                    if ($event->image) {
+                        $this->uploadService->delete($event->image);
+                    }
 
-                $data['image'] = $this->uploadService->upload($data['image'], 'events');
+                    $data['image'] = $this->uploadService->upload($data['image'], 'events');
+                } else {
+                    // Already a URL (unchanged) — don't touch Cloudinary at all
+                    unset($data['image']);
+                }
             }
 
             $event->update($data);
@@ -101,6 +115,35 @@ class EventController extends Controller
             );
         }
     }
+    /**
+     * Update an existing event (ADMIN ONLY).
+     */
+    // public function update(UpdateEventRequest $request, Event $event): JsonResponse
+    // {
+    //     try {
+    //         $data = $request->validated();
+
+    //         if (isset($data['image'])) {
+    //             if ($event->image) {
+    //                 $this->uploadService->delete($event->image);
+    //             }
+
+    //             $data['image'] = $this->uploadService->upload($data['image'], 'events');
+    //         }
+
+    //         $event->update($data);
+
+    //         return $this->successResponse(
+    //             new EventResource($event->fresh()),
+    //             'Event updated successfully.'
+    //         );
+    //     } catch (\Exception $e) {
+    //         return $this->errorResponse(
+    //             $e->getMessage(),
+    //             Response::HTTP_INTERNAL_SERVER_ERROR
+    //         );
+    //     }
+    // }
 
     /**
      * Delete an event (ADMIN ONLY).
