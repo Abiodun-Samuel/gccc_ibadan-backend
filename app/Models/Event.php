@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Event extends Model
 {
@@ -204,5 +205,10 @@ class Event extends Model
             ->orderBy('start_date', 'asc')
             ->orderByRaw('ISNULL(start_time) ASC')
             ->orderBy('start_time', 'asc');
+    }
+
+    public function registrations(): HasMany
+    {
+        return $this->hasMany(Registration::class);
     }
 }

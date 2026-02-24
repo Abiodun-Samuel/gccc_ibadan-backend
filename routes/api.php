@@ -59,6 +59,8 @@ Route::middleware('guest')->group(function () {
     Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
     // Client Error Logging
     Route::post('/client-errors', [ClientErrorLogController::class, 'store'])->name('client-errors.store');
+    // Media
+    Route::get('/media', [MediaController::class, 'index'])->name('media.index');
 });
 
 // ============================================================================
@@ -88,11 +90,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/today-service', [ServiceController::class, 'today'])->name('today');
         Route::get('/core-app-data', [ServiceController::class, 'fetchCoreAppData'])->name('core-app-data');
     });
-
-    // ------------------------------------------------------------------------
-    // Media
-    // ------------------------------------------------------------------------
-    Route::get('/media', [MediaController::class, 'index'])->name('media.index');
 
     // ------------------------------------------------------------------------
     // Follow-Up System

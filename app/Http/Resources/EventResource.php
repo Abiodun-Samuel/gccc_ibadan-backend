@@ -35,6 +35,7 @@ class EventResource extends JsonResource
             'has_streaming' => $this->hasStreaming(),
             'created_at' => $this->created_at->toDateTimeString(),
             'updated_at' => $this->updated_at->toDateTimeString(),
+            'registrations' => RegistrationResource::collection($this->whenLoaded('registrations')),
         ];
     }
 }

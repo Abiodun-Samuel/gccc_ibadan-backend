@@ -57,7 +57,7 @@ class FirstTimerService
     public function getAllFirstTimers(array $filters = []): Collection
     {
         $query = User::firstTimers()
-            ->with(['followUpStatus', 'assignedTo', 'attendances.service']);
+            ->with(['followUpStatus', 'assignedTo', 'attendances.service', 'followupFeedbacks']);
         $this->applyAttendanceFilters($query, $filters);
         return $query
             ->orderBy('date_of_visit', 'desc')

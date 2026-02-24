@@ -62,7 +62,8 @@ class FirstTimerResource extends JsonResource
                 'avatar' => $this->assignedTo->avatar,
             ]),
 
-            'followupFeedbacks' => $this->whenLoaded('followupFeedbacks'),
+            'followupFeedbacks' => FollowupFeedbackResource::collection($this->whenLoaded('followupFeedbacks')),
+            // 'followupFeedbacks' => $this->whenLoaded('followupFeedbacks'),
 
             'created_at' => $this->created_at?->toDateTimeString(),
             'updated_at' => $this->updated_at?->toDateTimeString(),

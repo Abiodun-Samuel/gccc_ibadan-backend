@@ -39,10 +39,8 @@ class EventController extends Controller
      */
     public function show(Event $event): JsonResponse
     {
-        return $this->successResponse(
-            new EventResource($event),
-            'Event retrieved successfully.'
-        );
+        $event->load(['registrations']);
+        return $this->successResponse(new EventResource($event), 'Event retrieved successfully.');
     }
 
     /**
