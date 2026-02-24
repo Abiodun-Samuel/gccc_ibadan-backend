@@ -11,7 +11,7 @@ class StoreUsherAttendanceRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->hasAnyRole(['admin', 'leader']);
+        return $this->user()->hasAnyRole(['admin', 'leader', 'member']);
     }
 
     /**
