@@ -18,6 +18,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\UsherAttendanceController;
 use App\Enums\RoleEnum;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\RedeemableItemController;
 use App\Http\Controllers\RegistrationController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,7 +43,6 @@ Route::middleware('guest')->group(function () {
 
     Route::prefix('event-registrations')->group(function () {
         Route::get('/', [RegistrationController::class, 'index']);
-        Route::post('/', [RegistrationController::class, 'store']);
     });
 
     Route::prefix('events')->group(function () {
@@ -53,9 +53,7 @@ Route::middleware('guest')->group(function () {
 
     // Guest First Timer Registration
     Route::post('/first-timers', [FirstTimerController::class, 'store'])->name('first-timers.guest.store');
-    // Guest Form Submission
-    Route::post('/forms', [FormController::class, 'store'])->name('forms.guest.store');
-    // Public Services
+
     Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
     // Client Error Logging
     Route::post('/client-errors', [ClientErrorLogController::class, 'store'])->name('client-errors.store');
@@ -68,6 +66,15 @@ Route::middleware('guest')->group(function () {
 // ============================================================================
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/award/points', [UserController::class, 'award']);
+    Route::post('/', [RegistrationController::class, 'store']);
+    // Guest Form Submission
+    Route::post('/forms', [FormController::class, 'store'])->name('forms.guest.store');
+    // Public Services
+    Route::prefix('redeemable-items')->group(function () {
+        Route::get('/',                          [RedeemableItemController::class, 'index']);
+        Route::post('/{redeemableItem}/redeem',  [RedeemableItemController::class, 'redeem']);
+    });
     // ------------------------------------------------------------------------
     // Authentication & User Profile
     // ------------------------------------------------------------------------
@@ -245,6 +252,14 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('admin.')
         ->middleware(['role:' . RoleEnum::ADMIN->value])
         ->group(function () {
+
+            Route::prefix('redeemable-items')->group(function () {
+                Route::get('/',                          [RedeemableItemController::class, 'adminIndex']);
+                Route::post('/',                         [RedeemableItemController::class, 'store']);
+                Route::put('/{redeemableItem}',          [RedeemableItemController::class, 'update']);
+                Route::patch('/{redeemableItem}',        [RedeemableItemController::class, 'update']);
+                Route::delete('/{redeemableItem}',       [RedeemableItemController::class, 'destroy']);
+            });
 
             Route::prefix('event-registrations')->group(function () {
                 Route::put('/{registration}', [RegistrationController::class, 'update']);

@@ -25,7 +25,7 @@ class User extends Authenticatable
         'follow_up_status_id',
         'first_name',
         'last_name',
-        'total_stars',
+        'reward_points',
         'email',
         'avatar',
         'secondary_avatar',

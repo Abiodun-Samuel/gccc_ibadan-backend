@@ -2,16 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Config\PointRewards;
 use App\Enums\FormTypeEnum;
 use App\Http\Requests\StoreFormRequest;
 use App\Http\Resources\FormResource;
 use App\Models\Form;
+use App\Services\PointService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
 class FormController extends Controller
 {
+    public function __construct(
+        private PointService $pointService,
+    ) {}
+
     public function index(Request $request)
     {
         $validated = $request->validate([
@@ -37,7 +43,10 @@ class FormController extends Controller
      */
     public function store(StoreFormRequest $request)
     {
+        $user =  $request->user();
         $form = Form::create($request->validated());
+        $this->pointService->award($user, PointRewards::FORM_SUBMITTED);
+
         return $this->successResponse(
             new FormResource($form),
             'Form submitted successfully',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Config\PointRewards;
 use App\Http\Requests\Attendance\MarkAbsenteesRequest;
 use App\Http\Requests\Attendance\MarkAttendanceRequest;
 use App\Http\Resources\AttendanceResource;
@@ -10,22 +11,23 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\UsherAttendance;
-use App\Models\FollowUpStatus;
 use App\Enums\RoleEnum;
-use App\Http\Resources\UserResource;
 use App\Models\AbsenteeAssignment;
 use App\Models\Attendance;
 use App\Models\FollowupFeedback;
 use App\Models\Service;
 use App\Models\User;
+use App\Services\PointService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
 {
     public function __construct(
-        private AttendanceService $attendanceService
+        private AttendanceService $attendanceService,
+        private PointService $pointService,
     ) {}
+
 
     public function index(Request $request): JsonResponse
     {
@@ -43,33 +45,24 @@ class AttendanceController extends Controller
             'Attendance records retrieved successfully'
         );
     }
-    protected function getAttendanceMessage($attendance): string
-    {
-        if ($attendance->status !== 'present') {
-            return 'Attendance marked successfully.';
-        }
 
-        $stars = $attendance->service->reward_stars ?? 5;
-
-        return sprintf(
-            'Congratulations! You have earned %d %s for attending %s. Keep up the great work! ⭐',
-            $stars,
-            $stars === 1 ? 'star' : 'stars',
-            $attendance->service->name
-        );
-    }
     public function markAttendance(MarkAttendanceRequest $request): JsonResponse
     {
         $user =  $request->user();
+        $data =  $request->validated();
         $attendance = $this->attendanceService->markUserAttendance(
             $user,
-            $request->validated()
+            $data
         );
-        $message = $this->getAttendanceMessage($attendance);
+        $isNowPresent = $data['status'] === 'present';
+
+        if ($isNowPresent && $attendance) {
+            $this->pointService->award($user, PointRewards::ATTENDANCE_MARKED);
+        }
 
         return $this->successResponse(
-            ['user' => UserResource::make($user->loadFullProfile())],
-            $message,
+            new AttendanceResource($attendance),
+            'Attendance marked successfully.',
             Response::HTTP_CREATED
         );
     }

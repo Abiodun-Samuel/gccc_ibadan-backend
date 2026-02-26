@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Config\PointRewards;
 use App\Http\Requests\StoreFollowupFeedbackRequest;
 use App\Http\Resources\AbsenteeResource;
 use App\Http\Resources\FirstTimerResource;
@@ -10,19 +11,24 @@ use App\Http\Resources\UserResource;
 use App\Models\AbsenteeAssignment;
 use App\Models\User;
 use App\Services\FollowUpService;
+use App\Services\PointService;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 class FollowupFeedbackController extends Controller
 {
     public $followUpService;
-    public function __construct(FollowUpService $followUpService)
+    public $pointService;
+    public function __construct(FollowUpService $followUpService, PointService $pointService)
     {
         $this->followUpService = $followUpService;
+        $this->pointService = $pointService;
     }
     public function store(StoreFollowupFeedbackRequest $request): JsonResponse
     {
+        $user =  $request->user();
         $followUp = $this->followUpService->createFollowUp($request->validated());
+        $this->pointService->award($user, PointRewards::FOLLOWUP_FEEDBACK_SUBMITTED);
         return $this->successResponse(
             new FollowupFeedbackResource($followUp),
             'Followup feedback has been saved successfully',

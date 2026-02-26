@@ -96,17 +96,12 @@ class AttendanceService
 
     // ==================== ATTENDANCE MARKING ====================
     /**
-     * Mark attendance for a user
+     * Mark attendance a user
      */
     public function markUserAttendance(User $user, array $data): Attendance
     {
         $service = Service::findOrFail($data['service_id']);
         $attendanceDate = $this->getServiceDate($service);
-        $isNowPresent = $data['status'] === 'present';
-
-        if ($isNowPresent) {
-            $user->increment('total_stars', $service->reward_stars);
-        }
 
         $attendance = $this->upsertAttendance([
             'user_id' => $user->id,
@@ -199,18 +194,6 @@ class AttendanceService
         );
     }
 
-    /**
-     * Get absent members for a service
-     */
-    private function getAbsentMembers(int $serviceId, string $attendanceDate): Collection
-    {
-        return Attendance::where('service_id', $serviceId)
-            ->whereDate('attendance_date', $attendanceDate)
-            ->where('status', 'absent')
-            ->select('id', 'user_id')
-            ->get();
-    }
-
     // ==================== LEADER ASSIGNMENT ====================
     /**
      * Assign absent members to leaders for follow-up
@@ -296,9 +279,10 @@ class AttendanceService
      */
     private function clearPreviousAssignments(int $serviceId, string $attendanceDate): void
     {
-        AbsenteeAssignment::where('service_id', $serviceId)
-            ->where('attendance_date', $attendanceDate)
-            ->delete();
+        AbsenteeAssignment::delete();
+        // where('service_id', $serviceId)
+        //     ->where('attendance_date', $attendanceDate)
+        //     ->
     }
 
     /**

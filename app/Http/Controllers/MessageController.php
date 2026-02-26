@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Config\PointRewards;
 use App\Http\Requests\ReplyMessageRequest;
 use App\Http\Requests\SendMessageRequest;
 use App\Http\Resources\MessageResource;
 use App\Http\Resources\UserResource;
 use App\Models\Message;
 use App\Services\MessageService;
+use App\Services\PointService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +17,8 @@ use Symfony\Component\HttpFoundation\Response;
 class MessageController extends Controller
 {
     public function __construct(
-        private readonly MessageService $messageService
+        private readonly MessageService $messageService,
+        private PointService $pointService,
     ) {}
 
     /**
@@ -140,14 +143,12 @@ class MessageController extends Controller
                 $request->user(),
                 $request->validated()
             );
-
-            $user->increment('total_stars', 10);
-
+            $this->pointService->award($user, PointRewards::MESSAGE_SENT);
             // Load relationships for response
             $message->load(['sender', 'recipient']);
 
             return $this->successResponse(
-                new UserResource($user->fresh()),
+                ['user' => new UserResource($user->fresh())],
                 'Message sent successfully, Congratulations! You have earned 10points for sending a wish.',
                 Response::HTTP_CREATED
             );
@@ -165,8 +166,9 @@ class MessageController extends Controller
     public function reply(ReplyMessageRequest $request, Message $message): JsonResponse
     {
         try {
+            $user = $request->user();
             // Authorization check
-            if ($message->recipient_id !== $request->user()->id) {
+            if ($message->recipient_id !== $user->id) {
                 return $this->errorResponse(
                     'You can only reply to messages sent to you',
                     Response::HTTP_FORBIDDEN
@@ -174,10 +176,12 @@ class MessageController extends Controller
             }
 
             $reply = $this->messageService->replyToMessage(
-                $request->user(),
+                $user,
                 $message,
                 $request->validated()
             );
+
+            $this->pointService->award($user, PointRewards::MESSAGE_REPLIED);
 
             // Load relationships for response
             $reply->load(['sender', 'recipient']);
@@ -231,7 +235,9 @@ class MessageController extends Controller
      */
     public function markAsRead(Request $request, Message $message): JsonResponse
     {
+        $user = $request->user();
         $success = $this->messageService->markAsRead($message, $request->user());
+        $this->pointService->award($user, PointRewards::MESSAGE_REPLIED);
 
         if (!$success) {
             return $this->errorResponse(

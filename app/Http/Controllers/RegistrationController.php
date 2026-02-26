@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Config\PointRewards;
 use App\Http\Requests\StoreRegistrationRequest;
 use App\Http\Requests\UpdateRegistrationRequest;
 use App\Http\Resources\RegistrationResource;
 use App\Models\Registration;
+use App\Services\PointService;
 use App\Services\RegistrationService;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,9 +15,9 @@ use Symfony\Component\HttpFoundation\Response;
 class RegistrationController extends Controller
 {
     public function __construct(
-        private readonly RegistrationService $service
+        private readonly RegistrationService $service,
+        private PointService $pointService,
     ) {}
-
     // ─── Public ───────────────────────────────────────────────────────────────
 
     /**
@@ -43,7 +45,9 @@ class RegistrationController extends Controller
      */
     public function store(StoreRegistrationRequest $request): JsonResponse
     {
+        $user =  $request->user();
         $registration = $this->service->register($request->validated());
+        $this->pointService->award($user, PointRewards::EVENT_REGISTERED);
 
         return $this->successResponse(
             new RegistrationResource($registration),

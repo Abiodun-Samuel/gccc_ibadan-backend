@@ -11,7 +11,6 @@ class Service extends Model
         'name',
         'description',
         'day_of_week',
-        'reward_stars',
         'start_time',
         'is_recurring',
         'service_date',
@@ -21,7 +20,6 @@ class Service extends Model
         return [
             'service_date' => 'date',
             'start_time' => 'datetime:H:i',
-            'reward_stars' => 'integer',
         ];
     }
     public function attendances(): HasMany

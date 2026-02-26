@@ -37,7 +37,7 @@ class AuthController extends Controller
             $message = match ($e->getMessage()) {
                 'user_not_found' => 'User does not exist, please contact the admin.',
                 'invalid_password' => 'Password is incorrect, please reset your password.',
-                default => 'An error occurred during authentication',
+                default => $e->getMessage(),
             };
 
             return $this->errorResponse(

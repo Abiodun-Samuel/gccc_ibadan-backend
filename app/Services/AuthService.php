@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Config\PointRewards;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Carbon\Carbon;
@@ -14,9 +15,11 @@ class AuthService
 {
     private const TOKEN_EXPIRY_MINUTES = 60;
     public $mailService;
-    public function __construct(MailService $mailService)
+    public $pointService;
+    public function __construct(MailService $mailService, PointService $pointService)
     {
         $this->mailService = $mailService;
+        $this->pointService = $pointService;
     }
     /**
      * Authenticate user with credentials
@@ -33,17 +36,15 @@ class AuthService
             throw new RuntimeException('invalid_password');
         }
 
+        $this->pointService->award($user, PointRewards::USER_LOGIN);
+
         $user->loadFullProfile();
         $token = $user->createToken($user->email)->plainTextToken;
 
         return [
             'token' => $token,
-            'user' => UserResource::make($user),
+            'user' => UserResource::make($user->refresh()),
         ];
-    }
-    private function findUserByEmail(string $email): ?User
-    {
-        return User::where('email', $email)->first();
     }
 
     public function sendResetLink(string $email): void
@@ -76,6 +77,7 @@ class AuthService
         $resetUrl = env('FRONTEND_URL') . '/reset-password?token=' . $token . '&email=' . urlencode($user->email);
         $this->mailService->sendResetPasswordEmail($resetUrl, $recipients);
     }
+
     public function resetPassword(array $data): void
     {
         $tokenData = $this->getTokenData($data['email']);

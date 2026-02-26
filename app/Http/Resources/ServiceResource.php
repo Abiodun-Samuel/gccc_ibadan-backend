@@ -18,7 +18,6 @@ class ServiceResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
-            'reward_stars' => $this->reward_stars,
             'start_time' => $this->start_time,
             'day_of_week' => $this->is_recurring ? $this->day_of_week : null,
             'service_date' => $this->is_recurring ? null : $this->service_date,

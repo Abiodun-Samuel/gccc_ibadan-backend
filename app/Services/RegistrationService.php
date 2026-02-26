@@ -3,13 +3,10 @@
 namespace App\Services;
 
 use App\Models\Registration;
-use App\Models\TheOneRegistration;
-use Illuminate\Support\Collection;
 
 class RegistrationService
 {
     private const MAX_CAPACITY = 54;
-
     /**
      * Return all registrations and the total count (no pagination).
      */

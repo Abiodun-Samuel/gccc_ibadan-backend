@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Config\PointRewards;
+use App\Http\Requests\AwardPointRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\AbsenteeResource;
 use App\Http\Resources\UserResource;
+use App\Services\PointService;
 use App\Services\UserService;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -16,10 +19,12 @@ use Throwable;
 class UserController extends Controller
 {
     protected UserService $userService;
+    protected PointService $pointService;
 
-    public function __construct(UserService $userService)
+    public function __construct(UserService $userService, PointService $pointService)
     {
         $this->userService = $userService;
+        $this->pointService = $pointService;
     }
 
     /**
@@ -33,6 +38,7 @@ class UserController extends Controller
             $folder = $request->input('folder', 'users');
 
             $updatedUser = $this->userService->updateProfile($user, $validated, $folder);
+            $this->pointService->award($user, PointRewards::PROFILE_UPDATED);
 
             $data = ['user' => new UserResource($updatedUser)];
 
@@ -79,6 +85,26 @@ class UserController extends Controller
         return $this->successResponse(
             $members,
             'Assigned members retrieved successfully'
+        );
+    }
+
+    public function award(AwardPointRequest $request): JsonResponse
+    {
+        $data   = $request->validated();
+        $user   = $request->user();
+
+        $starsAwarded =  $this->pointService->award($user, $data['action']);
+
+        $user->refresh();
+
+        return $this->successResponse(
+            data: [
+                'stars_awarded' => $starsAwarded,
+                'user'          => new UserResource($user),
+            ],
+            message: $starsAwarded > 0
+                ? "{$starsAwarded} star(s) awarded."
+                : 'Action received. No stars awarded.',
         );
     }
 }

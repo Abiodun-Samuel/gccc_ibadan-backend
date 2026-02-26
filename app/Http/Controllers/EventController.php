@@ -88,14 +88,12 @@ class EventController extends Controller
 
             if (isset($data['image'])) {
                 if ($this->isBase64($data['image'])) {
-                    // New image uploaded — delete the old one, upload the new one
                     if ($event->image) {
                         $this->uploadService->delete($event->image);
                     }
 
                     $data['image'] = $this->uploadService->upload($data['image'], 'events');
                 } else {
-                    // Already a URL (unchanged) — don't touch Cloudinary at all
                     unset($data['image']);
                 }
             }

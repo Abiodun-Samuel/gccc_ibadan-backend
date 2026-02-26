@@ -35,7 +35,6 @@ class Attendance extends Model
             'start_time',
             'is_recurring',
             'service_date',
-            'reward_stars'
         ]);
     }
     // Query scopes for common filters
