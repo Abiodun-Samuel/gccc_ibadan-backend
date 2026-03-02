@@ -87,6 +87,8 @@ class FirstTimerController extends Controller
                 }
             }
 
+            $firstTimer->load('assignedTo');
+
             $updatedFirstTimer = $this->firstTimerService->updateFirstTimer($firstTimer, $validated);
 
             return $this->successResponse(

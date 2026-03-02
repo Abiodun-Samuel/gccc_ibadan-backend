@@ -115,19 +115,53 @@ class FirstTimerService
     {
         return DB::transaction(function () use ($firstTimer, $data) {
             $oldFollowUpStatusId = $firstTimer->follow_up_status_id;
+            $oldFollowUpById = $firstTimer->followup_by_id;
 
             $firstTimer->update($data);
 
             $newFollowUpStatusId = $data['follow_up_status_id'] ?? null;
+            $newFollowUpById = $data['followup_by_id'] ?? null;
 
             // Auto-assign member role when status changes to integrated (ID: 7)
             if ($newFollowUpStatusId == 7 && $oldFollowUpStatusId != 7) {
                 $this->assignMemberRole($firstTimer);
             }
 
+            // Call function when followup_by_id changes and is not null
+            if (!is_null($newFollowUpById) && $newFollowUpById != $oldFollowUpById) {
+                $assignedUser = User::findOrFail($newFollowUpById);
+
+                $recipients = [['name' => $assignedUser->first_name, 'email' => $assignedUser->email]];
+
+                $emailData = [
+                    "first_timer_name" => $firstTimer->first_name ?? '',
+                    "first_timer_email" => $firstTimer->email ?? '',
+                    "first_timer_phone" => $firstTimer->phone_number ?? ''
+                ];
+
+                $this->mailService->sendFirstTimerAssignedEmail($recipients, [], [], $emailData);
+            }
+
             return $firstTimer->fresh(['followUpStatus', 'assignedTo']);
         });
     }
+    // public function updateFirstTimer(User $firstTimer, array $data): User
+    // {
+    //     return DB::transaction(function () use ($firstTimer, $data) {
+    //         $oldFollowUpStatusId = $firstTimer->follow_up_status_id;
+
+    //         $firstTimer->update($data);
+
+    //         $newFollowUpStatusId = $data['follow_up_status_id'] ?? null;
+
+    //         // Auto-assign member role when status changes to integrated (ID: 7)
+    //         if ($newFollowUpStatusId == 7 && $oldFollowUpStatusId != 7) {
+    //             $this->assignMemberRole($firstTimer);
+    //         }
+
+    //         return $firstTimer->fresh(['followUpStatus', 'assignedTo']);
+    //     });
+    // }
 
     /**
      * Assign member role to first timer
