@@ -138,6 +138,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ------------------------------------------------------------------------
     Route::prefix('first-timers')->name('first-timers.')->group(function () {
         Route::get('/', [FirstTimerController::class, 'index'])->name('index');
+        Route::get('/report', [FirstTimerController::class, 'getFirstTimerReport'])->name('report');
         Route::get('/assigned', [FirstTimerController::class, 'getAssignedFirstTimers'])->name('assigned');
         Route::get('/{firstTimer}', [FirstTimerController::class, 'show'])->name('show');
         Route::put('/{firstTimer}', [FirstTimerController::class, 'update'])->name('update');
@@ -287,7 +288,6 @@ Route::middleware('auth:sanctum')->group(function () {
             // Admin First Timers
             // --------------------------------------------------------------------
             Route::prefix('first-timers')->name('first-timers.')->group(function () {
-                Route::get('/report', [FirstTimerController::class, 'getFirstTimerReport'])->name('report');
                 Route::get('/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics'])->name('analytics');
                 Route::post('/integrated/assign-member-role', [FirstTimerController::class, 'assignMemberRole'])->name('assign-member-role');
             });
