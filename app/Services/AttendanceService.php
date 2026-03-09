@@ -211,7 +211,7 @@ class AttendanceService
 
         return DB::transaction(function () use ($providedLeaderIds, $serviceId, $attendanceDate) {
             // Clear previous assignments for this service and date
-            $this->clearPreviousAssignments($serviceId, $attendanceDate);
+            $this->clearPreviousAssignments();
 
             // Get absent members with their units and leaders
             $absentMembers = $this->getAbsentMembersWithUnits($serviceId, $attendanceDate);
@@ -277,12 +277,9 @@ class AttendanceService
     /**
      * Clear previous assignments for the given service and date
      */
-    private function clearPreviousAssignments(int $serviceId, string $attendanceDate): void
+    private function clearPreviousAssignments(): void
     {
-        AbsenteeAssignment::delete();
-        // where('service_id', $serviceId)
-        //     ->where('attendance_date', $attendanceDate)
-        //     ->
+        AbsenteeAssignment::query()->delete();
     }
 
     /**
