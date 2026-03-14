@@ -19,6 +19,7 @@ class SendBulkMailRequest extends FormRequest
     {
         return [
             'user_ids'      => ['required', 'array', 'min:1'],
+            'use_merge_info' => ['sometimes', 'boolean'],
             'user_ids.*'    => ['required', 'integer', 'exists:users,id'],
             'template_id'   => ['required', 'string'],
             'cc_recipients' => ['sometimes', 'array'],

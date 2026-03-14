@@ -3,10 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SendBulkMailRequest;
-use App\Models\PicnicRegistration;
 use App\Services\MailService;
 use App\Services\UserService;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -56,15 +54,10 @@ class MailController extends Controller
                         recipients: $batch,
                         ccRecipients: $validated['cc_recipients']  ?? [],
                         bccRecipients: $validated['bcc_recipients'] ?? [],
+                        useMergeInfo: (bool) ($validated['use_merge_info'] ?? false),
                     );
 
                     $successCount += count($batch);
-
-                    Log::info('Bulk email batch sent', [
-                        'template_id' => $validated['template_id'],
-                        'batch'       => ($batchIndex + 1) . "/{$batchCount}",
-                        'recipients'  => count($batch),
-                    ]);
                 } catch (\Exception $e) {
                     $failureCount += count($batch);
 
@@ -74,25 +67,10 @@ class MailController extends Controller
                         'emails'     => array_column($batch, 'email'),
                         'error'      => $e->getMessage(),
                     ];
-
-                    Log::error('Bulk email batch failed', [
-                        'template_id' => $validated['template_id'],
-                        'batch'       => ($batchIndex + 1) . "/{$batchCount}",
-                        'recipients'  => count($batch),
-                        'error'       => $e->getMessage(),
-                    ]);
                 }
             }
 
             $isFullSuccess = $failureCount === 0;
-
-            Log::info('Bulk email sending completed', [
-                'template_id'   => $validated['template_id'],
-                'total_users'   => $totalUsers,
-                'batches_sent'  => $batchCount,
-                'success_count' => $successCount,
-                'failure_count' => $failureCount,
-            ]);
 
             return response()->json([
                 'success' => $isFullSuccess,
@@ -107,10 +85,6 @@ class MailController extends Controller
                 ],
             ], $isFullSuccess ? Response::HTTP_OK : 207);
         } catch (\Exception $e) {
-            Log::error('Bulk email sending failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
 
             return $this->errorResponse(
                 'Failed to send bulk email: ' . $e->getMessage(),
