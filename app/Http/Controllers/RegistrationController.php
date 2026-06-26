@@ -45,9 +45,9 @@ class RegistrationController extends Controller
      */
     public function store(StoreRegistrationRequest $request): JsonResponse
     {
-        $user =  $request->user();
+        // $user =  $request->user();
         $registration = $this->service->register($request->validated());
-        $this->pointService->award($user, PointRewards::EVENT_REGISTERED);
+        // $this->pointService->award($user, PointRewards::EVENT_REGISTERED);
 
         return $this->successResponse(
             new RegistrationResource($registration),

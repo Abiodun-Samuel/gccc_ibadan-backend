@@ -43,6 +43,7 @@ Route::middleware('guest')->group(function () {
 
     Route::prefix('event-registrations')->group(function () {
         Route::get('/', [RegistrationController::class, 'index']);
+        Route::post('/', [RegistrationController::class, 'store']);
     });
 
     Route::prefix('events')->group(function () {
