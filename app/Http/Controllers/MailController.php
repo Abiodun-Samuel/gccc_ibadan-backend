@@ -25,20 +25,14 @@ class MailController extends Controller
         try {
             $validated = $request->validated();
 
-            $users = $this->userService->getUsersForBulkEmail($validated['user_ids']);
+            $recipients = $this->resolveRecipients($validated);
 
-            if ($users->isEmpty()) {
+            if (empty($recipients)) {
                 return $this->errorResponse(
-                    'No valid users found with email addresses.',
+                    'No valid recipients found with email addresses.',
                     Response::HTTP_NOT_FOUND
                 );
             }
-
-            // Map users to the recipient shape ZeptoMail expects.
-            $recipients = $users->map(fn($user) => [
-                'email' => $user->email,
-                'name'  => trim("{$user->first_name} {$user->last_name}"),
-            ])->values()->all();
 
             $totalUsers    = count($recipients);
             $batches       = array_chunk($recipients, self::BATCH_SIZE);
@@ -92,6 +86,62 @@ class MailController extends Controller
             );
         }
     }
+    /**
+     * Resolve the final list of recipients for a bulk send.
+     *
+     * Recipients can come from two sources, which may be used independently
+     * or together:
+     *   - user_ids: resolved to users (and their stored names) via UserService.
+     *   - emails:   a plain list of email-address strings.
+     *
+     * Results are merged and de-duplicated by (lower-cased) email, with
+     * user-derived recipients taking precedence so their names are kept.
+     *
+     * @param array $validated
+     * @return array<int, array{email: string, name: string}>
+     */
+    private function resolveRecipients(array $validated): array
+    {
+        $recipients = [];
+
+        // Existing behaviour: build recipients from selected user IDs.
+        if (!empty($validated['user_ids'])) {
+            $users = $this->userService->getUsersForBulkEmail($validated['user_ids']);
+
+            foreach ($users as $user) {
+                $email = strtolower(trim($user->email));
+
+                if ($email === '') {
+                    continue;
+                }
+
+                $recipients[$email] = [
+                    'email' => $user->email,
+                    'name'  => trim("{$user->first_name} {$user->last_name}"),
+                ];
+            }
+        }
+
+        // New alternative: build recipients from a raw list of email strings.
+        if (!empty($validated['emails'])) {
+            foreach ($validated['emails'] as $email) {
+                $normalized = strtolower(trim($email));
+
+                // Don't overwrite a user-derived recipient (keeps its name).
+                if ($normalized === '' || isset($recipients[$normalized])) {
+                    continue;
+                }
+
+                $recipients[$normalized] = [
+                    'email' => trim($email),
+                    'name'  => '',
+                ];
+            }
+        }
+
+        return array_values($recipients);
+    }
+
     /**
      * Compose an appropriate message for bulk email results
      *
