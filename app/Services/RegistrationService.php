@@ -6,7 +6,7 @@ use App\Models\Registration;
 
 class RegistrationService
 {
-    private const MAX_CAPACITY = 54;
+    private const MAX_CAPACITY = 54000;
     /**
      * Return all registrations and the total count (no pagination).
      */
