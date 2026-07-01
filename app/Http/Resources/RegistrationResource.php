@@ -18,6 +18,10 @@ class RegistrationResource extends JsonResource
             'whatsapp_number' => $this->whatsapp_number,
             'email'           => $this->email,
             'attending'       => $this->attending,
+            'needs_accommodation'       => $this->needs_accommodation,
+            'travelling_with_us'        => $this->travelling_with_us,
+            'needs_transport_fare_help' => $this->needs_transport_fare_help,
+            'travel_date'               => $this->travel_date?->toDateString(),
             'created_at'      => $this->created_at?->toISOString(),
             'updated_at'      => $this->updated_at?->toISOString(),
         ];

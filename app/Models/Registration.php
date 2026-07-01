@@ -15,10 +15,18 @@ class Registration extends Model
         'whatsapp_number',
         'email',
         'attending',
+        'needs_accommodation',
+        'travelling_with_us',
+        'needs_transport_fare_help',
+        'travel_date',
     ];
 
     protected $casts = [
-        'attending' => 'boolean',
+        'attending'                 => 'boolean',
+        'needs_accommodation'       => 'boolean',
+        'travelling_with_us'        => 'boolean',
+        'needs_transport_fare_help' => 'boolean',
+        'travel_date'               => 'date',
     ];
 
     public function event(): BelongsTo

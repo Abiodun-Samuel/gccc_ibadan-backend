@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Event extends Model
 {
@@ -14,6 +15,7 @@ class Event extends Model
 
     protected $fillable = [
         'title',
+        'slug',
         'description',
         'start_date',
         'end_date',
@@ -42,8 +44,34 @@ class Event extends Model
     protected static function booted()
     {
         static::saving(function ($event) {
+            if (empty($event->slug) || $event->isDirty('title')) {
+                $event->slug = $event->generateUniqueSlug();
+            }
+
             $event->updateStatus();
         });
+    }
+
+    /**
+     * Build a unique slug from the event title.
+     */
+    protected function generateUniqueSlug(): string
+    {
+        $base = Str::slug($this->title) ?: 'event';
+        $slug = $base;
+        $suffix = 2;
+
+        while (
+            static::withoutGlobalScopes()
+                ->where('slug', $slug)
+                ->when($this->exists, fn($q) => $q->whereKeyNot($this->getKey()))
+                ->exists()
+        ) {
+            $slug = "{$base}-{$suffix}";
+            $suffix++;
+        }
+
+        return $slug;
     }
 
     /**

@@ -49,7 +49,7 @@ Route::middleware('guest')->group(function () {
     Route::prefix('events')->group(function () {
         Route::get('/', [EventController::class, 'index']);
         Route::get('/closest',  [EventController::class, 'closest']);
-        Route::get('/{event}', [EventController::class, 'show']);
+        Route::get('/{event:slug}', [EventController::class, 'show']);
     });
 
     // Guest First Timer Registration

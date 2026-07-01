@@ -21,6 +21,11 @@ class StoreRegistrationRequest extends FormRequest
             'whatsapp_number' => ['nullable', 'string', 'max:25'],
             'email'           => ['required', 'email', 'max:255', 'unique:registrations,email'],
             'attending'       => ['required', 'boolean'],
+
+            'needs_accommodation'       => ['nullable', 'boolean'],
+            'travelling_with_us'        => ['nullable', 'boolean'],
+            'needs_transport_fare_help' => ['nullable', 'boolean'],
+            'travel_date'               => ['nullable', 'date'],
         ];
     }
 
