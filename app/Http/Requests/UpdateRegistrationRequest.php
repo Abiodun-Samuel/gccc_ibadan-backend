@@ -21,6 +21,11 @@ class UpdateRegistrationRequest extends FormRequest
             'whatsapp_number' => ['nullable', 'string', 'max:25'],
             'email'           => ['sometimes', 'required', 'email', 'max:255'],
             'attending'       => ['sometimes', 'required', 'boolean'],
+
+            'needs_accommodation'       => ['nullable', 'boolean'],
+            'travelling_with_us'        => ['nullable', 'boolean'],
+            'needs_transport_fare_help' => ['nullable', 'boolean'],
+            'travel_date'               => ['nullable', 'date'],
         ];
     }
 }
