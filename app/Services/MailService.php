@@ -10,12 +10,14 @@ class MailService
 {
     protected $apiUrl;
     protected $apiKey;
+    protected $fromAddress;
     private const POOL_SIZE = 10; // concurrent requests per pool chunk
 
     public function __construct()
     {
         $this->apiUrl = config('services.zeptomail.base_url');
         $this->apiKey = config('services.zeptomail.api_key');
+        $this->fromAddress = config('services.zeptomail.from_address');
     }
 
     private function sendEmail(array $data): array
@@ -136,7 +138,7 @@ class MailService
         $data = [
             "mail_template_key" => env('MESSAGE_NOTIFICATION_TEMPLATE_ID'),
             "from" => [
-                "address" => "admin@gcccibadan.org",
+                "address" => $this->fromAddress,
                 "name" => "GCCC Ibadan"
             ],
             "to" => $this->buildRecipientsArray($recipients),
@@ -165,7 +167,7 @@ class MailService
         $data = [
             "mail_template_key" => env('assisgnment_email_template_id'),
             "from" => [
-                "address" => "admin@gcccibadan.org",
+                "address" => $this->fromAddress,
                 "name" => "Admin from GCCC IBADAN"
             ],
             "to" => $this->buildRecipientsArray($recipients),
@@ -192,7 +194,7 @@ class MailService
         $data = [
             "mail_template_key" => env('assigned_member_email_template_id'),
             "from" => [
-                "address" => "admin@gcccibadan.org",
+                "address" => $this->fromAddress,
                 "name" => "Admin from GCCC IBADAN"
             ],
             "to" => $this->buildRecipientsArray($recipients),
@@ -226,7 +228,7 @@ class MailService
         $emailData = [
             "mail_template_key" => env('firstTimerAssignedTemplateId'),
             "from" => [
-                "address" => "admin@gcccibadan.org",
+                "address" => $this->fromAddress,
                 "name" => "Admin from GCCC IBADAN"
             ],
             "to" => $this->buildRecipientsArray($recipients),
@@ -263,7 +265,7 @@ class MailService
         $data = [
             "mail_template_key" => env('firsttimer_welcome_email_template_id'),
             "from" => [
-                "address" => "admin@gcccibadan.org",
+                "address" => $this->fromAddress,
                 "name" => "Admin from GCCC IBADAN"
             ],
             "to" => $this->buildRecipientsArray($recipients),
@@ -294,7 +296,7 @@ class MailService
         $data = [
             "mail_template_key" => env('password_reset_email_template_id'),
             "from" => [
-                "address" => "admin@gcccibadan.org",
+                "address" => $this->fromAddress,
                 "name" => "Admin from GCCC IBADAN"
             ],
             "to" => $this->buildRecipientsArray($recipients),
@@ -322,7 +324,7 @@ class MailService
         $data = [
             "mail_template_key" => $templateId,
             "from" => [
-                "address" => "admin@gcccibadan.org",
+                "address" => $this->fromAddress,
                 "name" => "Admin from GCCC IBADAN"
             ],
             "to" => []
@@ -368,7 +370,7 @@ class MailService
         $data = [
             "mail_template_key" => env('ASSIGNED_MEMBERS_TEMPLATE_ID'),
             "from" => [
-                "address" => "admin@gcccibadan.org",
+                "address" => $this->fromAddress,
                 "name" => "Admin from GCCC IBADAN"
             ],
             "to" => $this->buildRecipientsArray($recipients),
@@ -400,7 +402,7 @@ class MailService
             $data = [
                 'mail_template_key' => $templateId,
                 'from' => [
-                    'address' => 'admin@gcccibadan.org',
+                    'address' => $this->fromAddress,
                     'name'    => 'GCCC IBADAN',
                 ],
                 'to' => $this->buildRecipientsArray($recipients),
@@ -519,7 +521,7 @@ class MailService
         $payload = [
             'mail_template_key' => $templateId,
             'from' => [
-                'address' => 'admin@gcccibadan.org',
+                'address' => $this->fromAddress,
                 'name'    => 'GCCC IBADAN',
             ],
             'to' => [
