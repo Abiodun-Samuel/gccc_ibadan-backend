@@ -18,6 +18,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\UsherAttendanceController;
 use App\Enums\RoleEnum;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\HangoutController;
+use App\Http\Controllers\HangoutRegistrationController;
 use App\Http\Controllers\RedeemableItemController;
 use App\Http\Controllers\RegistrationController;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +52,14 @@ Route::middleware('guest')->group(function () {
         Route::get('/', [EventController::class, 'index']);
         Route::get('/closest',  [EventController::class, 'closest']);
         Route::get('/{event:slug}', [EventController::class, 'show']);
+    });
+
+    // GCCC Hangout (separate from events)
+    Route::prefix('hangout')->name('hangout.')->group(function () {
+        Route::get('/', [HangoutController::class, 'show'])->name('show');
+        Route::post('/registrations', [HangoutController::class, 'register'])
+            ->middleware('throttle:20,1')
+            ->name('register');
     });
 
     // Guest First Timer Registration
@@ -266,6 +276,11 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::prefix('event-registrations')->group(function () {
                 Route::put('/{registration}', [RegistrationController::class, 'update']);
                 Route::delete('/{registration}', [RegistrationController::class, 'destroy']);
+            });
+
+            Route::prefix('hangout')->name('hangout.')->group(function () {
+                Route::get('/registrations', [HangoutRegistrationController::class, 'index'])->name('registrations.index');
+                Route::get('/registrations/export', [HangoutRegistrationController::class, 'export'])->name('registrations.export');
             });
 
             // --------------------------------------------------------------------
