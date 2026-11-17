@@ -13,6 +13,7 @@ class HangoutRegistration extends Model
         'phone_number',
         'whatsapp_number',
         'game',
+        'menu',
         'support_amount',
     ];
 
@@ -36,6 +37,18 @@ class HangoutRegistration extends Model
             ->orWhere('email', 'like', $like)
             ->orWhere('phone_number', 'like', $like)
             ->orWhere('whatsapp_number', 'like', $like));
+    }
+
+    /**
+     * Scope: one meal, or 'none' for registrations that haven't picked one yet.
+     */
+    public function scopeMenu(Builder $query, ?string $menu): Builder
+    {
+        return match (true) {
+            blank($menu) => $query,
+            $menu === 'none' => $query->whereNull('menu'),
+            default => $query->where('menu', $menu),
+        };
     }
 
     /**

@@ -60,6 +60,9 @@ Route::middleware('guest')->group(function () {
         Route::post('/registrations', [HangoutController::class, 'register'])
             ->middleware('throttle:20,1')
             ->name('register');
+        Route::post('/registrations/lookup', [HangoutController::class, 'lookup'])
+            ->middleware('throttle:10,1')
+            ->name('lookup');
     });
 
     // Guest First Timer Registration

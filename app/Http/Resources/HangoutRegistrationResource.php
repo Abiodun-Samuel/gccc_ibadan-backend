@@ -16,6 +16,7 @@ class HangoutRegistrationResource extends JsonResource
             'phone_number'    => $this->phone_number,
             'whatsapp_number' => $this->whatsapp_number,
             'game'            => $this->game,
+            'menu'            => $this->menu,
             'support_amount'  => $this->support_amount !== null ? (float) $this->support_amount : null,
             'created_at'      => $this->created_at?->toISOString(),
             'updated_at'      => $this->updated_at?->toISOString(),

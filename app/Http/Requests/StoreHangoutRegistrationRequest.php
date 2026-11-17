@@ -30,6 +30,9 @@ class StoreHangoutRegistrationRequest extends FormRequest
             'phone_number'    => ['required', 'string', 'max:25', self::PHONE],
             'whatsapp_number' => ['nullable', 'string', 'max:25', self::PHONE],
             'game'            => ['required', 'string', Rule::in(app(HangoutRegistrationService::class)->gameNames())],
+            'menu'            => ['required', 'string', Rule::in(app(HangoutRegistrationService::class)->menuNames())],
+            // The phone number the registration was saved with, when changing it.
+            'current_phone'   => ['nullable', 'string', 'max:25', self::PHONE],
             'support_amount'  => ['nullable', 'numeric', 'decimal:0,2', 'gt:0', 'max:100000000'],
         ];
     }
@@ -45,6 +48,8 @@ class StoreHangoutRegistrationRequest extends FormRequest
             'whatsapp_number.regex' => 'Enter a valid WhatsApp number.',
             'game.required'         => 'Choose the game you want to play.',
             'game.in'               => 'Choose one of the hangout games.',
+            'menu.required'         => 'Choose your meal.',
+            'menu.in'               => 'Choose one of the two meals.',
             'support_amount.numeric' => 'Enter the amount as a number, for example 5000.',
             'support_amount.decimal' => 'Use at most two decimal places.',
             'support_amount.gt'     => 'Enter an amount above zero, or leave it empty.',
