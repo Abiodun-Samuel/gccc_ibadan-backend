@@ -26,6 +26,7 @@ return [
     'zeptomail' => [
         'base_url' => env('ZEPTO_BASE_URL'),
         'api_key' => env('ZEPTO_API_KEY'),
+        'from_address' => env('ZEPTOMAIL_FROM_ADDRESS'),
     ],
 
     'youtube' => [
