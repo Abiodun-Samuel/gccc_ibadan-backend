@@ -19,6 +19,7 @@ class IndexHangoutRegistrationsRequest extends FormRequest
             'search'    => ['nullable', 'string', 'max:100'],
             'game'      => ['nullable', 'string', 'max:100'],
             'menu'      => ['nullable', 'string', 'max:100'], // a meal, or 'none'
+            'gender'    => ['nullable', 'string', 'max:10'], // a gender, or 'none'
             'support'   => ['nullable', Rule::in(['with', 'without'])],
             'sort'      => ['nullable', Rule::in(HangoutRegistrationService::SORTABLE)],
             'direction' => ['nullable', Rule::in(['asc', 'desc'])],

@@ -22,24 +22,45 @@ return [
     // Registration closes at this moment. Leave empty to close when the hangout starts.
     'registration_closes_at' => env('HANGOUT_REGISTRATION_CLOSES_AT'),
 
-    // Each registrant picks exactly one, and the name is what gets stored. The
-    // frontend shows each game's photos, video and description from its own
-    // list (src/components/hangout/hangoutGames.js), matched by these names, so
+    // Each person (a registering adult, or a child they add) picks exactly
+    // one, and the name is what gets stored. The frontend shows each game's
+    // photos, video and description from its own list
+    // (src/components/hangout/hangoutGames.js), matched by these names, so
     // add, rename or remove a game in both places.
+    //
+    // These are the games and activities Agodi Gardens' management confirmed
+    // (November 2026).
     'games' => [
         'Paintball',
         'Archery',
+        'Go-Karts & Hoverboards',
         'Horse Riding',
         'Swimming & Water Slides',
+        'Football',
+        'Basketball',
         'Bowling',
+        'Snooker',
         'Trampoline & Bouncing Castle',
         'Bicycle Riding',
-        'Table Tennis & Badminton',
+        'Kids Power Bike',
+        'Table Tennis',
+        'Badminton',
         'VR Games',
+        'Karaoke',
+        'Sip & Paint',
+        'Face Painting',
         'Board Games',
     ],
 
-    // Each registrant picks one meal; the name is what gets stored. The
+    // Games only children can pick.
+    'children_only_games' => [
+        'Kids Power Bike',
+    ],
+
+    // The most children one adult can add to their registration.
+    'max_children' => 10,
+
+    // Each person picks one meal; the name is what gets stored. The
     // frontend's list (src/components/hangout/hangoutMenus.js) adds the
     // "Menu 1" labels, dishes and photos, matched by these names.
     'menus' => [
@@ -47,49 +68,126 @@ return [
         'Abula and Beef',
     ],
 
+    // Everyone gives one; the frontend offers the same two.
+    'genders' => [
+        'Male',
+        'Female',
+    ],
+
     /*
-    | What Agodi Gardens charges, for the admin's cost estimate only. Never
-    | sent to the public page. Each price says where it came from:
-    | 'confirmed' marks prices the hangout team has given; the rest are from
-    | online guides and posts, which may be out of date (they gave the gate
-    | fee as ₦1,000). A game left out (or with a null amount) has no price yet.
+    | What each person costs, for the admin's cost estimate only. Never sent to
+    | the public page. 'adult' and 'child' are each age's price; 'amount' is one
+    | price for both. A missing or null price means none is set yet (or, for
+    | 'adult' on a children-only game, that adults can't play it); 0 means
+    | free. 'confirmed' marks prices from Agodi Gardens' management or the
+    | hangout team, and each says where it came from. Where a game has several
+    | packages, the estimate uses the standard one and the source lists the rest.
     */
     'entry_fee' => [
         'amount' => 1500,
         'confirmed' => true,
-        'source' => 'Given by the hangout team, 17 November 2026.',
+        'source' => 'Gate fee given by the hangout team, 17 November 2026. No separate children’s fee was given, so children are counted at the same fee.',
     ],
 
     'game_prices' => [
         'Paintball' => [
-            'amount' => 3000,
+            'amount' => 3500,
             'confirmed' => true,
-            'source' => 'Given by the hangout team, 17 November 2026.',
+            'source' => 'Agodi Gardens management: ₦3,500 for 20 paintballs.',
         ],
         'Archery' => [
-            'amount' => 4000,
+            'amount' => 2000,
             'confirmed' => true,
-            'source' => 'Given by the hangout team, 17 November 2026.',
+            'source' => 'Agodi Gardens management: 6 shots ₦2,000, 12 shots ₦3,500, 30 minutes ₦7,000. The estimate uses 6 shots.',
+        ],
+        'Go-Karts & Hoverboards' => [
+            'amount' => 1000,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: hoverboard and go-kart ride ₦1,000; off-road hoverboard ride ₦1,500.',
         ],
         'Horse Riding' => [
-            'amount' => 1000,
-            'confirmed' => false,
-            'source' => 'A visitor’s post, April 2025: ₦1,000 for a short ride.',
+            'adult' => 1000,
+            'child' => 500,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: adults ₦1,000 (₦2,000 on special request), children ₦500 (₦1,000 on special request).',
         ],
         'Swimming & Water Slides' => [
             'amount' => 1000,
-            'confirmed' => false,
-            'source' => 'Tadexprof guide to Agodi Gardens (2026): the pool costs an extra ₦1,000 a person.',
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: pool access ₦1,000.',
+        ],
+        'Football' => [
+            'amount' => 0,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: free.',
+        ],
+        'Basketball' => [
+            'amount' => 500,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: bin basket ₦500; mobile basketball net ₦500.',
         ],
         'Bowling' => [
-            'amount' => 500,
-            'confirmed' => false,
-            'source' => 'About ₦500, from an online summary of Agodi activities. Not confirmed with the gardens.',
+            'amount' => 1000,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: ₦1,000.',
+        ],
+        'Snooker' => [
+            'amount' => 1000,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: ₦1,000.',
         ],
         'Trampoline & Bouncing Castle' => [
+            'adult' => 1000,
+            'child' => 500,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: trampoline adults ₦1,000, children ₦500; bouncing castle ₦500.',
+        ],
+        'Bicycle Riding' => [
+            'amount' => 1000,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: ₦1,000.',
+        ],
+        'Kids Power Bike' => [
+            'child' => 1000,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: children’s power bike ₦1,000.',
+        ],
+        'Table Tennis' => [
             'amount' => 500,
-            'confirmed' => false,
-            'source' => 'About ₦500, from an online summary of Agodi activities. Not confirmed with the gardens.',
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: ₦500.',
+        ],
+        'Badminton' => [
+            'amount' => 1000,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: ₦1,000.',
+        ],
+        'VR Games' => [
+            'adult' => 2500,
+            'child' => 1000,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: adult VR experience ₦2,500, children’s VR experience ₦1,000; sport and RPG VR ₦2,500 to ₦5,000.',
+        ],
+        'Karaoke' => [
+            'amount' => 1000,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: karaoke alone ₦1,000.',
+        ],
+        'Sip & Paint' => [
+            'amount' => 8500,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: sip and paint ₦8,500, karaoke included.',
+        ],
+        'Face Painting' => [
+            'amount' => 500,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management: ₦500.',
+        ],
+        'Board Games' => [
+            'adult' => 1000,
+            'child' => 500,
+            'confirmed' => true,
+            'source' => 'Agodi Gardens management lists board games at ₦1,000 and at ₦500; the estimate takes ₦1,000 for adults and ₦500 for children.',
         ],
     ],
 

@@ -24,11 +24,17 @@ class HangoutController extends Controller
      */
     public function show(): JsonResponse
     {
-        // Open games only, in order, with how many have picked each so far.
+        // Open games only, in order, with how many people (adults and children)
+        // have picked each so far, and which only children can pick.
         $open = $this->service->gameNames();
+        $childrenOnly = $this->service->childrenOnlyGames();
         $games = collect($this->service->countsByGame())
             ->filter(fn(array $row) => in_array($row['game'], $open, true))
-            ->map(fn(array $row) => ['name' => $row['game'], 'registrations_count' => $row['count']])
+            ->map(fn(array $row) => [
+                'name'                => $row['game'],
+                'registrations_count' => $row['count'],
+                'children_only'       => in_array($row['game'], $childrenOnly, true),
+            ])
             ->values();
 
         return $this->successResponse([
@@ -39,6 +45,7 @@ class HangoutController extends Controller
             'registrations_count'    => HangoutRegistration::count(),
             'games'                  => $games,
             'menus'                  => array_map(fn(string $name) => ['name' => $name], $this->service->menuNames()),
+            'max_children'           => $this->service->maxChildren(),
             'support_account'        => config('hangout.support_account'),
         ], 'Hangout details retrieved successfully.');
     }
@@ -93,12 +100,17 @@ class HangoutController extends Controller
     {
         return [
             'full_name'       => $registration->full_name,
+            'gender'          => $registration->gender,
             'email'           => $registration->email,
             'phone_number'    => $registration->phone_number,
             'whatsapp_number' => $registration->whatsapp_number,
             'game'            => $registration->game,
             'menu'            => $registration->menu,
             'support_amount'  => $registration->support_amount !== null ? (float) $registration->support_amount : null,
+            'children'        => $registration->children
+                ->map(fn($child) => $child->only(['full_name', 'gender', 'game', 'menu']))
+                ->values()
+                ->all(),
         ];
     }
 }
