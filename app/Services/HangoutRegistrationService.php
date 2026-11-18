@@ -136,12 +136,44 @@ class HangoutRegistrationService
             }
 
             if ($children !== null) {
-                $registration->children()->delete();
-                $registration->children()->createMany($children);
+                $this->replaceChildren($registration, $children);
             }
 
             return [$registration->load('children'), $created];
         });
+    }
+
+    /**
+     * Replaces the registration's children with the list the form sent. A
+     * child still on paintball keeps their paintball group: the form sends
+     * the whole list again, so they're matched by name.
+     */
+    private function replaceChildren(HangoutRegistration $registration, array $children): void
+    {
+        $paintball = config('hangout.paintball.game', 'Paintball');
+        $groups = $registration->children()
+            ->where('game', $paintball)
+            ->whereNotNull('paintball_group_id')
+            ->get(['full_name', 'paintball_group_id'])
+            ->groupBy(fn(HangoutRegistrationChild $child) => self::nameKey($child->full_name))
+            ->map(fn(Collection $same) => $same->pluck('paintball_group_id')->all())
+            ->all();
+
+        $registration->children()->delete();
+        foreach ($children as $attributes) {
+            $child = $registration->children()->make($attributes);
+            $key = self::nameKey($child->full_name);
+            if ($child->game === $paintball && !empty($groups[$key])) {
+                $child->paintball_group_id = array_shift($groups[$key]);
+            }
+            $child->save();
+        }
+    }
+
+    /** A name as compared: lower case, single spaces. */
+    private static function nameKey(?string $name): string
+    {
+        return Str::lower(preg_replace('/\s+/u', ' ', trim((string) $name)));
     }
 
     /**
@@ -188,6 +220,10 @@ class HangoutRegistrationService
         }
 
         $registration->fill($data);
+        // A member keeps their paintball group unless they switch game.
+        if ($registration->isDirty('game')) {
+            $registration->paintball_group_id = null;
+        }
         // Touch the row even when nothing changed, so admins see it was resubmitted.
         $registration->isDirty() ? $registration->save() : $registration->touch();
 

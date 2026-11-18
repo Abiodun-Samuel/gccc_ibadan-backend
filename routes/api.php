@@ -19,6 +19,7 @@ use App\Http\Controllers\UsherAttendanceController;
 use App\Enums\RoleEnum;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\HangoutController;
+use App\Http\Controllers\HangoutPaintballController;
 use App\Http\Controllers\HangoutRegistrationController;
 use App\Http\Controllers\RedeemableItemController;
 use App\Http\Controllers\RegistrationController;
@@ -284,6 +285,18 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::prefix('hangout')->name('hangout.')->group(function () {
                 Route::get('/registrations', [HangoutRegistrationController::class, 'index'])->name('registrations.index');
                 Route::get('/registrations/export', [HangoutRegistrationController::class, 'export'])->name('registrations.export');
+
+                // Paintball groups: move players, add, rename, remove or rearrange groups.
+                Route::prefix('paintball')->name('paintball.')->group(function () {
+                    Route::post('/groups', [HangoutPaintballController::class, 'store'])->name('groups.store');
+                    Route::post('/groups/rearrange', [HangoutPaintballController::class, 'rearrange'])->name('groups.rearrange');
+                    Route::patch('/groups/{group}', [HangoutPaintballController::class, 'update'])->name('groups.update');
+                    Route::delete('/groups/{group}', [HangoutPaintballController::class, 'destroy'])->name('groups.destroy');
+                    Route::patch('/players/{kind}/{id}', [HangoutPaintballController::class, 'move'])
+                        ->whereIn('kind', ['adult', 'child'])
+                        ->whereNumber('id')
+                        ->name('players.move');
+                });
             });
 
             // --------------------------------------------------------------------

@@ -6,6 +6,7 @@ use App\Http\Requests\LookupHangoutRegistrationRequest;
 use App\Http\Requests\StoreHangoutRegistrationRequest;
 use App\Models\HangoutRegistration;
 use App\Services\HangoutRegistrationService;
+use App\Services\PaintballGroupService;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -15,7 +16,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class HangoutController extends Controller
 {
-    public function __construct(private readonly HangoutRegistrationService $service) {}
+    public function __construct(
+        private readonly HangoutRegistrationService $service,
+        private readonly PaintballGroupService $paintball,
+    ) {}
 
     /**
      * GET /api/hangout
@@ -89,15 +93,23 @@ class HangoutController extends Controller
             );
         }
 
+        // The groups are read once for all the registrations found.
+        $groups = $this->paintball->groups();
+
         return $this->successResponse(
-            ['registrations' => $registrations->map(fn(HangoutRegistration $registration) => $this->details($registration))->all()],
+            ['registrations' => $registrations->map(fn(HangoutRegistration $registration) => $this->details($registration, $groups))->all()],
             $registrations->count() === 1 ? 'Registration found.' : 'Registrations found.',
         );
     }
 
-    /** What a member sees of their own registration. */
-    private function details(HangoutRegistration $registration): array
+    /**
+     * What a member sees of their own registration, including the paintball
+     * groups they (or their children) are in, with the names in each group.
+     */
+    private function details(HangoutRegistration $registration, ?array $allGroups = null): array
     {
+        $groups = $this->paintball->forRegistration($registration, $allGroups);
+
         return [
             'full_name'       => $registration->full_name,
             'gender'          => $registration->gender,
@@ -111,6 +123,13 @@ class HangoutController extends Controller
                 ->map(fn($child) => $child->only(['full_name', 'gender', 'game', 'menu']))
                 ->values()
                 ->all(),
+            // Null when nobody on this registration plays paintball. A player
+            // keeps their group; `final` says registration has closed.
+            'paintball'       => $groups ? [
+                'final'          => !$this->service->isOpen(),
+                'min_group_size' => $this->paintball->minGroupSize(),
+                'groups'         => $groups,
+            ] : null,
         ];
     }
 }

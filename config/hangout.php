@@ -60,6 +60,41 @@ return [
     // The most children one adult can add to their registration.
     'max_children' => 10,
 
+    /*
+    | Paintball groups. Everyone who picks the game (adults and children) is
+    | put into groups that play against each other: as many groups as there
+    | can be with at least `min_group_size` each, so groups stay small and
+    | orderly, with women and men (and children) spread evenly. Groups are
+    | worked out again as people register, and are final once registration
+    | closes. Groups take these names in order (a second round adds "II").
+    */
+    'paintball' => [
+        'game' => 'Paintball',
+        'min_group_size' => 5,
+        'group_names' => [
+            ['name' => "Gideon's 300", 'reference' => 'Judges 7:7', 'motto' => 'A small band with a big God.'],
+            ['name' => 'Jericho Wall Breakers', 'reference' => 'Joshua 6:20', 'motto' => 'Seven laps, one shout, no walls left.'],
+            ['name' => "David's Slingers", 'reference' => '1 Samuel 17:49', 'motto' => 'It only took one good shot.'],
+            ['name' => "Joseph's Coat of Many Colours", 'reference' => 'Genesis 37:3', 'motto' => 'You’ll leave in many colours too.'],
+            ['name' => "Lions' Den Survivors", 'reference' => 'Daniel 6:22', 'motto' => 'Not a scratch on them.'],
+            ['name' => 'Fiery Furnace Crew', 'reference' => 'Daniel 3:27', 'motto' => 'Out without even the smell of smoke.'],
+            ['name' => 'Shield of Faith', 'reference' => 'Ephesians 6:16', 'motto' => 'Ready for every flaming dart.'],
+            ['name' => 'Red Sea Crossers', 'reference' => 'Exodus 14:22', 'motto' => 'Dry ground all the way through.'],
+            ['name' => "Nehemiah's Wall Builders", 'reference' => 'Nehemiah 4:17', 'motto' => 'One hand on the work, one on the defence.'],
+            ['name' => 'Chariots of Fire', 'reference' => '2 Kings 2:11', 'motto' => 'Fast, fiery and always heading up.'],
+            ['name' => "Deborah's Riders", 'reference' => 'Judges 5:12', 'motto' => 'Wake up, wake up, and lead the way.'],
+            ['name' => 'The Mighty Warriors', 'reference' => 'Judges 6:12', 'motto' => 'The Lord is with you, mighty warriors.'],
+            ['name' => "Noah's Ark Rangers", 'reference' => 'Genesis 7:9', 'motto' => 'In two by two, out victorious.'],
+            ['name' => "Esther's Royal Guard", 'reference' => 'Esther 4:14', 'motto' => 'Made for such a time as this.'],
+            ['name' => 'The Water Walkers', 'reference' => 'Matthew 14:29', 'motto' => 'Eyes up, keep walking.'],
+            ['name' => "Joshua's Trumpeters", 'reference' => 'Joshua 6:16', 'motto' => 'Shout, for the Lord has given you the city!'],
+            ['name' => "Elisha's Double Portion", 'reference' => '2 Kings 2:9', 'motto' => 'Twice the spirit, twice the aim.'],
+            ['name' => 'Burning Bush Brigade', 'reference' => 'Exodus 3:2', 'motto' => 'On fire, never burnt out.'],
+            ['name' => 'Mustard Seed Movers', 'reference' => 'Matthew 17:20', 'motto' => 'Small seed, mountain-moving faith.'],
+            ['name' => 'Salt and Light', 'reference' => 'Matthew 5:13–14', 'motto' => 'Bringing the flavour, lighting up the field.'],
+        ],
+    ],
+
     // Each person picks one meal; the name is what gets stored. The
     // frontend's list (src/components/hangout/hangoutMenus.js) adds the
     // "Menu 1" labels, dishes and photos, matched by these names.

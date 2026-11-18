@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\IndexHangoutRegistrationsRequest;
 use App\Http\Resources\HangoutRegistrationResource;
 use App\Services\HangoutRegistrationService;
+use App\Services\PaintballGroupService;
 use App\Support\SimpleXlsx;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
@@ -16,7 +17,10 @@ class HangoutRegistrationController extends Controller
 {
     private const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-    public function __construct(private readonly HangoutRegistrationService $service) {}
+    public function __construct(
+        private readonly HangoutRegistrationService $service,
+        private readonly PaintballGroupService $paintball,
+    ) {}
 
     /**
      * GET /api/admin/hangout/registrations
@@ -42,8 +46,34 @@ class HangoutRegistrationController extends Controller
                 'to'           => $page->lastItem(),
                 'links'        => $page->linkCollection()->toArray(),
             ],
-            'summary' => $this->service->summary(),
+            'summary' => $this->service->summary() + [
+                'paintball' => [
+                    'min_group_size' => $this->paintball->minGroupSize(),
+                    'groups'         => $this->paintball->forAdmin(),
+                ],
+            ],
         ], 'Hangout registrations retrieved successfully.');
+    }
+
+    /** The paintball groups sheet: a bold line per group, then its members. */
+    private function paintballRows(): array
+    {
+        $rows = [];
+        foreach ($this->paintball->forAdmin() as $group) {
+            $rows[] = ['values' => [
+                "{$group['number']}. {$group['name']}",
+                "{$group['size']} players: {$group['women']} women, {$group['men']} men" . ($group['children'] ? ", {$group['children']} children" : ''),
+                null, null, trim("{$group['reference']} · {$group['motto']}", ' ·'),
+            ], 'bold' => true];
+            foreach ($group['members'] as $member) {
+                $rows[] = [
+                    null, $member['full_name'], $member['gender'] ?? 'Not given', $member['child'] ? 'Child' : 'Adult',
+                    $member['parent'], $member['phone_number'],
+                ];
+            }
+        }
+
+        return $rows;
     }
 
     /**
@@ -126,6 +156,14 @@ class HangoutRegistrationController extends Controller
                 ['title' => 'Parent’s phone', 'type' => 'text', 'width' => 17],
                 ['title' => 'Parent’s email', 'type' => 'text', 'width' => 32],
             ], $children())
+            ->addSheet('Paintball groups', [
+                ['title' => 'Group', 'type' => 'text', 'width' => 30],
+                ['title' => 'Name', 'type' => 'text', 'width' => 28],
+                ['title' => 'Gender', 'type' => 'text', 'width' => 11],
+                ['title' => 'Adult or child', 'type' => 'text', 'width' => 14],
+                ['title' => 'Parent (for a child)', 'type' => 'text', 'width' => 28],
+                ['title' => 'Phone', 'type' => 'text', 'width' => 17],
+            ], $this->paintballRows())
             ->addSheet('Summary', [
                 ['title' => 'Item', 'type' => 'text', 'width' => 30],
                 ['title' => 'Adults', 'type' => 'integer', 'width' => 9],

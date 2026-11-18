@@ -1,10 +1,12 @@
 <?php
 
 use App\Enums\RoleEnum;
+use App\Models\HangoutPaintballGroup;
 use App\Models\HangoutRegistration;
 use App\Models\HangoutRegistrationChild;
 use App\Models\User;
 use App\Services\HangoutRegistrationService;
+use App\Services\PaintballGroupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -155,7 +157,7 @@ describe('public registration', function () {
             ->assertJsonPath('data.registration', [
                 'full_name' => 'Ada Obi', 'gender' => 'Female', 'email' => 'ada@example.com', 'phone_number' => '08012345678',
                 'whatsapp_number' => '08087654321', 'game' => 'Archery', 'menu' => 'Rice and Chicken', 'support_amount' => 5000,
-                'children' => [],
+                'children' => [], 'paintball' => null,
             ]);
 
         $saved = HangoutRegistration::sole();
@@ -528,6 +530,18 @@ describe('admin registrations list', function () {
         expect(HangoutRegistration::orderBy('id')->pluck('game')->all())->toBe(['Sip & Paint', 'Basketball', 'Archery']);
     });
 
+    it('moves the old joint "Table Tennis & Badminton" to Table Tennis, adults and children', function () {
+        $registration = HangoutRegistration::create(hangoutPayload(['game' => 'Table Tennis & Badminton']));
+        $registration->children()->create(hangoutChild(['game' => 'Table Tennis & Badminton']));
+        HangoutRegistration::create(hangoutPayload(['email' => 'b@example.com', 'game' => 'Badminton']));
+
+        (require database_path('migrations/2026_11_19_100000_split_table_tennis_and_badminton.php'))->up();
+
+        expect(HangoutRegistration::orderBy('id')->pluck('game')->all())->toBe(['Table Tennis', 'Badminton'])
+            ->and(HangoutRegistrationChild::sole()->game)->toBe('Table Tennis')
+            ->and(config('hangout.games'))->toContain('Table Tennis', 'Badminton')->not->toContain('Table Tennis & Badminton');
+    });
+
     it('filters by search, game, meal and support', function (array $query, array $names) {
         seedHangoutRegistrations();
 
@@ -606,8 +620,9 @@ describe('admin Excel export', function () {
             ->assertDownload('gccc-hangout-2026-registrations-2026-11-01.xlsx');
 
         $parts = readXlsxParts($response->getContent());
-        expect(array_keys($parts))->toContain('[Content_Types].xml', 'xl/workbook.xml', 'xl/styles.xml', 'xl/worksheets/sheet1.xml', 'xl/worksheets/sheet3.xml')
-            ->and($parts['xl/workbook.xml'])->toContain('name="Registrations"')->toContain('name="Children"')->toContain('name="Summary"');
+        expect(array_keys($parts))->toContain('[Content_Types].xml', 'xl/workbook.xml', 'xl/styles.xml', 'xl/worksheets/sheet1.xml', 'xl/worksheets/sheet4.xml')
+            ->and($parts['xl/workbook.xml'])->toContain('name="Registrations"')->toContain('name="Children"')
+            ->toContain('name="Paintball groups"')->toContain('name="Summary"');
 
         $sheet = $parts['xl/worksheets/sheet1.xml'];
         expect(substr_count($sheet, '<row '))->toBe(4) // header + Ada, Bola and the formula-looking name
@@ -632,7 +647,7 @@ describe('admin Excel export', function () {
         // The summary covers everyone. Game fees: Paintball ₦3,000 × 1, Archery ₦4,000 × 3
         // adults (Bola, Ada and the formula-looking name), Horse Riding ₦500 × 1 child, Kids
         // Power Bike ₦1,000 × 1 child = ₦16,500. Gate: ₦1,500 × 5 adults + ₦1,000 × 2 children.
-        expect($parts['xl/worksheets/sheet3.xml'])
+        expect($parts['xl/worksheets/sheet4.xml'])
             ->toContain('>Game fees total<')->toContain('<v>16500</v>')
             ->toContain('>Gate fees total<')->toContain('<v>9500</v>')
             ->toContain('>Estimated total<')->toContain('<v>26000</v>')
@@ -640,4 +655,485 @@ describe('admin Excel export', function () {
             ->toContain('>Not chosen yet<')
             ->toContain('>Not given<');
     });
+});
+
+/**
+ * Paintball players, registered in order: each entry is a gender ('Female',
+ * 'Male' or null). Numbered from `$from`. They have no group until the
+ * groups are next read. Returns the registrations.
+ */
+function paintballPlayers(array $genders, int $from = 0): array
+{
+    return array_map(fn($gender, int $i) => tap(HangoutRegistration::create(hangoutPayload([
+        'full_name' => "Player {$i}", 'email' => "player{$i}@example.com", 'phone_number' => sprintf('0809%07d', $i),
+        'game' => 'Paintball', 'gender' => $gender,
+    ])), fn($r) => $r->forceFill(['created_at' => now()->addMinutes($i)])->saveQuietly()), $genders, array_map(fn(int $k) => $from + $k, array_keys($genders)));
+}
+
+/** Paintball players who register one after another, each given a group as they do. */
+function paintballPlayersOneByOne(array $genders, int $from = 0): array
+{
+    $players = [];
+    foreach (array_values($genders) as $i => $gender) {
+        $players[] = paintballPlayers([$gender], $from + $i)[0];
+        app(PaintballGroupService::class)->assignNewPlayers();
+    }
+
+    return $players;
+}
+
+/** The name of the group a player (adult or child) is in now, or null. */
+function paintballGroupOf(HangoutRegistration|HangoutRegistrationChild $player): ?string
+{
+    return HangoutPaintballGroup::find($player->fresh()?->paintball_group_id)?->name;
+}
+
+/**
+ * Back to an anonymous visitor after an admin request in the same test: the
+ * public routes are for guests, and `auth:sanctum` keeps the admin signed in
+ * for the rest of a test.
+ */
+function asGuest(Tests\TestCase $test): void
+{
+    $test->withoutToken();
+    auth()->shouldUse('web');
+    auth()->forgetGuards();
+}
+
+/** Each group's size, in order. */
+function paintballSizes(): array
+{
+    return array_column(app(PaintballGroupService::class)->groups(), 'size');
+}
+
+describe('paintball groups', function () {
+    it('makes as many groups of at least five as it can', function (int $players, array $sizes) {
+        paintballPlayers(array_fill(0, $players, 'Female'));
+
+        expect(array_column(app(PaintballGroupService::class)->groups(), 'size'))->toBe($sizes);
+    })->with([
+        'nobody'        => [0, []],
+        'too few yet'   => [4, [4]],
+        'exactly five'  => [5, [5]],
+        'nine'          => [9, [9]],
+        'ten'           => [10, [5, 5]],
+        'twelve'        => [12, [6, 6]],
+        'seventeen'     => [17, [6, 6, 5]],
+        'thirty-one'    => [31, [6, 5, 5, 5, 5, 5]],
+    ]);
+
+    it('mixes women and men evenly across the groups', function () {
+        paintballPlayers([...array_fill(0, 7, 'Female'), ...array_fill(0, 8, 'Male'), null]);
+
+        $groups = app(PaintballGroupService::class)->groups();
+        expect($groups)->toHaveCount(3);
+        foreach (['women', 'men'] as $kind) {
+            $counts = array_column($groups, $kind);
+            expect(max($counts) - min($counts))->toBeLessThanOrEqual(1);
+        }
+        expect(array_sum(array_column($groups, 'women')))->toBe(7)
+            ->and(array_sum(array_column($groups, 'men')))->toBe(8)
+            ->and(max(array_column($groups, 'size')) - min(array_column($groups, 'size')))->toBeLessThanOrEqual(1);
+    });
+
+    it('spreads children evenly too', function () {
+        $adults = paintballPlayers([...array_fill(0, 4, 'Female'), ...array_fill(0, 4, 'Male')]);
+        $adults[0]->children()->createMany([
+            hangoutChild(['full_name' => 'Kid A', 'gender' => 'Female', 'game' => 'Paintball']),
+            hangoutChild(['full_name' => 'Kid B', 'gender' => 'Male', 'game' => 'Paintball']),
+        ]);
+
+        $groups = app(PaintballGroupService::class)->groups();
+        expect(array_column($groups, 'children'))->toBe([1, 1])
+            ->and(array_column($groups, 'size'))->toBe([5, 5]);
+    });
+
+    it('names the groups from the Bible list, in order, starting again with "II"', function () {
+        config(['hangout.paintball.group_names' => [
+            ['name' => "Gideon's 300", 'reference' => 'Judges 7:7', 'motto' => 'A small band with a big God.'],
+            ['name' => 'Jericho Wall Breakers', 'reference' => 'Joshua 6:20', 'motto' => 'Seven laps, one shout.'],
+        ]]);
+        paintballPlayers(array_fill(0, 15, 'Male'));
+
+        $groups = app(PaintballGroupService::class)->groups();
+        expect(array_column($groups, 'name'))->toBe(["Gideon's 300", 'Jericho Wall Breakers', "Gideon's 300 II"])
+            ->and($groups[0])->toMatchArray(['number' => 1, 'reference' => 'Judges 7:7', 'motto' => 'A small band with a big God.']);
+    });
+
+    it('gives the same groups every time for the same registrations', function () {
+        paintballPlayers(['Female', 'Male', 'Male', 'Female', null, 'Female', 'Male', 'Male', 'Female', 'Male', 'Female']);
+
+        $first = app(PaintballGroupService::class)->groups();
+        $again = app(PaintballGroupService::class)->groups();
+        expect($again)->toBe($first);
+    });
+
+    it('tells a member their group and everyone in it when they register', function () {
+        paintballPlayers(['Male', 'Female', 'Male', 'Female', 'Male', 'Female', 'Male', 'Female', 'Male']);
+
+        $registration = $this->postJson('/api/hangout/registrations', hangoutPayload(['game' => 'Paintball', 'gender' => 'Female']))
+            ->assertCreated()
+            ->json('data.registration.paintball');
+
+        // Ten players: two groups of five.
+        expect($registration['final'])->toBeFalse()
+            ->and($registration['min_group_size'])->toBe(5)
+            ->and($registration['groups'])->toHaveCount(1);
+        $group = $registration['groups'][0];
+        expect($group['name'])->toBeIn(["Gideon's 300", 'Jericho Wall Breakers'])
+            ->and($group['size'])->toBe(5)
+            ->and($group['members'])->toHaveCount(5)
+            ->and(collect($group['members'])->where('yours', true)->pluck('full_name')->all())->toBe(['Ada Obi'])
+            // Names only: no one's email or phone number.
+            ->and(array_keys($group['members'][0]))->toBe(['full_name', 'gender', 'child', 'yours']);
+    });
+
+    it('shows a parent the groups their children are in', function () {
+        paintballPlayers(['Male', 'Female', 'Male', 'Female']);
+
+        $paintball = $this->postJson('/api/hangout/registrations', hangoutPayload([
+            'game' => 'Archery',
+            'children' => [hangoutChild(['full_name' => 'Tobi Obi', 'game' => 'Paintball'])],
+        ]))->assertCreated()->json('data.registration.paintball');
+
+        expect($paintball['groups'])->toHaveCount(1)
+            ->and(collect($paintball['groups'][0]['members'])->firstWhere('yours', true))
+            ->toBe(['full_name' => 'Tobi Obi', 'gender' => 'Male', 'child' => true, 'yours' => true]);
+    });
+
+    it('has no paintball groups for someone not playing it', function () {
+        paintballPlayers(['Male', 'Female', 'Male', 'Female', 'Male']);
+
+        $this->postJson('/api/hangout/registrations', hangoutPayload())
+            ->assertCreated()
+            ->assertJsonPath('data.registration.paintball', null);
+    });
+
+    it('says the groups are final once registration closes', function () {
+        paintballPlayers(['Male', 'Female', 'Male', 'Female', 'Male']);
+        $this->travelTo('2026-11-28 10:00:01');
+
+        $this->postJson('/api/hangout/registrations/lookup', ['email' => 'player0@example.com'])
+            ->assertOk()
+            ->assertJsonPath('data.registrations.0.paintball.final', true);
+    });
+
+    it('lists every group for admins, with each member’s contact', function () {
+        $adults = paintballPlayers(['Male', 'Female', 'Male', 'Female', 'Male', 'Female', 'Male', 'Female', 'Male', 'Female']);
+        $adults[0]->children()->create(hangoutChild(['full_name' => 'Kid A', 'game' => 'Paintball']));
+
+        $groups = $this->withToken(hangoutUserToken(RoleEnum::ADMIN->value))
+            ->getJson('/api/admin/hangout/registrations')
+            ->assertOk()
+            ->json('data.summary.paintball.groups');
+
+        expect($groups)->toHaveCount(2)
+            ->and(array_column($groups, 'size'))->toEqualCanonicalizing([6, 5])
+            ->and($groups[0]['id'])->toBeInt();
+        $kid = collect($groups)->flatMap(fn($g) => $g['members'])->firstWhere('full_name', 'Kid A');
+        expect($kid)->toMatchArray([
+            'kind' => 'child', 'id' => $adults[0]->children()->sole()->id,
+            'child' => true, 'parent' => 'Player 0', 'phone_number' => '08090000000',
+        ]);
+        $adult = collect($groups)->flatMap(fn($g) => $g['members'])->firstWhere('full_name', 'Player 3');
+        expect($adult)->toMatchArray(['kind' => 'adult', 'id' => $adults[3]->id, 'child' => false, 'parent' => null]);
+    });
+
+    it('exports the paintball groups', function () {
+        paintballPlayers(['Male', 'Female', 'Male', 'Female', 'Male']);
+
+        $parts = readXlsxParts($this->withToken(hangoutUserToken(RoleEnum::ADMIN->value))
+            ->get('/api/admin/hangout/registrations/export')->assertOk()->getContent());
+
+        expect($parts['xl/worksheets/sheet3.xml'])
+            ->toContain('>1. Gideon&apos;s 300<')
+            ->toContain('5 players: 2 women, 3 men')
+            ->toContain('>Player 0<')
+            ->toContain('>Adult<');
+    });
+});
+
+describe('kept paintball groups', function () {
+    it('gives each new player a group straight away, and never moves them as others join', function () {
+        $first = paintballPlayersOneByOne(['Female', 'Male', 'Female', 'Male', 'Female']);
+        expect(paintballSizes())->toBe([5])
+            ->and(array_map('paintballGroupOf', $first))->toBe(array_fill(0, 5, "Gideon's 300"));
+
+        // Every group has five, so the sixth player starts the next one, and so on.
+        $next = paintballPlayersOneByOne(['Male', 'Female', 'Male', 'Female', 'Male', 'Female'], 5);
+        expect(paintballSizes())->toBe([5, 5, 1])
+            ->and(array_map('paintballGroupOf', $first))->toBe(array_fill(0, 5, "Gideon's 300"))
+            ->and(array_map('paintballGroupOf', array_slice($next, 0, 5)))->toBe(array_fill(0, 5, 'Jericho Wall Breakers'))
+            ->and(paintballGroupOf($next[5]))->toBe("David's Slingers");
+    });
+
+    it('puts a new player in the group still needing players that has the fewest of their gender', function () {
+        $service = app(PaintballGroupService::class);
+        $service->createGroup();
+        $service->createGroup();
+
+        $players = paintballPlayersOneByOne(['Female', 'Female', 'Male', 'Male', 'Female']);
+
+        expect(array_map('paintballGroupOf', $players))
+            ->toBe(["Gideon's 300", 'Jericho Wall Breakers', "Gideon's 300", 'Jericho Wall Breakers', "Gideon's 300"]);
+    });
+
+    it('arranges players who picked paintball before groups were kept evenly, then keeps them', function () {
+        $before = paintballPlayers([...array_fill(0, 6, 'Female'), ...array_fill(0, 5, 'Male')]);
+
+        $groups = app(PaintballGroupService::class)->groups();
+        expect(array_column($groups, 'size'))->toEqualCanonicalizing([6, 5])
+            ->and(array_column($groups, 'women'))->toBe([3, 3])
+            ->and(array_column($groups, 'men'))->toEqualCanonicalizing([3, 2]);
+        $kept = array_map('paintballGroupOf', $before);
+
+        paintballPlayersOneByOne(['Male'], 11);
+        expect(array_map('paintballGroupOf', $before))->toBe($kept)
+            ->and(paintballSizes())->toHaveCount(3);
+    });
+
+    it('keeps a member’s group when they update their registration', function () {
+        paintballPlayersOneByOne(['Male', 'Female', 'Male', 'Female', 'Male', 'Female', 'Male', 'Female', 'Male']);
+
+        // The second group still needs a player.
+        $this->postJson('/api/hangout/registrations', hangoutPayload(['game' => 'Paintball']))
+            ->assertCreated()
+            ->assertJsonPath('data.registration.paintball.groups.0.name', 'Jericho Wall Breakers');
+
+        // More people join; Ada changes her name and meal.
+        paintballPlayersOneByOne(['Female', 'Male', 'Female'], 9);
+        $this->postJson('/api/hangout/registrations', hangoutPayload(['game' => 'Paintball', 'full_name' => 'Ada Obi-Okeke', 'menu' => 'Abula and Beef']))
+            ->assertOk()
+            ->assertJsonPath('data.registration.paintball.groups.0.name', 'Jericho Wall Breakers');
+
+        expect(paintballGroupOf(HangoutRegistration::where('email', 'ada@example.com')->sole()))->toBe('Jericho Wall Breakers')
+            ->and(paintballSizes())->toBe([5, 5, 3]);
+    });
+
+    it('keeps a child’s group when their parent updates the registration', function () {
+        paintballPlayersOneByOne(['Male', 'Female', 'Male', 'Female']);
+        $this->postJson('/api/hangout/registrations', hangoutPayload(['children' => [
+            hangoutChild(['full_name' => 'Tobi Obi', 'game' => 'Paintball']),
+            hangoutChild(['full_name' => 'Kemi Obi', 'gender' => 'Female']),
+        ]]))->assertCreated()->assertJsonPath('data.registration.paintball.groups.0.name', "Gideon's 300");
+
+        // The first group fills up. Ada sends her children again: Tobi with another
+        // meal, and Kemi now playing paintball too.
+        paintballPlayersOneByOne(['Female', 'Male', 'Female', 'Male', 'Female'], 4);
+        $this->postJson('/api/hangout/registrations', hangoutPayload(['children' => [
+            hangoutChild(['full_name' => 'TOBI OBI', 'game' => 'Paintball', 'menu' => 'Abula and Beef']),
+            hangoutChild(['full_name' => 'Kemi Obi', 'gender' => 'Female', 'game' => 'Paintball']),
+        ]]))->assertOk();
+
+        $child = fn(string $name) => HangoutRegistrationChild::where('full_name', $name)->sole();
+        expect(paintballGroupOf($child('TOBI OBI')))->toBe("Gideon's 300")
+            ->and(paintballGroupOf($child('Kemi Obi')))->toBe("David's Slingers")
+            ->and(paintballSizes())->toBe([5, 5, 1]);
+    });
+
+    it('takes a player out of their group when they switch game; coming back, they join like anyone new', function () {
+        paintballPlayersOneByOne(['Male', 'Female']);
+        $this->postJson('/api/hangout/registrations', hangoutPayload(['game' => 'Paintball']))
+            ->assertJsonPath('data.registration.paintball.groups.0.name', "Gideon's 300");
+        paintballPlayersOneByOne(['Male', 'Female'], 2);
+
+        $this->postJson('/api/hangout/registrations', hangoutPayload(['game' => 'Archery']))
+            ->assertOk()
+            ->assertJsonPath('data.registration.paintball', null);
+        expect(paintballSizes())->toBe([4]);
+
+        // Someone new takes the free place, so Ada, coming back, starts the next group.
+        paintballPlayersOneByOne(['Female'], 4);
+        $this->postJson('/api/hangout/registrations', hangoutPayload(['game' => 'Paintball']))
+            ->assertOk()
+            ->assertJsonPath('data.registration.paintball.groups.0.name', 'Jericho Wall Breakers');
+        expect(paintballSizes())->toBe([5, 1]);
+    });
+});
+
+describe('admin paintball groups', function () {
+    it('is only for admins', function () {
+        $group = app(PaintballGroupService::class)->createGroup();
+        [$player] = paintballPlayersOneByOne(['Male']);
+        $calls = [
+            ['postJson', '/api/admin/hangout/paintball/groups'],
+            ['postJson', '/api/admin/hangout/paintball/groups/rearrange'],
+            ['patchJson', "/api/admin/hangout/paintball/groups/{$group->id}"],
+            ['deleteJson', "/api/admin/hangout/paintball/groups/{$group->id}"],
+            ['patchJson', "/api/admin/hangout/paintball/players/adult/{$player->id}"],
+        ];
+        foreach ($calls as [$method, $url]) {
+            $this->{$method}($url, ['name' => 'X', 'group_id' => $group->id])->assertUnauthorized();
+        }
+        $this->withToken(hangoutUserToken())->postJson('/api/admin/hangout/paintball/groups')->assertForbidden();
+        expect(HangoutPaintballGroup::count())->toBe(1);
+    });
+
+    it('moves a player, adult or child, to another group, where they stay when they update', function () {
+        $players = paintballPlayersOneByOne(['Male', 'Female', 'Male', 'Female', 'Male', 'Female']);
+        $players[0]->children()->create(hangoutChild(['full_name' => 'Kid A', 'game' => 'Paintball']));
+        $service = app(PaintballGroupService::class);
+        $service->assignNewPlayers();
+        $gideon = HangoutPaintballGroup::where('name', "Gideon's 300")->sole();
+        $jericho = HangoutPaintballGroup::where('name', 'Jericho Wall Breakers')->sole();
+        $updatedAt = $players[0]->fresh()->updated_at;
+        $this->travel(1)->hours();
+
+        $token = hangoutUserToken(RoleEnum::ADMIN->value);
+        $groups = $this->withToken($token)
+            ->patchJson("/api/admin/hangout/paintball/players/adult/{$players[0]->id}", ['group_id' => $jericho->id])
+            ->assertOk()
+            ->assertJsonPath('message', 'Moved Player 0 to Jericho Wall Breakers.')
+            ->json('data.groups');
+        expect(array_column($groups, 'size'))->toBe([4, 3])
+            ->and(collect($groups[1]['members'])->pluck('full_name')->all())->toBe(['Player 0', 'Player 5', 'Kid A'])
+            // An admin's move isn't the member updating their registration.
+            ->and($players[0]->fresh()->updated_at->equalTo($updatedAt))->toBeTrue();
+
+        $kid = $players[0]->children()->sole();
+        $this->patchJson("/api/admin/hangout/paintball/players/child/{$kid->id}", ['group_id' => $gideon->id])->assertOk();
+        expect(paintballGroupOf($kid))->toBe("Gideon's 300");
+
+        // Player 0 updates, sending Kid A again: both stay where the admin put them.
+        asGuest($this);
+        $this->postJson('/api/hangout/registrations', hangoutPayload([
+            'full_name' => 'Player 0', 'gender' => 'Male', 'email' => 'player0@example.com', 'phone_number' => '08090000000',
+            'game' => 'Paintball', 'menu' => 'Abula and Beef',
+            'children' => [hangoutChild(['full_name' => 'Kid A', 'game' => 'Paintball'])],
+        ]))->assertOk();
+        expect(paintballGroupOf($players[0]))->toBe('Jericho Wall Breakers')
+            ->and(paintballGroupOf(HangoutRegistrationChild::where('full_name', 'Kid A')->sole()))->toBe("Gideon's 300");
+    });
+
+    it('won’t move someone who isn’t playing paintball, or into a group that’s gone', function () {
+        $group = app(PaintballGroupService::class)->createGroup();
+        $archer = HangoutRegistration::create(hangoutPayload());
+        [$player] = paintballPlayersOneByOne(['Male']);
+        $this->withToken(hangoutUserToken(RoleEnum::ADMIN->value));
+
+        $this->patchJson("/api/admin/hangout/paintball/players/adult/{$archer->id}", ['group_id' => $group->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('player');
+        $this->patchJson('/api/admin/hangout/paintball/players/child/999999', ['group_id' => $group->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('player');
+        $this->patchJson("/api/admin/hangout/paintball/players/adult/{$player->id}", ['group_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('group_id');
+        $this->patchJson("/api/admin/hangout/paintball/players/parent/{$player->id}", ['group_id' => $group->id])->assertNotFound();
+        expect($archer->fresh()->paintball_group_id)->toBeNull();
+    });
+
+    it('adds a group with the next Bible name not yet used, or the name given', function () {
+        app(PaintballGroupService::class)->createGroup();
+        $this->withToken(hangoutUserToken(RoleEnum::ADMIN->value));
+
+        $added = $this->postJson('/api/admin/hangout/paintball/groups')
+            ->assertCreated()
+            ->assertJsonPath('message', 'Jericho Wall Breakers added. New players join it until it has enough.')
+            ->json('data.groups.1');
+        expect($added)->toMatchArray(['number' => 2, 'name' => 'Jericho Wall Breakers', 'reference' => 'Joshua 6:20', 'size' => 0, 'members' => []]);
+
+        $this->postJson('/api/admin/hangout/paintball/groups', ['name' => 'The Peacemakers', 'reference' => 'Matthew 5:9', 'motto' => 'Blessed are they.'])
+            ->assertCreated()
+            ->assertJsonPath('data.groups.2.name', 'The Peacemakers')
+            ->assertJsonPath('data.groups.2.motto', 'Blessed are they.');
+        $this->postJson('/api/admin/hangout/paintball/groups', ['name' => 'the peacemakers'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['name' => 'Another group already has that name.']);
+    });
+
+    it('renames a group, and members see the new name', function () {
+        $group = app(PaintballGroupService::class)->createGroup();
+        $this->withToken(hangoutUserToken(RoleEnum::ADMIN->value));
+
+        $this->patchJson("/api/admin/hangout/paintball/groups/{$group->id}", ['name' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['name' => 'Give the group a name.']);
+        $saved = $this->patchJson("/api/admin/hangout/paintball/groups/{$group->id}", [
+            'name' => 'The Peacemakers', 'reference' => 'Matthew 5:9', 'motto' => 'Blessed are the peacemakers.',
+        ])->assertOk()->json('data.groups.0');
+        expect($saved)->toMatchArray(['name' => 'The Peacemakers', 'reference' => 'Matthew 5:9', 'motto' => 'Blessed are the peacemakers.']);
+
+        asGuest($this);
+        $this->postJson('/api/hangout/registrations', hangoutPayload(['game' => 'Paintball']))
+            ->assertCreated()
+            ->assertJsonPath('data.registration.paintball.groups.0.name', 'The Peacemakers');
+    });
+
+    it('removes a group only once it is empty', function () {
+        $players = paintballPlayersOneByOne(['Male', 'Female', 'Male', 'Female', 'Male', 'Female']);
+        $gideon = HangoutPaintballGroup::where('name', "Gideon's 300")->sole();
+        $jericho = HangoutPaintballGroup::where('name', 'Jericho Wall Breakers')->sole();
+        $this->withToken(hangoutUserToken(RoleEnum::ADMIN->value));
+
+        $this->deleteJson("/api/admin/hangout/paintball/groups/{$jericho->id}")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['group' => 'Move the players in Jericho Wall Breakers to other groups first.']);
+
+        $this->patchJson("/api/admin/hangout/paintball/players/adult/{$players[5]->id}", ['group_id' => $gideon->id])->assertOk();
+        $this->deleteJson("/api/admin/hangout/paintball/groups/{$jericho->id}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Removed Jericho Wall Breakers.')
+            ->assertJsonCount(1, 'data.groups');
+        expect(paintballSizes())->toBe([6]);
+    });
+
+    it('rearranges everyone into even groups, keeping the groups’ names', function () {
+        // One by one, the first group gets five men and the third has one player.
+        paintballPlayersOneByOne([...array_fill(0, 6, 'Male'), ...array_fill(0, 5, 'Female')]);
+        expect(paintballSizes())->toBe([5, 5, 1]);
+
+        $groups = $this->withToken(hangoutUserToken(RoleEnum::ADMIN->value))
+            ->postJson('/api/admin/hangout/paintball/groups/rearrange')
+            ->assertOk()
+            ->assertJsonPath('message', 'Rearranged everyone into even groups.')
+            ->json('data.groups');
+        expect(array_column($groups, 'name'))->toBe(["Gideon's 300", 'Jericho Wall Breakers'])
+            ->and(array_column($groups, 'size'))->toEqualCanonicalizing([6, 5])
+            ->and(array_column($groups, 'men'))->toBe([3, 3])
+            ->and(array_column($groups, 'women'))->toEqualCanonicalizing([3, 2])
+            ->and(HangoutPaintballGroup::count())->toBe(2);
+    });
+});
+
+it('arranges paintball groups evenly in every mix: sizes, women, men and children each within one', function () {
+    $service = app(PaintballGroupService::class);
+    $arrange = (new ReflectionClass($service))->getMethod('arrange');
+    $count = fn(array $players, callable $is) => count(array_filter($players, $is));
+
+    for ($women = 0; $women <= 12; $women++) {
+        for ($men = 0; $men <= 12; $men++) {
+            foreach ([[0, 0], [1, 0], [0, 2], [2, 1], [3, 3]] as [$girls, $boys]) {
+                $players = [];
+                foreach ([['Female', false, $women], ['Male', false, $men], ['Female', true, $girls], ['Male', true, $boys]] as [$gender, $child, $howMany]) {
+                    for ($i = 0; $i < $howMany; $i++) {
+                        $n = count($players);
+                        $players[] = [
+                            'kind' => $child ? 'child' : 'adult', 'id' => $n, 'full_name' => "P{$n}", 'gender' => $gender,
+                            'child' => $child, 'registration_id' => $n, 'group_id' => null, 'order' => [$n, 0, $n],
+                        ];
+                    }
+                }
+
+                $groups = array_map(fn(array $members) => [
+                    'size'     => count($members),
+                    'women'    => $count($members, fn($m) => $m['gender'] === 'Female'),
+                    'men'      => $count($members, fn($m) => $m['gender'] === 'Male'),
+                    'children' => $count($members, fn($m) => $m['child']),
+                ], $arrange->invoke($service, collect($players)));
+                if (!$groups) {
+                    continue;
+                }
+                expect(count($groups))->toBe(max(1, intdiv(count($players), 5)));
+                foreach (['size', 'women', 'men', 'children'] as $kind) {
+                    $counts = array_column($groups, $kind);
+                    expect(max($counts) - min($counts))->toBeLessThanOrEqual(1, "{$kind} with {$women}W {$men}M {$girls}g {$boys}b");
+                }
+                if (count($groups) > 1) {
+                    expect(min(array_column($groups, 'size')))->toBeGreaterThanOrEqual(5);
+                }
+            }
+        }
+    }
 });
