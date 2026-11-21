@@ -92,7 +92,8 @@ class MemberService
 
         $this->applyMembersFilters($query, $filters);
 
-        return $query->with(['units'])->get();
+        // Roles tell the table who is an admin or pastor (they can't be deleted there).
+        return $query->with(['units', 'roles'])->get();
     }
 
     public function findMember(User $user): User
@@ -169,34 +170,6 @@ class MemberService
             $member->update($validatedData);
 
             return $member->fresh(['assignedTo']);
-        });
-    }
-
-    /**
-     * Delete multiple members.
-     */
-    public function deleteMembers(array $ids): array
-    {
-        return DB::transaction(function () use ($ids) {
-            DB::table('unit_user')->whereIn('user_id', $ids)->delete();
-            $deletedCount = User::whereIn('id', $ids)->delete();
-
-            return [
-                'deleted_count' => $deletedCount,
-                'failed_count' => count($ids) - $deletedCount,
-                'success' => $deletedCount > 0,
-            ];
-        });
-    }
-
-    /**
-     * Delete a single member.
-     */
-    public function deleteMember(User $member): bool
-    {
-        return DB::transaction(function () use ($member) {
-            $member->units()->detach();
-            return $member->delete();
         });
     }
 

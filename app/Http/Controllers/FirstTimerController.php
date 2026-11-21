@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\RoleEnum;
+use App\Http\Requests\DeleteFirstTimersRequest;
+use App\Http\Requests\ListFirstTimersRequest;
+use App\Http\Requests\QuickAddFirstTimerRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\FirstTimerResource;
 use App\Models\FollowUpStatus;
 use App\Models\User;
+use App\Services\FirstTimerDeletionService;
 use App\Services\FirstTimerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,12 +24,15 @@ class FirstTimerController extends Controller
         private readonly FirstTimerService $firstTimerService,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(ListFirstTimersRequest $request): JsonResponse
     {
         $filters = $request->only([
             'week_ending',
             'date_of_visit',
             'date_month_of_visit',
+            'date_year_of_visit',
+            'visit_from',
+            'visit_to',
             'assigned_to_member',
             'follow_up_status'
         ]);
@@ -39,13 +46,34 @@ class FirstTimerController extends Controller
         );
     }
 
+    /** The public welcome form (no login). */
     public function store(StoreUserRequest $request): JsonResponse
     {
-
         $firstTimer = $this->firstTimerService->createFirstTimer($request->validated());
+
+        // The public never learns who will follow up (that would hand out staff names and emails).
+        return $this->successResponse(
+            new FirstTimerResource($firstTimer->unsetRelation('assignedTo')),
+            'First timer created successfully',
+            Response::HTTP_CREATED
+        );
+    }
+
+    /**
+     * Admins and the Follow Up Unit: add a first timer from the first-timers table, with only the
+     * details that are needed. They're assigned for follow-up exactly as the welcome form does.
+     */
+    public function quickStore(QuickAddFirstTimerRequest $request): JsonResponse
+    {
+        $firstTimer = $this->firstTimerService->createFirstTimer($request->validated());
+        $name = trim("{$firstTimer->first_name} {$firstTimer->last_name}");
+        $follower = $firstTimer->assignedTo;
+
         return $this->successResponse(
             new FirstTimerResource($firstTimer),
-            'First timer created successfully',
+            $follower
+                ? "Added {$name}. " . trim("{$follower->first_name} {$follower->last_name}") . ' will follow up.'
+                : "Added {$name}. Nobody in the follow-up unit could be assigned yet.",
             Response::HTTP_CREATED
         );
     }
@@ -139,6 +167,11 @@ class FirstTimerController extends Controller
             'name' => 'required|string|max:255'
         ]);
 
+        // Someone added without an email has a placeholder that can never receive mail.
+        if (FirstTimerService::isPlaceholderEmail($validated['email']) || FirstTimerService::isPlaceholderEmail($firstTimer->email)) {
+            return $this->errorResponse('This first timer has no email address.', Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         try {
             $updatedFirstTimer = $this->firstTimerService->sendWelcomeEmail(
                 $firstTimer,
@@ -211,6 +244,15 @@ class FirstTimerController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /** Admins: permanently delete several first timers at once (members among them are skipped). */
+    public function destroyMany(DeleteFirstTimersRequest $request, FirstTimerDeletionService $deletion): JsonResponse
+    {
+        $ids = array_map('intval', $request->validated('ids'));
+        $result = $deletion->deleteMany($ids, $request->user());
+
+        return $this->successResponse($result, $deletion->message($result));
     }
 
     public function getFirstTimerReport(Request $request)

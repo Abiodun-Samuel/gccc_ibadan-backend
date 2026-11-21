@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AssignMembersRequest;
+use App\Http\Requests\DeleteMembersRequest;
 use App\Http\Requests\StoreBulkMemberRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Services\MemberDeletionService;
 use App\Services\MemberService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -35,21 +37,6 @@ class MemberController extends Controller
         return "{$successful} of {$total} members created successfully. {$failed} failed.";
     }
 
-    private function buildBulkDeleteMessage(array $result): string
-    {
-        $deleted = $result['deleted_count'];
-        $failed = $result['failed_count'];
-        $total = $deleted + $failed;
-        if ($failed === 0) {
-            return $deleted === 1
-                ? 'Member deleted successfully'
-                : "{$deleted} members deleted successfully";
-        }
-        if ($deleted === 0) {
-            return "Failed to delete all {$total} members";
-        }
-        return "{$deleted} of {$total} members deleted successfully, {$failed} failed";
-    }
     public function index(Request $request): JsonResponse
     {
         try {
@@ -135,25 +122,16 @@ class MemberController extends Controller
         }
     }
 
-    public function destroy(Request $request): JsonResponse
+    /**
+     * Admins: permanently delete several people. Never the admin asking, admins or pastors, or
+     * anyone whose follow-up work or unit leadership ties them to other people (see MemberDeletionService).
+     */
+    public function destroy(DeleteMembersRequest $request, MemberDeletionService $deletion): JsonResponse
     {
-        try {
-            $ids = $request->validate([
-                'memberIds' => ['required', 'array', 'min:1', 'max:100'],
-                'memberIds.*' => ['required', 'integer', 'exists:users,id'],
-            ]);
+        $ids = array_map('intval', $request->validated('memberIds'));
+        $result = $deletion->deleteMany($ids, $request->user());
 
-            $result = $this->memberService->deleteMembers($ids['memberIds']);
-
-            $message = $this->buildBulkDeleteMessage($result);
-
-            return $this->successResponse($result, $message);
-        } catch (\Exception $e) {
-            return $this->errorResponse(
-                'Failed to delete members: ' . $e->getMessage(),
-                Response::HTTP_INTERNAL_SERVER_ERROR
-            );
-        }
+        return $this->successResponse($result, $deletion->message($result));
     }
 
     public function assignMembers(AssignMembersRequest $request): JsonResponse

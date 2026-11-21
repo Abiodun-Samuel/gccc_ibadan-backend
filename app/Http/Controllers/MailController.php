@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SendBulkMailRequest;
+use App\Services\FirstTimerService;
 use App\Services\MailService;
 use App\Services\UserService;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -111,7 +112,8 @@ class MailController extends Controller
             foreach ($users as $user) {
                 $email = strtolower(trim($user->email));
 
-                if ($email === '') {
+                // Skip first timers added without an email (their placeholder can never receive mail).
+                if ($email === '' || FirstTimerService::isPlaceholderEmail($email)) {
                     continue;
                 }
 
@@ -127,8 +129,8 @@ class MailController extends Controller
             foreach ($validated['emails'] as $email) {
                 $normalized = strtolower(trim($email));
 
-                // Don't overwrite a user-derived recipient (keeps its name).
-                if ($normalized === '' || isset($recipients[$normalized])) {
+                // Don't overwrite a user-derived recipient (keeps its name); skip placeholders.
+                if ($normalized === '' || isset($recipients[$normalized]) || FirstTimerService::isPlaceholderEmail($normalized)) {
                     continue;
                 }
 

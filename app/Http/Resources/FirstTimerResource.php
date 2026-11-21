@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\FirstTimerDeletionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -44,6 +45,13 @@ class FirstTimerResource extends JsonResource
             'visitation_report' => $this->visitation_report,
             'pastorate_call' => $this->pastorate_call,
             'assigned_at' => optional($this->assigned_at)?->toDateTimeString(),
+
+            // Now a member (or leader, pastor, admin): their account can't be deleted as a first timer.
+            // Only sent when roles are loaded (the list), so other endpoints add no queries.
+            'is_member' => $this->whenLoaded('roles', fn() => $this->roles
+                ->pluck('name')
+                ->intersect(FirstTimerDeletionService::PROTECTED_ROLES)
+                ->isNotEmpty()),
 
             // Relationships
             'follow_up_status' => $this->whenLoaded('followUpStatus', fn() => [

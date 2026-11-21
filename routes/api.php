@@ -67,7 +67,9 @@ Route::middleware('guest')->group(function () {
     });
 
     // Guest First Timer Registration
-    Route::post('/first-timers', [FirstTimerController::class, 'store'])->name('first-timers.guest.store');
+    Route::post('/first-timers', [FirstTimerController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('first-timers.guest.store');
 
     Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
     // Client Error Logging
@@ -155,6 +157,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [FirstTimerController::class, 'index'])->name('index');
         Route::get('/report', [FirstTimerController::class, 'getFirstTimerReport'])->name('report');
         Route::get('/assigned', [FirstTimerController::class, 'getAssignedFirstTimers'])->name('assigned');
+        // Admins and the Follow Up Unit add a first timer from the table (only the needed details).
+        Route::post('/quick', [FirstTimerController::class, 'quickStore'])->name('quick-store');
         Route::get('/{firstTimer}', [FirstTimerController::class, 'show'])->name('show');
         Route::put('/{firstTimer}', [FirstTimerController::class, 'update'])->name('update');
         Route::post('/{firstTimer}/welcome-email', [FirstTimerController::class, 'sendFirstTimerWelcomeEmail'])->name('welcome-email');
@@ -170,8 +174,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{member}', [MemberController::class, 'show'])->name('show');
         Route::put('/{member}', [MemberController::class, 'update'])->name('update');
         Route::patch('/{member}', [MemberController::class, 'update'])->name('patch');
-        Route::delete('/{member}', [MemberController::class, 'destroy'])->name('destroy-single');
-        Route::post('/delete', [MemberController::class, 'destroy'])->name('destroy');
+        // Deleting accounts is for admins only.
+        Route::delete('/{member}', [MemberController::class, 'destroy'])
+            ->middleware('role:' . RoleEnum::ADMIN->value)
+            ->name('destroy-single');
+        Route::post('/delete', [MemberController::class, 'destroy'])
+            ->middleware('role:' . RoleEnum::ADMIN->value)
+            ->name('destroy');
     });
 
     // ------------------------------------------------------------------------
@@ -322,6 +331,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::prefix('first-timers')->name('first-timers.')->group(function () {
                 Route::get('/analytics', [FirstTimerController::class, 'getFirstTimersAnalytics'])->name('analytics');
                 Route::post('/integrated/assign-member-role', [FirstTimerController::class, 'assignMemberRole'])->name('assign-member-role');
+                // Permanently delete several first timers (people who are now members are skipped).
+                Route::post('/delete', [FirstTimerController::class, 'destroyMany'])->name('delete');
             });
 
             // --------------------------------------------------------------------

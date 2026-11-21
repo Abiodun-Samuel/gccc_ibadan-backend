@@ -11,6 +11,9 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class FirstTimerService
@@ -45,6 +48,23 @@ class FirstTimerService
             fn($q) => $q->whereMonth('date_of_visit', $filters['date_month_of_visit'])
         );
 
+        // A year narrows the month to that year; a month sent alone still matches every year.
+        $query->when(
+            !empty($filters['date_month_of_visit']) && !empty($filters['date_year_of_visit']),
+            fn($q) => $q->whereYear('date_of_visit', $filters['date_year_of_visit'])
+        );
+
+        // A visit range: from a date, and optionally up to a date (no end means "until today").
+        $query->when(
+            !empty($filters['visit_from']),
+            fn($q) => $q->whereDate('date_of_visit', '>=', $filters['visit_from'])
+        );
+
+        $query->when(
+            !empty($filters['visit_to']),
+            fn($q) => $q->whereDate('date_of_visit', '<=', $filters['visit_to'])
+        );
+
         $query->when(
             !empty($filters['week_ending']),
             fn($q) => $q->whereDate('week_ending', $filters['week_ending'])
@@ -57,44 +77,73 @@ class FirstTimerService
     public function getAllFirstTimers(array $filters = []): Collection
     {
         $query = User::firstTimers()
-            ->with(['followUpStatus', 'assignedTo', 'attendances.service', 'followupFeedbacks']);
+            ->with(['followUpStatus', 'assignedTo', 'attendances.service', 'followupFeedbacks', 'roles']);
         $this->applyAttendanceFilters($query, $filters);
         return $query
             ->orderBy('date_of_visit', 'desc')
             ->get();
     }
 
+    /** Stored when a first timer gives no email: every account needs a unique one, and .invalid can never receive mail. */
+    public const NO_EMAIL_DOMAIN = 'gcccibadan.invalid';
+
+    public static function isPlaceholderEmail(?string $email): bool
+    {
+        return is_string($email) && str_ends_with(strtolower($email), '@' . self::NO_EMAIL_DOMAIN);
+    }
+
     /**
-     * Create a new first timer
+     * Create a new first timer (public welcome form, and "Add first timer" on the first-timers table).
+     *
+     * They're assigned to the least-busy follow-up person of their gender, and that person is emailed
+     * once the first timer is saved; a failed email is logged and never loses the first timer.
      */
     public function createFirstTimer($data): User
     {
-        return DB::transaction(function () use ($data) {
-            $followupMember = $this->findLeastLoadedFollowupMember($data['gender']);
+        $followupMember = $this->findLeastLoadedFollowupMember($data['gender'] ?? null);
 
+        $firstTimer = DB::transaction(function () use ($data, $followupMember) {
             $firstTimer = User::create(array_merge($data, [
+                'email' => ($data['email'] ?? null) ?: 'no-email-' . bin2hex(random_bytes(6)) . '@' . self::NO_EMAIL_DOMAIN,
                 'followup_by_id' => $followupMember?->id,
                 'follow_up_status_id' => FollowUpStatus::NOT_CONTACTED_ID,
                 'assigned_at' => $followupMember != null ? now() : null,
-                'week_ending' => getNextSunday()?->toDateString(),
+                'week_ending' => $this->weekEnding($data['date_of_visit'] ?? null),
                 'password' => Hash::make($data['phone_number'])
             ]));
 
-            $recipients = [['name' => $followupMember?->first_name, 'email' => $followupMember?->email]];
-
-            $emailData = [
-                "first_timer_name" => $firstTimer->first_name ?? '',
-                "first_timer_email" => $firstTimer?->email ?? '',
-                "first_timer_phone" => $firstTimer?->phone_number ?? ''
-            ];
-
-            $this->mailService->sendFirstTimerAssignedEmail($recipients, [], [], $emailData);
-
             $firstTimer->assignRole(RoleEnum::FIRST_TIMER->value);
-            $firstTimer->load(['followUpStatus', 'assignedTo']);
 
-            return $firstTimer;
+            // Re-read so the reply carries what the database filled in (e.g. status "active").
+            return $firstTimer->refresh()->load(['followUpStatus', 'assignedTo']);
         });
+
+        if ($followupMember) {
+            try {
+                $this->mailService->sendFirstTimerAssignedEmail(
+                    [['name' => $followupMember->first_name, 'email' => $followupMember->email]],
+                    [],
+                    [],
+                    [
+                        'first_timer_name' => $firstTimer->first_name ?? '',
+                        'first_timer_email' => self::isPlaceholderEmail($firstTimer->email) ? '' : ($firstTimer->email ?? ''),
+                        'first_timer_phone' => $firstTimer->phone_number ?? '',
+                    ]
+                );
+            } catch (\Throwable $e) {
+                Log::error('First timer assignment email not sent', ['user_id' => $firstTimer->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return $firstTimer;
+    }
+
+    /** The Sunday that ends the week of the visit (the visit day itself when it's a Sunday). */
+    private function weekEnding($dateOfVisit): string
+    {
+        $day = $dateOfVisit ? Carbon::parse($dateOfVisit)->startOfDay() : Carbon::today();
+
+        return ($day->isSunday() ? $day : $day->next(CarbonInterface::SUNDAY))->toDateString();
     }
 
     /**
